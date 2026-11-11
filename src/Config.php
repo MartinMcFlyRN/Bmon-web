@@ -42,6 +42,8 @@ final class Config
             // bin/bmon-web report:slack
             'slack' => [
                 'webhook_url' => '',        // Incoming Webhook of the channel
+                'title'       => 'Active alerts summary:',
+                'no_alerts'   => 'No active alerts.',
                 'proxy'       => '',        // e.g. http://proxy.example.com:3128
                 'timeout'     => 10,
             ],

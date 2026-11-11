@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.7.0**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.7.1**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -136,10 +136,21 @@ loaded, with a 4-second timeout, so an unreachable host does not slow the page.
 
 ## Slack report
 
-`bin/bmon-web report:slack` posts to a Slack channel the situation at that
-moment: how many services are failing and on how many hosts, the offline hosts,
-then for each host its failing services with the failing checks, for how long
-and the last error message. It reads the same data as the dashboard.
+`bin/bmon-web report:slack` posts to a Slack channel the active alerts of that
+moment, one numbered line each, like M/Monit's summary:
+
+```
+Active alerts summary:
+1) db1.example.it: failed protocol test [MYSQL] at [localhost]:3306 [TCP/IP] -- MYSQL: Access denied
+2) mail.example.it: process is not running
+3) old.example.it: No report from Monit: the network, the host or Monit is down. Last report was 10 Nov 2026 14:49:59 +0100
+```
+
+A line is a failing service of an online host (the message of its last failure
+event, as Monit wrote it) or an offline host. Lines are sorted by host name;
+host names link to their page in Bmon when `app.url` is set. The title and the
+"no alerts" text are configurable (`slack.title`, `slack.no_alerts`), e.g.
+`'title' => 'Riepilogo Allarmi Attivi:'`.
 
 1. In Slack, create an app with an **Incoming Webhook** for the channel
    (<https://api.slack.com/messaging/webhooks>) and copy its URL.
@@ -147,7 +158,10 @@ and the last error message. It reads the same data as the dashboard.
 
    ```php
    'app'   => ['url' => 'https://bmon.example.com'],   // host names become links
-   'slack' => ['webhook_url' => 'https://hooks.slack.com/services/T…/B…/…'],
+   'slack' => [
+       'webhook_url' => 'https://hooks.slack.com/services/T…/B…/…',
+       'title'       => 'Active alerts summary:',
+   ],
    ```
 3. Try it: `bin/bmon-web report:slack --dry-run` prints the message without
    sending it; without `--dry-run` it is posted.
@@ -171,8 +185,8 @@ periodic reports use cron, as the user that can read the config:
 */15 * * * *  bmon-web  BMON_WEB_CONFIG=/etc/bmon-web/config.php php /opt/bmon-web/bin/bmon-web report:slack --only-if-failing
 ```
 
-Large installations: Slack accepts 50 blocks per message, so after about 45
-hosts the message ends with "…and N more hosts" and a link to the Status page.
+Very long lists: Slack truncates messages over 40000 characters, so the list
+stops before that with "…and N more alerts" (a few hundred lines).
 
 ## Configuration
 
@@ -193,6 +207,8 @@ hosts the message ends with "…and N more hosts" and a link to the Status page.
 | `monit.tls_verify` | `false` | require a valid certificate on Monit httpd with SSL |
 | `monit.timeout` | `10` | seconds, for each action |
 | `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |
+| `slack.title` | `Active alerts summary:` | first line of the report |
+| `slack.no_alerts` | `No active alerts.` | text when nothing is failing |
 | `slack.proxy` | `''` | outgoing proxy, e.g. `http://proxy:3128` |
 | `slack.timeout` | `10` | seconds |
 | `session.secure` | `true` | cookie over HTTPS only |

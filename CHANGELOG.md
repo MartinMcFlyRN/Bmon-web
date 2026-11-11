@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.7.1 — 2026-11-12
+
+- `report:slack`: new compact format, one numbered line per alert (`N) host: message`), like M/Monit's summary; offline hosts are lines of the same list ("No report from Monit … Last report was …"), everything sorted by host name
+- New config keys `slack.title` (default `Active alerts summary:`) and `slack.no_alerts`
+
 ## 0.7.0 — 2026-11-12
 
 No migrations.

@@ -5,19 +5,23 @@ declare(strict_types=1);
 namespace Bmon\Web;
 
 /**
- * Report of the failing services at this moment, posted to a Slack channel
+ * Report of the active alerts at this moment, posted to a Slack channel
  * through an Incoming Webhook (https://api.slack.com/messaging/webhooks).
  *
- * Used by `bin/bmon-web report:slack`. The message uses Block Kit: a header with
- * the totals, the offline hosts, then one section per host with its failing
- * services (failing checks, for how long, last error message).
+ * Used by `bin/bmon-web report:slack`. One numbered line per alert, in the
+ * style of M/Monit's summary:
+ *
+ *   Active alerts summary:
+ *   1) <host>: <message of the last failure event of the service>
+ *   2) <host>: No report from Monit: the network, the host or Monit is down. Last report was …
+ *
+ * Failing services of online hosts and offline hosts are listed together, by host name.
  */
 final class SlackReport
 {
-    /** Slack limits: 50 blocks per message, 3000 characters per section. */
-    private const MAX_BLOCKS = 50;
-    private const MAX_SECTION = 2900;
-    private const MAX_SERVICES = 1000;
+    /** Slack truncates messages longer than 40000 characters: stay well below. */
+    private const MAX_TEXT = 38000;
+    private const MAX_SERVICES = 2000;
 
     /**
      * Reads the current state from the collector database.
@@ -28,82 +32,63 @@ final class SlackReport
         return [
             'stats' => Overview::stats(),
             'services' => Overview::failingServices(self::MAX_SERVICES),
-            'offline' => $withOffline ? Overview::offlineHosts(200) : [],
+            'offline' => $withOffline ? Overview::offlineHosts(1000) : [],
         ];
+    }
+
+    /**
+     * The alert lines, sorted by host name (then service), without numbering.
+     * @return list<array{hostname:string,host_id:int|string,sort:string,text:string}>
+     */
+    public static function alerts(array $data): array
+    {
+        $alerts = [];
+        foreach ($data['services'] as $s) {
+            $alerts[] = [
+                'hostname' => $s['hostname'],
+                'host_id' => $s['host_id'],
+                'sort' => $s['name'],
+                'text' => self::serviceText($s),
+            ];
+        }
+        foreach ($data['offline'] as $h) {
+            $alerts[] = [
+                'hostname' => $h['hostname'],
+                'host_id' => $h['id'],
+                'sort' => '',
+                'text' => 'No report from Monit: the network, the host or Monit is down. Last report was '
+                    . fmt_dt($h['last_seen'], 'j M Y H:i:s O'),
+            ];
+        }
+        usort($alerts, static fn ($a, $b) => [strtolower($a['hostname']), $a['sort']] <=> [strtolower($b['hostname']), $b['sort']]);
+        return $alerts;
     }
 
     /** Builds the webhook payload. $baseUrl (app.url) turns host names into links. */
     public static function payload(array $data, string $baseUrl = ''): array
     {
-        $stats = $data['stats'];
-        $services = $data['services'];
-        $offline = $data['offline'];
         $baseUrl = rtrim($baseUrl, '/');
+        $title = (string) Config::get('slack.title', 'Active alerts summary:');
+        $alerts = self::alerts($data);
 
-        $byHost = [];
-        foreach ($services as $s) {
-            $byHost[$s['host_id']][] = $s;
-        }
-        $nServices = count($services);
-        $nHosts = count($byHost);
-
-        $title = $nServices === 0
-            ? 'No failing services'
-            : sprintf('%d failing service%s on %d host%s', $nServices, $nServices === 1 ? '' : 's', $nHosts, $nHosts === 1 ? '' : 's');
-        $emoji = $nServices === 0 ? ':large_green_circle:' : ':red_circle:';
-
-        $now = (new \DateTimeImmutable('now', new \DateTimeZone((string) Config::get('app.timezone'))))->format('Y-m-d H:i');
-        $online = (int) ($stats['hosts'] ?? 0) - (int) ($stats['hosts_offline'] ?? 0);
-        $context = sprintf('%s · %s · %d/%d hosts online · %d services monitored',
-            Config::get('app.name'), $now, $online, (int) ($stats['hosts'] ?? 0), (int) ($stats['services'] ?? 0));
-
-        $blocks = [
-            ['type' => 'header', 'text' => ['type' => 'plain_text', 'text' => mb_strimwidth("$emoji $title", 0, 150), 'emoji' => true]],
-            ['type' => 'context', 'elements' => [['type' => 'mrkdwn', 'text' => self::esc($context)]]],
-        ];
-
-        if ($offline) {
-            $items = array_map(
-                static fn ($h) => self::hostRef($h['id'], $h['hostname'], $baseUrl) . ' (' . fmt_duration(time() - self::ts($h['offline_since'])) . ')',
-                $offline
-            );
-            $text = ':black_circle: *Offline hosts (' . (int) ($stats['hosts_offline'] ?? count($offline)) . '):* ' . implode(', ', $items);
-            $blocks[] = ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => mb_strimwidth($text, 0, self::MAX_SECTION, '…')]];
+        if ($alerts === []) {
+            return ['text' => self::esc($title) . "\n" . self::esc((string) Config::get('slack.no_alerts', 'No active alerts.'))];
         }
 
-        if ($byHost) {
-            $blocks[] = ['type' => 'divider'];
-        }
-
-        // one section per host; keep room for the closing blocks
-        $budget = self::MAX_BLOCKS - count($blocks) - 2;
-        $hostsShown = 0;
-        foreach ($byHost as $hostId => $rows) {
-            $sections = self::hostSections($hostId, $rows, $baseUrl);
-            if (count($sections) > $budget) {
+        $lines = [self::esc($title)];
+        $length = mb_strlen($lines[0]);
+        foreach ($alerts as $n => $a) {
+            $line = ($n + 1) . ') ' . self::hostRef($a['host_id'], $a['hostname'], $baseUrl) . ': ' . self::esc($a['text']);
+            if ($length + mb_strlen($line) + 200 > self::MAX_TEXT) {
+                $more = count($alerts) - $n;
+                $lines[] = "…and $more more alert" . ($more === 1 ? '' : 's')
+                    . ($baseUrl !== '' ? " <$baseUrl/|in Bmon>" : '') . '.';
                 break;
             }
-            foreach ($sections as $text) {
-                $blocks[] = ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => $text]];
-            }
-            $budget -= count($sections);
-            $hostsShown++;
+            $lines[] = $line;
+            $length += mb_strlen($line) + 1;
         }
-        if ($hostsShown < $nHosts) {
-            $more = $nHosts - $hostsShown;
-            $text = "_…and $more more host" . ($more === 1 ? '' : 's') . ' with failing services._';
-            if ($baseUrl !== '') {
-                $text .= " <$baseUrl/status?filter=failing|See all in Bmon>";
-            }
-            $blocks[] = ['type' => 'section', 'text' => ['type' => 'mrkdwn', 'text' => $text]];
-        }
-        if ($baseUrl !== '') {
-            $blocks[] = ['type' => 'context', 'elements' => [['type' => 'mrkdwn', 'text' => "<$baseUrl/|Open the dashboard>"]]];
-        }
-
-        // plain text: shown in notifications and by clients without Block Kit
-        $fallback = "$title" . ($offline ? ', ' . count($offline) . ' host(s) offline' : '');
-        return ['text' => $fallback, 'blocks' => $blocks];
+        return ['text' => implode("\n", $lines)];
     }
 
     /** @return array{ok:bool,error:string} */
@@ -155,33 +140,17 @@ final class SlackReport
 
     // -------------------------------------------------------------------------
 
-    /** Sections for one host (split when longer than Slack allows). */
-    private static function hostSections(int|string $hostId, array $rows, string $baseUrl): array
+    /**
+     * Text of a failing service: the message of its last failure event, as Monit
+     * wrote it (on one line); without one, the failing checks.
+     */
+    private static function serviceText(array $s): string
     {
-        $head = '*' . self::hostRef($hostId, $rows[0]['hostname'], $baseUrl) . '*'
-            . ($rows[0]['remote_addr'] !== '' ? '  `' . self::esc($rows[0]['remote_addr']) . '`' : '');
-        $lines = [];
-        foreach ($rows as $s) {
-            $line = '• *' . self::esc($s['name']) . '* _' . self::esc(Monit::serviceType((int) $s['type'])) . '_ — '
-                . self::esc(implode(', ', Monit::failures((int) $s['status'])))
-                . ' · for ' . fmt_duration(time() - self::ts($s['status_changed_at']));
-            if (!empty($s['message'])) {
-                $line .= "\n      " . self::esc(mb_strimwidth(preg_replace('/\s+/', ' ', (string) $s['message']), 0, 200, '…'));
-            }
-            $lines[] = $line;
+        $msg = trim(preg_replace('/\s+/', ' ', (string) ($s['message'] ?? '')));
+        if ($msg !== '') {
+            return mb_strimwidth($msg, 0, 500, '…');
         }
-
-        $sections = [];
-        $current = $head;
-        foreach ($lines as $line) {
-            if (mb_strlen($current) + mb_strlen($line) + 1 > self::MAX_SECTION) {
-                $sections[] = $current;
-                $current = $head . ' _(continued)_';
-            }
-            $current .= "\n" . $line;
-        }
-        $sections[] = $current;
-        return $sections;
+        return $s['name'] . ': ' . implode(', ', Monit::failures((int) $s['status'])) . ' failed';
     }
 
     private static function hostRef(int|string $id, string $hostname, string $baseUrl): string
@@ -193,10 +162,5 @@ final class SlackReport
     private static function esc(string $s): string
     {
         return str_replace(['&', '<', '>'], ['&amp;', '&lt;', '&gt;'], $s);
-    }
-
-    private static function ts(?string $utc): int
-    {
-        return $utc ? (new \DateTimeImmutable($utc, new \DateTimeZone('UTC')))->getTimestamp() : time();
     }
 }

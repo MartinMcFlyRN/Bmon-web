@@ -36,6 +36,8 @@ return [
     // Create an Incoming Webhook for the channel: https://api.slack.com/messaging/webhooks
     'slack' => [
         'webhook_url' => '',            // https://hooks.slack.com/services/T…/B…/…
+        'title'       => 'Active alerts summary:',   // e.g. 'Riepilogo Allarmi Attivi:'
+        'no_alerts'   => 'No active alerts.',
         'proxy'       => '',            // only if outgoing HTTPS goes through a proxy
         'timeout'     => 10,
     ],
