@@ -144,5 +144,11 @@ try {
             usage();
     }
 } catch (PDOException $e) {
-    fail('database: ' . $e->getMessage());
+    $hint = '';
+    if (($e->errorInfo[1] ?? 0) === 1142) {   // command denied
+        $hint = "\nThe database user lacks a privilege. Bmon-web needs on its own database:\n"
+            . "  GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES ON bmon_web.* TO 'bmon_web'@'localhost';\n"
+            . 'then run migrate again (it resumes where it stopped).';
+    }
+    fail('database: ' . $e->getMessage() . $hint);
 }

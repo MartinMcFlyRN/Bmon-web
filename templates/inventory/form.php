@@ -1,12 +1,12 @@
 <?php
-/** @var bool $isNew @var array $form @var array $errors @var array|null $label @var array $hosts @var bool|null $canEdit */
+/** @var bool $isNew @var array $form @var array $errors @var array|null $item @var array $hosts @var bool|null $canEdit */
 $canEdit ??= true;
 $err = static fn (string $f): string => !empty($errors[$f]) ? ' aria-invalid="true" aria-describedby="' . e($f) . '-error"' : '';
-$action = $isNew ? url('/labels') : url('/labels/' . $label['id']);
+$action = $isNew ? url('/inventory') : url('/inventory/' . $item['id']);
 ?>
 <div class="page-head">
-  <h1><?= $isNew ? 'New label' : 'Label <span class="label-chip label-chip-lg">' . e($label['name']) . '</span>' ?></h1>
-  <a class="btn" href="<?= e(url('/labels')) ?>">Back to labels</a>
+  <h1><?= $isNew ? 'New inventory item' : 'Inventory <span class="inv-chip inv-chip-lg">' . e($item['name']) . '</span>' ?></h1>
+  <a class="btn" href="<?= e(url('/inventory')) ?>">Back to inventory</a>
 </div>
 
 <div class="grid-2">
@@ -21,20 +21,20 @@ $action = $isNew ? url('/labels') : url('/labels/' . $label['id']);
     <textarea id="description" name="description" rows="4" maxlength="1000"<?= $err('description') ?>><?= e($form['description']) ?></textarea>
     <?php $field = 'description'; require __DIR__ . '/../partials/field_error.php' ?>
 
-    <button type="submit" class="btn btn-primary"><?= $isNew ? 'Create label' : 'Save' ?></button>
+    <button type="submit" class="btn btn-primary"><?= $isNew ? 'Create item' : 'Save' ?></button>
   </form>
   <?php else: ?>
   <section class="card">
     <h2>Description</h2>
-    <p class="pre-line"><?= $label['description'] !== '' ? e($label['description']) : '<span class="muted">No description.</span>' ?></p>
+    <p class="pre-line"><?= $item['description'] !== '' ? e($item['description']) : '<span class="muted">No description.</span>' ?></p>
   </section>
   <?php endif ?>
 
   <?php if (!$isNew): ?>
   <aside class="card">
-    <h2>Hosts with this label <span class="muted">(<?= count($hosts) ?>)</span></h2>
+    <h2>Hosts with this item <span class="muted">(<?= count($hosts) ?>)</span></h2>
     <?php if (!$hosts): ?>
-      <p class="muted">None yet. Add the label from a host's status page.</p>
+      <p class="muted">None yet. Add the item from a host's status page.</p>
     <?php else: ?>
       <ul class="host-list">
         <?php foreach ($hosts as $h): ?>
@@ -50,10 +50,10 @@ $action = $isNew ? url('/labels') : url('/labels/' . $label['id']);
     <?php endif ?>
 
     <?php if ($canEdit): ?>
-      <form method="post" action="<?= e(url('/labels/' . $label['id'] . '/delete')) ?>"
-            data-confirm="Delete label “<?= e($label['name']) ?>”?<?= $hosts ? ' It will be removed from ' . count($hosts) . ' host' . (count($hosts) === 1 ? '' : 's') . '.' : '' ?>">
+      <form method="post" action="<?= e(url('/inventory/' . $item['id'] . '/delete')) ?>"
+            data-confirm="Delete “<?= e($item['name']) ?>” from the inventory?<?= $hosts ? ' It will be removed from ' . count($hosts) . ' host' . (count($hosts) === 1 ? '' : 's') . '.' : '' ?>">
         <?= csrf_field() ?>
-        <button type="submit" class="btn btn-danger">Delete label</button>
+        <button type="submit" class="btn btn-danger">Delete item</button>
       </form>
     <?php endif ?>
   </aside>

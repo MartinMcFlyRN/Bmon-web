@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.6.0 — 2026-11-12
+
+**Upgrade:** the database user needs the `DROP` privilege (RENAME TABLE requires it), then run the migration:
+
+```sql
+GRANT DROP ON bmon_web.* TO 'bmon_web'@'localhost';
+```
+```sh
+BMON_WEB_CONFIG=/etc/bmon-web/config.php php bin/bmon-web migrate
+```
+
+- Renamed: the Labels menu is now **Inventory**; its entries are "items". URLs `/labels…` → `/inventory…` (old URLs redirect)
+- Renamed: tables `labels` → `inventory`, `host_labels` → `host_inventory` (column `label_id` → `item_id`); existing items and host assignments are kept
+- Renamed: on the host page the Labels box is now the Inventory box
+- Audit log actions `label.*` / `host.label_*` are now `inventory.*` / `host.inventory_*` (older entries keep their names)
+- Migrations can now be PHP files; 003 checks the current schema at each step, so it resumes if interrupted
+- `bin/bmon-web migrate` explains which GRANT is needed when a privilege is missing
+
 ## 0.5.1 — 2026-11-12
 
 - Host page, Monit box: "Service monit" row with a green/red dot showing whether Monit httpd (port 2812) answers and accepts the credentials; checked in the background (`GET /status/{id}/monit-check`, 4 s timeout), reason in the tooltip

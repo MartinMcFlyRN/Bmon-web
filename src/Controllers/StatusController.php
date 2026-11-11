@@ -7,7 +7,7 @@ namespace Bmon\Web\Controllers;
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
 use Bmon\Web\HttpException;
-use Bmon\Web\Labels;
+use Bmon\Web\Inventory;
 use Bmon\Web\Audit;
 use Bmon\Web\MonitClient;
 use Bmon\Web\Monit;
@@ -159,8 +159,8 @@ final class StatusController
             'dir' => $dir,
             'groups' => $groups,
             'events' => $events,
-            'labels' => Labels::forHost($id),
-            'allLabels' => Labels::all(),
+            'inventory' => Inventory::forHost($id),
+            'allItems' => Inventory::all(),
             'canEdit' => Auth::isAdmin(),
             'canAct' => Auth::isAdmin() && MonitClient::available($host) && $host['offline_since'] === null,
             'actionsNote' => self::actionsNote($host),

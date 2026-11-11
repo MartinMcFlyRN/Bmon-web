@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.5.1**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.6.0**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -30,7 +30,7 @@ Composer dependencies: copy the files, configure, run the migrations.
 - **Host page** (click a host): host and Monit details, every service with its state (failing checks decoded from the Monit status, not monitored, initializing, pending action) and a summary per type: load/CPU/memory/swap for the system, space and inodes for filesystems, PID/uptime/CPU/memory for processes, response time for remote host ports and ping, size and modification time for files, exit status and output for programs, link and traffic for network interfaces; "All values" shows every metric Monit sent. Plus service groups and the last 30 events. The services table can be sorted by status, name, type, "since" and last check.
 - **Auto-refresh** (off, 5 s, 10 s, 30 s, 1 min) on Dashboard, Status and host pages, remembered per browser; it pauses while the tab is hidden, you are typing or an "All values" panel is open. The sort order is kept across refreshes.
 
-- **Labels**: define labels (name and description) in the Labels menu, edit or delete them; each label page lists the hosts that carry it. On a host's status page, the Labels box under the Host box shows its labels and lets administrators add (from the defined labels) or remove them. Deleting a label removes it from every host. Everyone can see labels; only administrators can change them.
+- **Inventory**: define inventory items (name and description) in the Inventory menu, edit or delete them; each item page lists the hosts that carry it. On a host's status page, the Inventory box under the Host box shows its items and lets administrators add (from the defined items) or remove them. Deleting an item removes it from every host. Everyone can see the inventory; only administrators can change it.
 - **Service actions** (administrators): on the host page every service has Start, Stop, Restart and Monitor/Unmonitor, sent to the Monit agent of the host like M/Monit does. See [Service actions](#service-actions).
 
 Coming next: Reports.
@@ -49,14 +49,14 @@ bin/bmon-web     command line tool
 
 ## Database
 
-Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `labels`, `host_labels`) in a
+Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`) in a
 separate database and only **reads** the collector database. Both must be on the
 same MySQL/MariaDB server.
 
 ```sql
 CREATE DATABASE bmon_web CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 CREATE USER 'bmon_web'@'localhost' IDENTIFIED BY '...';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES
   ON bmon_web.* TO 'bmon_web'@'localhost';
 GRANT SELECT ON bmon_collector.* TO 'bmon_web'@'localhost';
 ```
@@ -101,6 +101,9 @@ will not send the session cookie back.
 cd /opt/bmon-web && git pull
 BMON_WEB_CONFIG=/etc/bmon-web/config.php php bin/bmon-web migrate
 ```
+
+`migrate` applies only what is missing and can be re-run safely. Read the
+CHANGELOG for version-specific notes (e.g. 0.6.0 needs the `DROP` privilege).
 
 ## Service actions
 

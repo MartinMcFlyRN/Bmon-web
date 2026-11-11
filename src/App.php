@@ -7,7 +7,7 @@ namespace Bmon\Web;
 use Bmon\Web\Controllers\AdminController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
-use Bmon\Web\Controllers\LabelController;
+use Bmon\Web\Controllers\InventoryController;
 use Bmon\Web\Controllers\ProfileController;
 use Bmon\Web\Controllers\StatusController;
 
@@ -27,15 +27,18 @@ final class App
         $r->get('/status/{id}', [StatusController::class, 'host']);
         $r->get('/status/{id}/monit-check', [StatusController::class, 'monitCheck']);
         $r->post('/status/{id}/action', [StatusController::class, 'action'], 'admin');
-        $r->post('/status/{id}/labels', [LabelController::class, 'assign'], 'admin');
-        $r->post('/status/{id}/labels/{labelId}/delete', [LabelController::class, 'unassign'], 'admin');
+        $r->post('/status/{id}/inventory', [InventoryController::class, 'assign'], 'admin');
+        $r->post('/status/{id}/inventory/{itemId}/delete', [InventoryController::class, 'unassign'], 'admin');
 
-        $r->get('/labels', [LabelController::class, 'index']);
-        $r->get('/labels/new', [LabelController::class, 'newLabel'], 'admin');
-        $r->post('/labels', [LabelController::class, 'create'], 'admin');
-        $r->get('/labels/{id}', [LabelController::class, 'show']);
-        $r->post('/labels/{id}', [LabelController::class, 'update'], 'admin');
-        $r->post('/labels/{id}/delete', [LabelController::class, 'delete'], 'admin');
+        $r->get('/inventory', [InventoryController::class, 'index']);
+        $r->get('/inventory/new', [InventoryController::class, 'newItem'], 'admin');
+        $r->post('/inventory', [InventoryController::class, 'create'], 'admin');
+        $r->get('/inventory/{id}', [InventoryController::class, 'show']);
+        $r->post('/inventory/{id}', [InventoryController::class, 'update'], 'admin');
+        $r->post('/inventory/{id}/delete', [InventoryController::class, 'delete'], 'admin');
+        // pre-0.6.0 URLs
+        $r->get('/labels', [InventoryController::class, 'legacy']);
+        $r->get('/labels/{id}', [InventoryController::class, 'legacy']);
 
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);

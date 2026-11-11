@@ -1,6 +1,6 @@
 <?php
 /** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir
- * @var array $labels @var array $allLabels @var bool $canEdit @var bool $canAct @var string|null $actionsNote */
+ * @var array $inventory @var array $allItems @var bool $canEdit @var bool $canAct @var string|null $actionsNote */
 use Bmon\Web\MonitClient;
 use Bmon\Web\Monit;
 
@@ -43,44 +43,44 @@ $th = static fn (string $key, string $label, string $class = ''): string
     </dl>
   </section>
 
-  <section class="card" id="labels">
-    <h2>Labels</h2>
-    <?php if ($labels): ?>
-      <ul class="label-list">
-        <?php foreach ($labels as $l): ?>
-          <li class="label-chip" title="<?= e($l['description']) ?>">
-            <a href="<?= e(url('/labels/' . $l['id'])) ?>"><?= e($l['name']) ?></a>
+  <section class="card" id="inventory">
+    <h2>Inventory</h2>
+    <?php if ($inventory): ?>
+      <ul class="inv-list">
+        <?php foreach ($inventory as $it): ?>
+          <li class="inv-chip" title="<?= e($it['description']) ?>">
+            <a href="<?= e(url('/inventory/' . $it['id'])) ?>"><?= e($it['name']) ?></a>
             <?php if ($canEdit): ?>
-              <form method="post" action="<?= e(url('/status/' . $host['id'] . '/labels/' . $l['id'] . '/delete')) ?>">
+              <form method="post" action="<?= e(url('/status/' . $host['id'] . '/inventory/' . $it['id'] . '/delete')) ?>">
                 <?= csrf_field() ?>
-                <button type="submit" class="chip-remove" title="Remove label <?= e($l['name']) ?>" aria-label="Remove label <?= e($l['name']) ?>">×</button>
+                <button type="submit" class="chip-remove" title="Remove <?= e($it['name']) ?>" aria-label="Remove <?= e($it['name']) ?> from the inventory">×</button>
               </form>
             <?php endif ?>
           </li>
         <?php endforeach ?>
       </ul>
     <?php else: ?>
-      <p class="muted">No labels on this host.</p>
+      <p class="muted">No inventory items on this host.</p>
     <?php endif ?>
 
     <?php if ($canEdit):
-        $assigned = array_column($labels, 'id');
-        $available = array_filter($allLabels, static fn ($l) => !in_array($l['id'], $assigned, true)); ?>
+        $assigned = array_column($inventory, 'id');
+        $available = array_filter($allItems, static fn ($it) => !in_array($it['id'], $assigned, true)); ?>
       <?php if ($available): ?>
-        <form method="post" action="<?= e(url('/status/' . $host['id'] . '/labels')) ?>" class="inline-form">
+        <form method="post" action="<?= e(url('/status/' . $host['id'] . '/inventory')) ?>" class="inline-form">
           <?= csrf_field() ?>
-          <select name="label_id" aria-label="Label to add" required>
-            <option value="">Add a label…</option>
-            <?php foreach ($available as $l): ?>
-              <option value="<?= e($l['id']) ?>"><?= e($l['name']) ?><?= $l['description'] !== '' ? ' — ' . e(mb_strimwidth($l['description'], 0, 60, '…')) : '' ?></option>
+          <select name="item_id" aria-label="Inventory item to add" required>
+            <option value="">Add an item…</option>
+            <?php foreach ($available as $it): ?>
+              <option value="<?= e($it['id']) ?>"><?= e($it['name']) ?><?= $it['description'] !== '' ? ' — ' . e(mb_strimwidth($it['description'], 0, 60, '…')) : '' ?></option>
             <?php endforeach ?>
           </select>
           <button type="submit" class="btn">Add</button>
         </form>
-      <?php elseif (!$allLabels): ?>
-        <p class="hint">No labels defined yet: <a href="<?= e(url('/labels/new')) ?>">create one</a>.</p>
+      <?php elseif (!$allItems): ?>
+        <p class="hint">The inventory is empty: <a href="<?= e(url('/inventory/new')) ?>">create an item</a>.</p>
       <?php else: ?>
-        <p class="hint">All labels are already on this host. <a href="<?= e(url('/labels/new')) ?>">New label</a></p>
+        <p class="hint">All inventory items are already on this host. <a href="<?= e(url('/inventory/new')) ?>">New item</a></p>
       <?php endif ?>
     <?php endif ?>
   </section>
