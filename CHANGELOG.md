@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.7.0 — 2026-11-12
+
+No migrations.
+
+- New CLI command `report:slack`: posts the failing services of this moment to a Slack channel through an Incoming Webhook (header with totals, offline hosts, one section per host with failing checks, duration and last error message); options `--webhook`, `--only-if-failing`, `--no-offline`, `--dry-run`
+- New config keys `app.url` (links in the report) and `slack.webhook_url`, `slack.proxy`, `slack.timeout`
+- Dashboard and Slack report share the same queries (`Overview`)
+
 ## 0.6.0 — 2026-11-12
 
 **Upgrade:** the database user needs the `DROP` privilege (RENAME TABLE requires it), then run the migration:

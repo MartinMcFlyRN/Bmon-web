@@ -9,6 +9,7 @@ return [
         'base_path' => '',              // '/bmon' if published in a subdirectory
         'timezone'  => 'Europe/Rome',
         'debug'     => false,           // never true in production
+        'url'       => 'https://bmon.example.com',  // public URL, for links in Slack reports
     ],
 
     'db' => [
@@ -29,6 +30,14 @@ return [
         // true to require a valid certificate on Monit httpd with SSL.
         'tls_verify'      => false,
         'timeout'         => 10,
+    ],
+
+    // bin/bmon-web report:slack: report of the failing services to a Slack channel.
+    // Create an Incoming Webhook for the channel: https://api.slack.com/messaging/webhooks
+    'slack' => [
+        'webhook_url' => '',            // https://hooks.slack.com/services/T…/B…/…
+        'proxy'       => '',            // only if outgoing HTTPS goes through a proxy
+        'timeout'     => 10,
     ],
 
     'session' => [

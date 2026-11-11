@@ -15,6 +15,7 @@ use Bmon\Web\Audit;
 use Bmon\Web\Config;
 use Bmon\Web\Migrator;
 use Bmon\Web\Password;
+use Bmon\Web\SlackReport;
 use Bmon\Web\Users;
 
 function usage(): never
@@ -31,6 +32,10 @@ function usage(): never
       user:passwd <username>               set a new password (ends the user's sessions)
       user:enable <username>               enable a disabled account
       user:list                            list users
+      report:slack [--webhook=URL] [--only-if-failing] [--no-offline] [--dry-run]
+                                           post the failing services of this moment to Slack
+                                           (webhook from slack.webhook_url; --dry-run prints
+                                           the message instead of sending it)
       version                              print the version
 
     Config file: \$BMON_WEB_CONFIG, /etc/bmon-web/config.php or config/config.php
@@ -138,6 +143,30 @@ try {
                 printf("%-5d %-24s %-6s %-8s %s\n", $u['id'], $u['username'], $u['role'],
                     $u['is_active'] ? 'yes' : 'no', $u['last_login_at'] ?? '-');
             }
+            break;
+
+        case 'report:slack':
+            $data = SlackReport::collect(!isset($opts['no-offline']));
+            $nFailing = count($data['services']);
+            $nOffline = count($data['offline']);
+            if (isset($opts['only-if-failing']) && $nFailing === 0 && $nOffline === 0) {
+                echo "Nothing failing: no message sent.\n";
+                break;
+            }
+            $payload = SlackReport::payload($data, (string) Config::get('app.url'));
+            if (isset($opts['dry-run'])) {
+                echo json_encode($payload, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE), "\n";
+                break;
+            }
+            $webhook = is_string($opts['webhook'] ?? null) ? $opts['webhook'] : (string) Config::get('slack.webhook_url');
+            if ($webhook === '') {
+                fail('no Slack webhook: set slack.webhook_url in the config or pass --webhook=URL');
+            }
+            $res = SlackReport::send($webhook, $payload);
+            if (!$res['ok']) {
+                fail($res['error']);
+            }
+            echo "Sent to Slack: $nFailing failing service(s), $nOffline offline host(s).\n";
             break;
 
         default:

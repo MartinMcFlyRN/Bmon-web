@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.6.0**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.7.0**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -32,6 +32,7 @@ Composer dependencies: copy the files, configure, run the migrations.
 
 - **Inventory**: define inventory items (name and description) in the Inventory menu, edit or delete them; each item page lists the hosts that carry it. On a host's status page, the Inventory box under the Host box shows its items and lets administrators add (from the defined items) or remove them. Deleting an item removes it from every host. Everyone can see the inventory; only administrators can change it.
 - **Service actions** (administrators): on the host page every service has Start, Stop, Restart and Monitor/Unmonitor, sent to the Monit agent of the host like M/Monit does. See [Service actions](#service-actions).
+- **Slack report** from the command line: `bin/bmon-web report:slack` posts the failing services of this moment to a Slack channel. See [Slack report](#slack-report).
 
 Coming next: Reports.
 
@@ -133,6 +134,46 @@ is unreachable, refuses the credentials or does not allow this server (the
 reason is in the tooltip). The check runs in the background after the page has
 loaded, with a 4-second timeout, so an unreachable host does not slow the page.
 
+## Slack report
+
+`bin/bmon-web report:slack` posts to a Slack channel the situation at that
+moment: how many services are failing and on how many hosts, the offline hosts,
+then for each host its failing services with the failing checks, for how long
+and the last error message. It reads the same data as the dashboard.
+
+1. In Slack, create an app with an **Incoming Webhook** for the channel
+   (<https://api.slack.com/messaging/webhooks>) and copy its URL.
+2. In the config:
+
+   ```php
+   'app'   => ['url' => 'https://bmon.example.com'],   // host names become links
+   'slack' => ['webhook_url' => 'https://hooks.slack.com/services/T…/B…/…'],
+   ```
+3. Try it: `bin/bmon-web report:slack --dry-run` prints the message without
+   sending it; without `--dry-run` it is posted.
+
+Options:
+
+| | |
+|---|---|
+| `--webhook=URL` | use this webhook instead of `slack.webhook_url` (e.g. another channel) |
+| `--only-if-failing` | send nothing when no service is failing and no host is offline |
+| `--no-offline` | leave out the offline hosts |
+| `--dry-run` | print the Slack payload (JSON) instead of sending it |
+
+Exit status 0 when sent (or nothing to send with `--only-if-failing`), 1 on
+error, with the reason on stderr; the webhook URL is never printed. For
+periodic reports use cron, as the user that can read the config:
+
+```
+# every morning at 8:00, and every 15 minutes only if something is failing
+0 8 * * *     bmon-web  BMON_WEB_CONFIG=/etc/bmon-web/config.php php /opt/bmon-web/bin/bmon-web report:slack
+*/15 * * * *  bmon-web  BMON_WEB_CONFIG=/etc/bmon-web/config.php php /opt/bmon-web/bin/bmon-web report:slack --only-if-failing
+```
+
+Large installations: Slack accepts 50 blocks per message, so after about 45
+hosts the message ends with "…and N more hosts" and a link to the Status page.
+
 ## Configuration
 
 `/etc/bmon-web/config.php` returns a PHP array; keys not set keep their default
@@ -145,11 +186,15 @@ loaded, with a 4-second timeout, so an unreachable host does not slow the page.
 | `app.base_path` | `''` | e.g. `/bmon` when published in a subdirectory |
 | `app.timezone` | `Europe/Rome` | display timezone; the database stores UTC |
 | `app.debug` | `false` | shows stack traces: never in production |
+| `app.url` | `''` | public URL of Bmon-web, for links in Slack reports |
 | `db.dsn` / `db.user` / `db.password` | `bmon_web` on localhost | PDO DSN |
 | `collector_db` | `bmon_collector` | database of bmon-collector |
 | `monit.credentials_key` | `''` | same value as `BMON_CREDENTIALS_KEY` of bmon-collector |
 | `monit.tls_verify` | `false` | require a valid certificate on Monit httpd with SSL |
 | `monit.timeout` | `10` | seconds, for each action |
+| `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |
+| `slack.proxy` | `''` | outgoing proxy, e.g. `http://proxy:3128` |
+| `slack.timeout` | `10` | seconds |
 | `session.secure` | `true` | cookie over HTTPS only |
 | `session.idle_timeout` | `3600` | seconds |
 | `session.absolute_timeout` | `43200` | seconds |
@@ -167,6 +212,7 @@ bin/bmon-web user:create <username> [--admin] [--name=NAME] [--email=EMAIL]
 bin/bmon-web user:passwd <username>           new password, ends the user's sessions
 bin/bmon-web user:enable <username>           re-enable a disabled account
 bin/bmon-web user:list
+bin/bmon-web report:slack [--webhook=URL] [--only-if-failing] [--no-offline] [--dry-run]
 bin/bmon-web version
 ```
 

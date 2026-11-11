@@ -23,6 +23,7 @@ final class Config
                 'base_path' => '',              // e.g. '/bmon' when not served at the vhost root
                 'timezone'  => 'Europe/Rome',   // display timezone (the database stores UTC)
                 'debug'     => false,
+                'url'       => '',              // public URL, e.g. https://bmon.example.com (links in Slack reports)
             ],
             'db' => [
                 'dsn'      => 'mysql:host=localhost;dbname=bmon_web;charset=utf8mb4',
@@ -37,6 +38,12 @@ final class Config
                 'credentials_key' => '',    // = BMON_CREDENTIALS_KEY of bmon-collector, if set there
                 'tls_verify'      => false, // Monit httpd usually has a self-signed certificate
                 'timeout'         => 10,    // seconds
+            ],
+            // bin/bmon-web report:slack
+            'slack' => [
+                'webhook_url' => '',        // Incoming Webhook of the channel
+                'proxy'       => '',        // e.g. http://proxy.example.com:3128
+                'timeout'     => 10,
             ],
             'session' => [
                 'name'             => 'bmon_session',
