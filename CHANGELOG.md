@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0 — 2026-11-11
+
+- Dashboard: list of offline hosts (offline for, last report) under the Hosts box
+- Dashboard: list of hosts with at least one failing service (failing / total)
+- Dashboard: list of failing services under the Services box, with host name, service type, failing checks decoded from the Monit status bitmask, last error message and time since the status changed
+- Service totals now cover online hosts only; services of offline hosts are shown apart
+- Lists are capped at 100 rows ("and N more")
+
 ## 0.1.0 — 2026-11-11
 
 First release: authentication and user management.

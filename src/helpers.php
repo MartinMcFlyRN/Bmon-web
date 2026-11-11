@@ -57,6 +57,21 @@ function fmt_dt(?string $utc, string $format = 'Y-m-d H:i'): string
     return $dt->setTimezone(new DateTimeZone((string) Config::get('app.timezone')))->format($format);
 }
 
+/** Time elapsed since a UTC DATETIME, compact: "45s", "12m", "3h 20m", "4d 6h". */
+function since(?string $utc): string
+{
+    if ($utc === null || $utc === '') {
+        return '—';
+    }
+    $s = max(0, time() - (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->getTimestamp());
+    return match (true) {
+        $s < 60 => $s . 's',
+        $s < 3600 => intdiv($s, 60) . 'm',
+        $s < 86400 => intdiv($s, 3600) . 'h ' . intdiv($s % 3600, 60) . 'm',
+        default => intdiv($s, 86400) . 'd ' . intdiv($s % 86400, 3600) . 'h',
+    };
+}
+
 /** Client IP, honouring X-Forwarded-For / X-Real-IP only from trusted proxies. */
 function client_ip(): string
 {

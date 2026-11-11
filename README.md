@@ -1,13 +1,13 @@
 # Bmon-web
 
-Version **0.1.0**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.2.0**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
 Stack: **nginx + PHP-FPM (PHP ≥ 8.2) + MariaDB/MySQL**. No framework and no
 Composer dependencies: copy the files, configure, run the migrations.
 
-## What 0.1.0 does
+## What it does
 
 - **Sign-in** with username and password
   - passwords hashed with Argon2id (bcrypt if PHP lacks Argon2), rehashed transparently when the algorithm changes
@@ -21,7 +21,7 @@ Composer dependencies: copy the files, configure, run the migrations.
   - an admin cannot delete/disable/demote their own account, and the last active admin cannot be removed
 - **My account**: full name, e-mail, password change (ends the other sessions)
 - **Audit log** (Admin → Audit log): sign-ins, failures, throttling, user changes
-- **Dashboard**: host and service totals read from the collector database
+- **Dashboard**: host and service totals read from the collector database, with the lists of offline hosts, hosts with failing services, and failing services (host, service, failing checks, last error message, failing since). Services of offline hosts are counted apart, since their state is stale.
 - CSRF token on every form, strict Content-Security-Policy (no inline scripts or styles), only `public/` exposed by nginx
 - `bin/bmon-web` CLI: migrations and user management (first admin, password reset)
 
