@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.3.0 — 2026-11-11
+
+- Status page: all hosts with state, CPU, memory, load, services and last report; filters with counts, search, sortable columns, pagination (100 per page)
+- Host page: host and Monit details, services with decoded state and a per-type summary, all raw values, service groups, last 30 events
+- Auto-refresh toggle (30 s) on Dashboard, Status and host pages
+- Dashboard: host names link to the host page
+
 ## 0.2.0 — 2026-11-11
 
 - Dashboard: list of offline hosts (offline for, last report) under the Hosts box

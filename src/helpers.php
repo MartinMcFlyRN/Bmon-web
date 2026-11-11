@@ -63,13 +63,59 @@ function since(?string $utc): string
     if ($utc === null || $utc === '') {
         return '—';
     }
-    $s = max(0, time() - (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->getTimestamp());
+    return fmt_duration(time() - (new DateTimeImmutable($utc, new DateTimeZone('UTC')))->getTimestamp());
+}
+
+/** Compact duration from seconds: "45s", "12m", "3h 20m", "4d 6h". */
+function fmt_duration(int|float $seconds): string
+{
+    $s = max(0, (int) $seconds);
     return match (true) {
         $s < 60 => $s . 's',
         $s < 3600 => intdiv($s, 60) . 'm',
         $s < 86400 => intdiv($s, 3600) . 'h ' . intdiv($s % 3600, 60) . 'm',
         default => intdiv($s, 86400) . 'd ' . intdiv($s % 86400, 3600) . 'h',
     };
+}
+
+/** Human-readable size from bytes (binary units). */
+function fmt_bytes(int|float|null $bytes, int $decimals = 1): string
+{
+    if ($bytes === null) {
+        return '—';
+    }
+    $units = ['B', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    $i = 0;
+    $v = (float) $bytes;
+    while (abs($v) >= 1024 && $i < count($units) - 1) {
+        $v /= 1024;
+        $i++;
+    }
+    return ($i === 0 ? (string) (int) $v : number_format($v, $decimals)) . ' ' . $units[$i];
+}
+
+/** Percentage with one decimal, or a dash when unknown. */
+function fmt_pct(int|float|string|null $v): string
+{
+    return $v === null || $v === '' ? '—' : number_format((float) $v, 1) . '%';
+}
+
+/** Formats a Unix timestamp (seconds) in the display timezone. */
+function fmt_ts(int|float|null $ts, string $format = 'Y-m-d H:i'): string
+{
+    if (!$ts) {
+        return '—';
+    }
+    return (new DateTimeImmutable('@' . (int) $ts))
+        ->setTimezone(new DateTimeZone((string) Config::get('app.timezone')))->format($format);
+}
+
+/** Current query string with some parameters replaced (null removes them). */
+function query_with(array $changes): string
+{
+    $q = array_merge($_GET, $changes);
+    $q = array_filter($q, static fn ($v) => $v !== null && $v !== '');
+    return $q ? '?' . http_build_query($q) : '';
 }
 
 /** Client IP, honouring X-Forwarded-For / X-Real-IP only from trusted proxies. */

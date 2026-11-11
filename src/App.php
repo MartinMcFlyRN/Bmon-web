@@ -8,6 +8,7 @@ use Bmon\Web\Controllers\AdminController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
 use Bmon\Web\Controllers\ProfileController;
+use Bmon\Web\Controllers\StatusController;
 
 final class App
 {
@@ -20,6 +21,9 @@ final class App
         $r->post('/logout', [AuthController::class, 'logout'], 'auth');
 
         $r->get('/', [DashboardController::class, 'index']);
+
+        $r->get('/status', [StatusController::class, 'index']);
+        $r->get('/status/{id}', [StatusController::class, 'host']);
 
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);

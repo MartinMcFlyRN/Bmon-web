@@ -24,7 +24,7 @@ $tab = static fn (string $id): string => $nav === $id ? ' class="active" aria-cu
   </a>
   <nav class="tabs" aria-label="Main">
     <a href="<?= e(url('/')) ?>"<?= $tab('dashboard') ?>>Dashboard</a>
-    <span class="tab-soon" title="Coming soon">Status</span>
+    <a href="<?= e(url('/status')) ?>"<?= $tab('status') ?>>Status</a>
     <span class="tab-soon" title="Coming soon">Events</span>
     <span class="tab-soon" title="Coming soon">Reports</span>
     <?php if ($isAdmin): ?>

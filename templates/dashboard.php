@@ -8,11 +8,14 @@ use Bmon\Web\Monit;
 /** Prints "and N more" when a list has been cut at $limit rows. */
 $more = static function (array $rows, int $total) use ($limit): string {
     return count($rows) > $limit
-        ? '<p class="list-more">… and ' . e($total - $limit) . ' more</p>'
+        ? '<p class="list-more">… and ' . e($total - $limit) . ' more · <a href="' . e(url('/status')) . '">see Status</a></p>'
         : '';
 };
 ?>
-<h1>Dashboard</h1>
+<div class="page-head">
+  <h1>Dashboard</h1>
+  <label class="autorefresh"><input type="checkbox" data-autorefresh="30"> Auto-refresh (30s)</label>
+</div>
 
 <?php if ($collectorError !== null): ?>
   <div class="alert alert-error"><?= e($collectorError) ?></div>
@@ -41,7 +44,7 @@ $more = static function (array $rows, int $total) use ($limit): string {
           <tbody>
           <?php foreach (array_slice($offlineHosts, 0, $limit) as $h): ?>
             <tr>
-              <td class="strong"><?= e($h['hostname']) ?></td>
+              <td><a class="strong" href="<?= e(url('/status/' . $h['id'])) ?>"><?= e($h['hostname']) ?></a></td>
               <td class="mono"><?= e($h['remote_addr']) ?></td>
               <td class="nowrap"><?= e(since($h['offline_since'])) ?></td>
               <td class="nowrap muted"><?= e(fmt_dt($h['last_seen'])) ?></td>
@@ -61,7 +64,7 @@ $more = static function (array $rows, int $total) use ($limit): string {
           <tbody>
           <?php foreach (array_slice($failingHosts, 0, $limit) as $h): ?>
             <tr>
-              <td class="strong"><?= e($h['hostname']) ?></td>
+              <td><a class="strong" href="<?= e(url('/status/' . $h['id'])) ?>"><?= e($h['hostname']) ?></a></td>
               <td class="mono"><?= e($h['remote_addr']) ?></td>
               <td class="nowrap"><span class="count-fail"><?= e($h['services_failed']) ?></span> / <?= e($h['services_total']) ?></td>
               <td class="nowrap muted"><?= e(since($h['last_seen'])) ?> ago</td>
@@ -95,7 +98,7 @@ $more = static function (array $rows, int $total) use ($limit): string {
           <tbody>
           <?php foreach (array_slice($failingServices, 0, $limit) as $s): ?>
             <tr>
-              <td class="strong nowrap"><?= e($s['hostname']) ?></td>
+              <td class="nowrap"><a class="strong" href="<?= e(url('/status/' . $s['host_id'])) ?>"><?= e($s['hostname']) ?></a></td>
               <td>
                 <?= e($s['name']) ?>
                 <span class="muted small"><?= e(Monit::serviceType((int) $s['type'])) ?></span>
