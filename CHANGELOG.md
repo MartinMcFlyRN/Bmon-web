@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 — 2026-11-12
+
+- Host page, Monit box: "Service monit" row with a green/red dot showing whether Monit httpd (port 2812) answers and accepts the credentials; checked in the background (`GET /status/{id}/monit-check`, 4 s timeout), reason in the tooltip
+
 ## 0.5.0 — 2026-11-12
 
 Requires **bmon-collector 0.5.0** (it stores the Monit httpd credentials). No migrations.

@@ -262,4 +262,13 @@ final class StatusController
         }
         return null;
     }
+
+    /** GET /status/{id}/monit-check: JSON reachability of the host's Monit httpd (used by app.js). */
+    public function monitCheck(int $id): string
+    {
+        $host = Db::one('SELECT * FROM ' . Db::collector('hosts') . ' WHERE id = ?', [$id])
+            ?? throw new HttpException(404, 'Host not found.');
+        header('Content-Type: application/json; charset=utf-8');
+        return json_encode(MonitClient::ping($host), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
 }

@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.5.0**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.5.1**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -123,6 +123,12 @@ key in `monit.credentials_key`. Every action, successful or not, is written to t
 audit log. When something is missing, the host page says what (no httpd, no
 credentials, key mismatch, Monit unreachable, credentials refused, address not
 in the `allow` list).
+
+The Monit box of the host page has a **Service monit** row: green dot when
+Monit httpd answers `GET /_ping` and accepts the stored credentials, red when it
+is unreachable, refuses the credentials or does not allow this server (the
+reason is in the tooltip). The check runs in the background after the page has
+loaded, with a 4-second timeout, so an unreachable host does not slow the page.
 
 ## Configuration
 

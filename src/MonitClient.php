@@ -40,21 +40,80 @@ final class MonitClient
         }
 
         $token = bin2hex(random_bytes(16));
-        $body = http_build_query(['securitytoken' => $token, 'service' => $service, 'action' => $action]);
+        $r = self::request($target . '/_doaction', [$user, $password], 'POST',
+            http_build_query(['securitytoken' => $token, 'service' => $service, 'action' => $action]),
+            ["Cookie: securitytoken=$token", 'Content-Type: application/x-www-form-urlencoded'],
+            (float) Config::get('monit.timeout', 10));
+
+        if ($r['error'] !== null) {
+            return self::fail("Cannot reach Monit at $target: {$r['error']}", $target);
+        }
+        return match (true) {
+            $r['status'] === 302 || $r['status'] === 200 => ['ok' => true, 'message' => '', 'target' => $target],
+            $r['status'] === 401 => self::fail('Monit rejected the credentials (did they change? the next report will update them).', $target),
+            $r['status'] === 403 => self::fail("Monit refused the request: add this server's address to the 'allow' list of 'set httpd' in monitrc.", $target),
+            default => self::fail("Monit answered {$r['status']}: " . self::errorText($r['body']), $target),
+        };
+    }
+
+    /**
+     * Checks that Monit httpd answers (GET /_ping, "pong" with valid credentials).
+     * @return array{state:string,label:string,detail:string,target:string}
+     *         state: ok | fail | unknown
+     */
+    public static function ping(array $host): array
+    {
+        try {
+            $target = self::target($host);
+        } catch (\RuntimeException $e) {
+            return ['state' => 'unknown', 'label' => 'Not available', 'detail' => $e->getMessage(), 'target' => ''];
+        }
+        $creds = null;
+        $credsNote = '';
+        try {
+            $creds = self::credentials($host);
+        } catch (\RuntimeException $e) {
+            $credsNote = $e->getMessage();   // still check that the port answers
+        }
+
+        $r = self::request($target . '/_ping', $creds, 'GET', '', [], 4.0);
+        $res = static fn (string $state, string $label, string $detail = '') => [
+            'state' => $state, 'label' => $label, 'detail' => $detail, 'target' => $target,
+        ];
+        if ($r['error'] !== null) {
+            return $res('fail', 'Unreachable', $r['error']);
+        }
+        return match (true) {
+            $r['status'] === 200 && $creds !== null => $res('ok', 'Reachable', 'Monit httpd answered and accepted the credentials.'),
+            $r['status'] === 401 && $creds === null => $res('ok', 'Reachable', 'Port open, credentials not verified: ' . $credsNote),
+            $r['status'] === 401 => $res('fail', 'Credentials refused', 'Monit httpd answered but refused the stored credentials.'),
+            $r['status'] === 403 => $res('fail', 'Not allowed', "Monit httpd answered but this server's address is not in its 'allow' list."),
+            default => $res('fail', 'Error ' . $r['status'], self::errorText($r['body'])),
+        };
+    }
+
+    /**
+     * One HTTP request to Monit httpd.
+     * @param array{0:string,1:string}|null $auth
+     * @return array{status:int,body:string,error:?string}
+     */
+    private static function request(string $url, ?array $auth, string $method, string $body, array $headers, float $timeout): array
+    {
+        if ($auth !== null) {
+            $headers[] = 'Authorization: Basic ' . base64_encode($auth[0] . ':' . $auth[1]);
+        }
+        if ($method === 'POST') {
+            $headers[] = 'Content-Length: ' . strlen($body);
+        }
+        $headers[] = 'User-Agent: Bmon-web/' . BMON_WEB_VERSION;
+        $headers[] = 'Connection: close';
         $verify = (bool) Config::get('monit.tls_verify');
         $ctx = stream_context_create([
             'http' => [
-                'method' => 'POST',
-                'header' => implode("\r\n", [
-                    'Authorization: Basic ' . base64_encode("$user:$password"),
-                    "Cookie: securitytoken=$token",
-                    'Content-Type: application/x-www-form-urlencoded',
-                    'Content-Length: ' . strlen($body),
-                    'User-Agent: Bmon-web/' . BMON_WEB_VERSION,
-                    'Connection: close',
-                ]),
+                'method' => $method,
+                'header' => implode("\r\n", $headers),
                 'content' => $body,
-                'timeout' => (float) Config::get('monit.timeout', 10),
+                'timeout' => $timeout,
                 'follow_location' => 0,
                 'ignore_errors' => true,
                 'protocol_version' => 1.1,
@@ -66,7 +125,6 @@ final class MonitClient
             ],
         ]);
 
-        $url = $target . '/_doaction';
         $http_response_header = [];
         $err = 'no response';
         set_error_handler(static function (int $no, string $msg) use (&$err): bool {
@@ -79,20 +137,10 @@ final class MonitClient
             restore_error_handler();
         }
         if ($response === false && $http_response_header === []) {
-            $err = preg_replace('/^.*?(failed to open stream|Failed to open stream): /i', '', $err);
-            return self::fail("Cannot reach Monit at $target: $err", $target);
+            return ['status' => 0, 'body' => '', 'error' => preg_replace('/^.*?failed to open stream: /i', '', $err)];
         }
-
-        $status = 0;
-        if (preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0] ?? '', $m)) {
-            $status = (int) $m[1];
-        }
-        return match (true) {
-            $status === 302 || $status === 200 => ['ok' => true, 'message' => '', 'target' => $target],
-            $status === 401 => self::fail('Monit rejected the credentials (did they change? the next report will update them).', $target),
-            $status === 403 => self::fail("Monit refused the request: add this server's address to the 'allow' list of 'set httpd' in monitrc.", $target),
-            default => self::fail("Monit answered $status: " . self::errorText((string) $response), $target),
-        };
+        $status = preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0] ?? '', $m) ? (int) $m[1] : 0;
+        return ['status' => $status, 'body' => (string) $response, 'error' => null];
     }
 
     /** Base URL of the host's Monit httpd, e.g. https://192.0.2.10:2812 */

@@ -40,3 +40,21 @@ document.addEventListener('DOMContentLoaded', () => {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); });
   schedule();
 });
+
+// Reachability of Monit httpd on the host page: <dd data-monit-check="/status/ID/monit-check">
+document.addEventListener('DOMContentLoaded', () => {
+  const el = document.querySelector('[data-monit-check]');
+  if (!el) return;
+  const dot = el.querySelector('.dot');
+  const label = el.querySelector('.monit-check-label');
+  const show = (state, text, title) => {
+    dot.className = 'dot ' + (state === 'ok' ? 'dot-ok' : state === 'fail' ? 'dot-fail' : 'dot-unknown');
+    label.className = 'monit-check-label ' + (state === 'ok' || state === 'fail' ? state : 'muted');
+    label.textContent = text;
+    el.title = title || '';
+  };
+  fetch(el.dataset.monitCheck, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+    .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+    .then((d) => show(d.state, d.label + (d.target ? ' · ' + d.target.replace(/^https?:\/\//, '') : ''), d.detail))
+    .catch((e) => show('unknown', 'Check failed', e.message));
+});

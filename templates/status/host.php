@@ -93,6 +93,10 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <dt>Poll interval</dt><dd><?= e($host['poll_interval']) ?>s</dd>
       <dt>Last report</dt><dd><?= e(fmt_dt($host['last_seen'], 'Y-m-d H:i:s')) ?> <span class="muted">(<?= e(since($host['last_seen'])) ?> ago)</span></dd>
       <dt>First seen</dt><dd><?= e(fmt_dt($host['first_seen'])) ?></dd>
+      <dt>Service monit</dt>
+      <dd class="monit-check" data-monit-check="<?= e(url('/status/' . $host['id'] . '/monit-check')) ?>">
+        <span class="dot dot-unknown"></span> <span class="monit-check-label muted">Checking…</span>
+      </dd>
       <dt>httpd</dt><dd class="mono"><?= $host['httpd_port'] ? e(($host['httpd_address'] ?: '*') . ':' . $host['httpd_port'] . ((int) $host['httpd_ssl'] ? ' (SSL)' : '')) : '—' ?></dd>
       <dt>Control file</dt><dd class="mono small"><?= e($host['control_file'] ?: '—') ?></dd>
       <dt>Monit ID</dt><dd class="mono small"><?= e($host['monit_id']) ?></dd>
