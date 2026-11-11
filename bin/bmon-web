@@ -1,0 +1,148 @@
+#!/usr/bin/env php
+<?php
+
+declare(strict_types=1);
+
+// Bmon-web command line tool: database migrations and user management.
+
+if (PHP_SAPI !== 'cli') {
+    exit(1);
+}
+
+require dirname(__DIR__) . '/src/bootstrap.php';
+
+use Bmon\Web\Audit;
+use Bmon\Web\Config;
+use Bmon\Web\Migrator;
+use Bmon\Web\Password;
+use Bmon\Web\Users;
+
+function usage(): never
+{
+    fwrite(STDERR, <<<TXT
+    Bmon-web {$GLOBALS['version']}
+
+    Usage: bmon-web <command> [arguments]
+
+      migrate                              create or update the database tables
+      user:create <username> [--admin] [--name=NAME] [--email=EMAIL]
+                                           create a user (password asked on the terminal,
+                                           or read from the first line of stdin)
+      user:passwd <username>               set a new password (ends the user's sessions)
+      user:enable <username>               enable a disabled account
+      user:list                            list users
+      version                              print the version
+
+    Config file: \$BMON_WEB_CONFIG, /etc/bmon-web/config.php or config/config.php
+
+    TXT);
+    exit(2);
+}
+
+function fail(string $msg): never
+{
+    fwrite(STDERR, "error: $msg\n");
+    exit(1);
+}
+
+function read_password(string $username): string
+{
+    if (function_exists('posix_isatty') ? posix_isatty(STDIN) : stream_isatty(STDIN)) {
+        $ask = static function (string $prompt): string {
+            fwrite(STDERR, $prompt);
+            shell_exec('stty -echo');
+            $line = fgets(STDIN);
+            shell_exec('stty echo');
+            fwrite(STDERR, "\n");
+            return rtrim((string) $line, "\r\n");
+        };
+        $p1 = $ask('Password: ');
+        $p2 = $ask('Repeat password: ');
+        if ($p1 !== $p2) {
+            fail('the two passwords do not match');
+        }
+    } else {
+        $p1 = rtrim((string) fgets(STDIN), "\r\n");
+    }
+    if (($err = Password::policyError($p1, $username)) !== null) {
+        fail($err);
+    }
+    return $p1;
+}
+
+$version = BMON_WEB_VERSION;
+$args = array_slice($argv, 1);
+$cmd = array_shift($args) ?? usage();
+$opts = [];
+$pos = [];
+foreach ($args as $a) {
+    if (preg_match('/^--([a-z-]+)(?:=(.*))?$/s', $a, $m)) {
+        $opts[$m[1]] = $m[2] ?? true;
+    } else {
+        $pos[] = $a;
+    }
+}
+
+try {
+    Config::load();
+    $cli = ['id' => null, 'username' => 'cli'];
+
+    switch ($cmd) {
+        case 'version':
+            echo BMON_WEB_VERSION, "\n";
+            break;
+
+        case 'migrate':
+            $applied = Migrator::run();
+            echo $applied ? 'Applied: ' . implode(', ', $applied) . "\n" : "Database is up to date.\n";
+            if (Users::count() === 0) {
+                echo "No users yet: create the first administrator with\n  bin/bmon-web user:create <username> --admin\n";
+            }
+            break;
+
+        case 'user:create':
+            $username = $pos[0] ?? usage();
+            $in = [
+                'username' => $username,
+                'full_name' => is_string($opts['name'] ?? null) ? $opts['name'] : '',
+                'email' => is_string($opts['email'] ?? null) ? $opts['email'] : '',
+                'role' => isset($opts['admin']) ? 'admin' : 'user',
+            ];
+            if ($errors = Users::validate($in)) {
+                fail(implode(' ', $errors));
+            }
+            $id = Users::create($username, read_password($username), $in['role'], $in['full_name'], $in['email']);
+            Audit::log('user.create', "$username (id $id, role {$in['role']}) via CLI", $cli);
+            echo "Created {$in['role']} '$username' (id $id).\n";
+            break;
+
+        case 'user:passwd':
+            $username = $pos[0] ?? usage();
+            $u = Users::findByUsername($username) ?? fail("no such user: $username");
+            Users::setPassword((int) $u['id'], read_password($u['username']));
+            Audit::log('user.update', "{$u['username']} (id {$u['id']}): password reset via CLI", $cli);
+            echo "Password changed for '{$u['username']}'. Existing sessions have been ended.\n";
+            break;
+
+        case 'user:enable':
+            $username = $pos[0] ?? usage();
+            $u = Users::findByUsername($username) ?? fail("no such user: $username");
+            Users::update((int) $u['id'], ['is_active' => 1]);
+            Audit::log('user.update', "{$u['username']} (id {$u['id']}): enabled via CLI", $cli);
+            echo "Enabled '{$u['username']}'.\n";
+            break;
+
+        case 'user:list':
+            printf("%-5s %-24s %-6s %-8s %s\n", 'ID', 'USERNAME', 'ROLE', 'ACTIVE', 'LAST LOGIN (UTC)');
+            foreach (Users::all() as $u) {
+                printf("%-5d %-24s %-6s %-8s %s\n", $u['id'], $u['username'], $u['role'],
+                    $u['is_active'] ? 'yes' : 'no', $u['last_login_at'] ?? '-');
+            }
+            break;
+
+        default:
+            usage();
+    }
+} catch (PDOException $e) {
+    fail('database: ' . $e->getMessage());
+}

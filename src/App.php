@@ -1,0 +1,114 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Bmon\Web;
+
+use Bmon\Web\Controllers\AdminController;
+use Bmon\Web\Controllers\AuthController;
+use Bmon\Web\Controllers\DashboardController;
+use Bmon\Web\Controllers\ProfileController;
+
+final class App
+{
+    public static function routes(): Router
+    {
+        $r = new Router();
+
+        $r->get('/login', [AuthController::class, 'showLogin'], 'guest');
+        $r->post('/login', [AuthController::class, 'login'], 'guest');
+        $r->post('/logout', [AuthController::class, 'logout'], 'auth');
+
+        $r->get('/', [DashboardController::class, 'index']);
+
+        $r->get('/profile', [ProfileController::class, 'show']);
+        $r->post('/profile', [ProfileController::class, 'update']);
+        $r->post('/profile/password', [ProfileController::class, 'changePassword']);
+
+        $r->get('/admin/users', [AdminController::class, 'users'], 'admin');
+        $r->get('/admin/users/new', [AdminController::class, 'newUser'], 'admin');
+        $r->post('/admin/users', [AdminController::class, 'createUser'], 'admin');
+        $r->get('/admin/users/{id}', [AdminController::class, 'editUser'], 'admin');
+        $r->post('/admin/users/{id}', [AdminController::class, 'updateUser'], 'admin');
+        $r->post('/admin/users/{id}/delete', [AdminController::class, 'deleteUser'], 'admin');
+        $r->get('/admin/audit', [AdminController::class, 'audit'], 'admin');
+
+        return $r;
+    }
+
+    public static function run(): void
+    {
+        try {
+            Config::load();
+            ini_set('display_errors', Config::get('app.debug') ? '1' : '0');
+            self::securityHeaders();
+            Session::start();
+
+            $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
+            $method = $method === 'HEAD' ? 'GET' : $method;
+            [$handler, $access, $params] = self::routes()->match($method, self::path());
+
+            $user = Auth::user();
+            if ($access !== 'guest' && $user === null) {
+                if ($method === 'GET') {
+                    $_SESSION['after_login'] = self::path();
+                }
+                redirect('/login');
+            }
+            if ($method === 'POST' && !Csrf::valid()) {
+                if ($access === 'guest') {
+                    // typically a login form left open past the session lifetime
+                    flash('error', 'The form has expired. Please try again.');
+                    redirect(self::path());
+                }
+                throw new HttpException(400, 'The form has expired. Reload the page and try again.');
+            }
+            if ($access === 'admin' && $user['role'] !== 'admin') {
+                throw new HttpException(403, 'This page is reserved to administrators.');
+            }
+
+            [$class, $action] = $handler;
+            echo (new $class())->$action(...$params);
+        } catch (HttpException $e) {
+            self::error($e->status, $e->getMessage());
+        } catch (\Throwable $e) {
+            error_log('bmon-web: ' . $e);
+            self::error(500, Config::get('app.debug') ? (string) $e : 'Internal error. Details are in the PHP error log.');
+        }
+    }
+
+    /** Request path relative to app.base_path, without query string. */
+    public static function path(): string
+    {
+        $path = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+        $base = rtrim((string) Config::get('app.base_path'), '/');
+        if ($base !== '' && str_starts_with($path, $base)) {
+            $path = substr($path, strlen($base)) ?: '/';
+        }
+        return $path === '/' ? '/' : rtrim($path, '/');
+    }
+
+    private static function securityHeaders(): void
+    {
+        header("Content-Security-Policy: default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; "
+            . "form-action 'self'; frame-ancestors 'none'; base-uri 'none'; object-src 'none'");
+        header('X-Content-Type-Options: nosniff');
+        header('X-Frame-Options: DENY');
+        header('Referrer-Policy: same-origin');
+        header('Cache-Control: no-store');
+        header_remove('X-Powered-By');
+    }
+
+    private static function error(int $status, string $message): void
+    {
+        http_response_code($status);
+        $titles = [400 => 'Bad request', 403 => 'Forbidden', 404 => 'Not found', 405 => 'Method not allowed', 500 => 'Error'];
+        try {
+            $layout = session_status() === PHP_SESSION_ACTIVE && Auth::user() !== null ? 'layout' : 'layout_guest';
+            echo View::render('error', ['title' => $titles[$status] ?? 'Error', 'status' => $status, 'message' => $message], $layout);
+        } catch (\Throwable) {
+            header('Content-Type: text/plain; charset=utf-8');
+            echo "$status " . ($titles[$status] ?? 'Error') . "\n";
+        }
+    }
+}
