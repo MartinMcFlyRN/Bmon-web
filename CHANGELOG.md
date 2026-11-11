@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.3.1 — 2026-11-11
+
+- Host page: services table sortable by Status, Service, Type, Since and Checked (click the column header; click again to reverse)
+- Auto-refresh: selectable interval (off, 5 s, 10 s, 30 s, 1 min) instead of the fixed 30 s; the 0.3.0 setting carries over as 30 s
+
 ## 0.3.0 — 2026-11-11
 
 - Status page: all hosts with state, CPU, memory, load, services and last report; filters with counts, search, sortable columns, pagination (100 per page)

@@ -5,16 +5,8 @@
  * @var string|null $collectorError
  */
 
-/** Sortable column header: clicking again flips the direction. */
-$th = static function (string $key, string $label, string $class = '') use ($sort, $dir): string {
-    $active = $sort === $key;
-    $next = $active ? ($dir === 'asc' ? 'desc' : 'asc') : null;   // null = column default
-    $arrow = $active ? ($dir === 'asc' ? ' ▲' : ' ▼') : '';
-    return '<th class="sortable' . ($class !== '' ? " $class" : '') . '"'
-        . ($active ? ' aria-sort="' . ($dir === 'asc' ? 'ascending' : 'descending') . '"' : '') . '>'
-        . '<a href="' . e(url('/status') . query_with(['sort' => $key, 'dir' => $next, 'page' => null])) . '">'
-        . e($label) . $arrow . '</a></th>';
-};
+$th = static fn (string $key, string $label, string $class = ''): string
+    => sort_th('/status', $key, $label, $sort, $dir, $class);
 
 /** Coloured bar for a percentage (green < 70, amber < 90, red). */
 $bar = static function (float|int|string|null $v): string {
@@ -30,7 +22,7 @@ $bar = static function (float|int|string|null $v): string {
 ?>
 <div class="page-head">
   <h1>Status</h1>
-  <label class="autorefresh"><input type="checkbox" data-autorefresh="30"> Auto-refresh (30s)</label>
+  <?= autorefresh_control() ?>
 </div>
 
 <?php if ($collectorError !== null): ?>

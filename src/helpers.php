@@ -118,6 +118,31 @@ function query_with(array $changes): string
     return $q ? '?' . http_build_query($q) : '';
 }
 
+/**
+ * Sortable table header cell. Clicking the active column flips the direction;
+ * clicking another column uses that column's default direction.
+ */
+function sort_th(string $path, string $key, string $label, string $sort, string $dir, string $class = ''): string
+{
+    $active = $sort === $key;
+    $next = $active ? ($dir === 'asc' ? 'desc' : 'asc') : null;
+    $arrow = $active ? ($dir === 'asc' ? ' ▲' : ' ▼') : '';
+    return '<th class="sortable' . ($class !== '' ? " $class" : '') . '"'
+        . ($active ? ' aria-sort="' . ($dir === 'asc' ? 'ascending' : 'descending') . '"' : '') . '>'
+        . '<a href="' . e(url($path) . query_with(['sort' => $key, 'dir' => $next, 'page' => null])) . '">'
+        . e($label) . $arrow . '</a></th>';
+}
+
+/** Auto-refresh selector; the choice is stored per browser by app.js. */
+function autorefresh_control(): string
+{
+    $opts = '';
+    foreach ([0 => 'Off', 5 => '5 s', 10 => '10 s', 30 => '30 s', 60 => '1 min'] as $v => $l) {
+        $opts .= '<option value="' . $v . '">' . $l . '</option>';
+    }
+    return '<label class="autorefresh">Auto-refresh <select data-autorefresh>' . $opts . '</select></label>';
+}
+
 /** Client IP, honouring X-Forwarded-For / X-Real-IP only from trusted proxies. */
 function client_ip(): string
 {

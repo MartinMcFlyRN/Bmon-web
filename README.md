@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.3.0**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.3.1**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -27,8 +27,8 @@ Composer dependencies: copy the files, configure, run the migrations.
 
 - **Status**: list of all hosts with state (OK / N failing / offline), CPU, memory, load, failing/total services and last report
   - filters All / OK / Failing / Offline with counts, search by host name or address, sortable columns, 100 hosts per page
-- **Host page** (click a host): host and Monit details, every service with its state (failing checks decoded from the Monit status, not monitored, initializing, pending action) and a summary per type: load/CPU/memory/swap for the system, space and inodes for filesystems, PID/uptime/CPU/memory for processes, response time for remote host ports and ping, size and modification time for files, exit status and output for programs, link and traffic for network interfaces; "All values" shows every metric Monit sent. Plus service groups and the last 30 events.
-- **Auto-refresh** (30 s) on Dashboard, Status and host pages, remembered per browser; it pauses while the tab is hidden or you are typing
+- **Host page** (click a host): host and Monit details, every service with its state (failing checks decoded from the Monit status, not monitored, initializing, pending action) and a summary per type: load/CPU/memory/swap for the system, space and inodes for filesystems, PID/uptime/CPU/memory for processes, response time for remote host ports and ping, size and modification time for files, exit status and output for programs, link and traffic for network interfaces; "All values" shows every metric Monit sent. Plus service groups and the last 30 events. The services table can be sorted by status, name, type, "since" and last check.
+- **Auto-refresh** (off, 5 s, 10 s, 30 s, 1 min) on Dashboard, Status and host pages, remembered per browser; it pauses while the tab is hidden, you are typing or an "All values" panel is open. The sort order is kept across refreshes.
 
 Coming next: Events, Reports.
 

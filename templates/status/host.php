@@ -1,9 +1,11 @@
 <?php
-/** @var array $host @var array $services @var array $groups @var array $events */
+/** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir */
 use Bmon\Web\Monit;
 
 $offline = $host['offline_since'] !== null;
 $failed = array_filter($services, static fn ($s) => (int) $s['status'] !== 0);
+$th = static fn (string $key, string $label, string $class = ''): string
+    => sort_th('/status/' . $host['id'], $key, $label, $sort, $dir, $class);
 ?>
 <div class="page-head">
   <div>
@@ -19,7 +21,7 @@ $failed = array_filter($services, static fn ($s) => (int) $s['status'] !== 0);
       <?php endif ?>
     </h1>
   </div>
-  <label class="autorefresh"><input type="checkbox" data-autorefresh="30"> Auto-refresh (30s)</label>
+  <?= autorefresh_control() ?>
 </div>
 
 <?php if ($offline): ?>
@@ -58,7 +60,13 @@ $failed = array_filter($services, static fn ($s) => (int) $s['status'] !== 0);
     <div class="card muted">No services reported.</div>
   <?php else: ?>
   <table class="table table-services">
-    <thead><tr><th>Status</th><th>Service</th><th>Details</th><th>Since</th><th>Checked</th></tr></thead>
+    <thead><tr>
+      <?= $th('status', 'Status') ?>
+      <?= $th('service', 'Service') ?>
+      <?= $th('type', 'Type / details') ?>
+      <?= $th('since', 'Since') ?>
+      <?= $th('checked', 'Checked') ?>
+    </tr></thead>
     <tbody>
     <?php foreach ($services as $s):
         [$cls, $label] = Monit::serviceState($s);

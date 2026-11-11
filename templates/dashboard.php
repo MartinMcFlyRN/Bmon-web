@@ -14,7 +14,7 @@ $more = static function (array $rows, int $total) use ($limit): string {
 ?>
 <div class="page-head">
   <h1>Dashboard</h1>
-  <label class="autorefresh"><input type="checkbox" data-autorefresh="30"> Auto-refresh (30s)</label>
+  <?= autorefresh_control() ?>
 </div>
 
 <?php if ($collectorError !== null): ?>

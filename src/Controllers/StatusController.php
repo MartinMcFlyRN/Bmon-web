@@ -131,6 +131,7 @@ final class StatusController
             $sv['data'] = json_decode((string) $sv['data'], true) ?: [];
         }
         unset($sv);
+        [$sort, $dir] = $this->sortServices($services);
 
         $groups = [];
         foreach (Db::all("SELECT group_name, service FROM " . Db::collector('service_groups')
@@ -150,8 +151,47 @@ final class StatusController
             'nav' => 'status',
             'host' => $host,
             'services' => $services,
+            'sort' => $sort,
+            'dir' => $dir,
             'groups' => $groups,
             'events' => $events,
         ]);
+    }
+
+    /** Default direction per column of the host's services table. */
+    private const SERVICE_SORTS = [
+        'type' => 'asc', 'status' => 'desc', 'service' => 'asc', 'since' => 'desc', 'checked' => 'desc',
+    ];
+
+    /**
+     * Sorts the host's services in place by ?sort= / ?dir=.
+     * The default ("type") keeps the SQL order: Monit's type order, then name.
+     * @return array{0:string,1:string} effective sort and direction
+     */
+    private function sortServices(array &$services): array
+    {
+        $sort = array_key_exists($_GET['sort'] ?? '', self::SERVICE_SORTS) ? $_GET['sort'] : 'type';
+        $dir = in_array($_GET['dir'] ?? '', ['asc', 'desc'], true) ? $_GET['dir'] : self::SERVICE_SORTS[$sort];
+
+        $typeRank = array_flip(Monit::TYPE_ORDER);
+        // failing > not monitored / initializing > OK
+        $stateRank = static fn (array $s): int => match (Monit::serviceState($s)[0]) {
+            'fail' => 2, 'off' => 1, default => 0,
+        };
+        $key = match ($sort) {
+            'status'  => static fn (array $s): array => [$stateRank($s), (string) $s['status_changed_at']],
+            'service' => static fn (array $s): array => [mb_strtolower($s['name'])],
+            'since'   => static fn (array $s): array => [(string) $s['status_changed_at']],
+            'checked' => static fn (array $s): array => [(string) $s['collected_at']],
+            default   => static fn (array $s): array => [$typeRank[(int) $s['type']] ?? 99, mb_strtolower($s['name'])],
+        };
+        usort($services, static function (array $a, array $b) use ($key, $dir): int {
+            $c = $key($a) <=> $key($b);
+            if ($c === 0) {
+                return strnatcasecmp($a['name'], $b['name']);   // stable, A→Z tiebreak
+            }
+            return $dir === 'asc' ? $c : -$c;
+        });
+        return [$sort, $dir];
     }
 }

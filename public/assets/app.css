@@ -154,6 +154,7 @@ body.guest { background: var(--topbar); min-height: 100vh; display: flex; align-
 .error-message { white-space: pre-wrap; font-family: inherit; margin: 0 0 16px; }
 
 /* --- status ---------------------------------------------------------------- */
+.autorefresh select { width: auto; padding: 3px 6px; font-size: 13px; }
 .autorefresh { display: flex; align-items: center; gap: 6px; font-weight: 400; color: var(--muted); margin: 0; font-size: 13px; }
 .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 14px; }
 .segmented { display: inline-flex; border: 1px solid var(--border); border-radius: 4px; overflow: hidden; background: var(--surface); }

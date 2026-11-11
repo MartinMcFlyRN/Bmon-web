@@ -6,33 +6,37 @@ document.addEventListener('submit', (ev) => {
   }
 });
 
-// Auto-refresh toggle: <input type="checkbox" data-autorefresh="30">
-// The choice is remembered per browser; the page reloads only while it is visible
-// and the user is not typing in a field.
+// Auto-refresh selector: <select data-autorefresh> with values in seconds (0 = off).
+// The choice is remembered per browser; the page reloads only while it is visible,
+// the user is not typing and no "All values" panel is open.
 document.addEventListener('DOMContentLoaded', () => {
-  const box = document.querySelector('input[data-autorefresh]');
-  if (!box) return;
+  const sel = document.querySelector('select[data-autorefresh]');
+  if (!sel) return;
   const key = 'bmon.autorefresh';
-  const seconds = parseInt(box.dataset.autorefresh, 10) || 30;
   let timer = null;
 
-  const read = () => { try { return localStorage.getItem(key) === '1'; } catch (e) { return false; } };
-  const save = (on) => { try { localStorage.setItem(key, on ? '1' : '0'); } catch (e) { /* storage disabled */ } };
+  const read = () => {
+    let v = null;
+    try { v = localStorage.getItem(key); } catch (e) { /* storage disabled */ }
+    if (v === '1') v = '30';   // value saved by 0.3.0 (on/off checkbox)
+    return [...sel.options].some((o) => o.value === v) ? v : '0';
+  };
+  const save = (v) => { try { localStorage.setItem(key, v); } catch (e) { /* storage disabled */ } };
 
   const schedule = () => {
     clearTimeout(timer);
-    if (!box.checked) return;
+    const seconds = parseInt(sel.value, 10) || 0;
+    if (seconds <= 0) return;
     timer = setTimeout(() => {
       const el = document.activeElement;
-      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA') && el !== box;
-      const open = document.querySelector('details[open]');
-      if (document.hidden || typing || open) { schedule(); return; }
+      const typing = el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA');
+      if (document.hidden || typing || document.querySelector('details[open]')) { schedule(); return; }
       window.location.reload();
     }, seconds * 1000);
   };
 
-  box.checked = read();
-  box.addEventListener('change', () => { save(box.checked); schedule(); });
+  sel.value = read();
+  sel.addEventListener('change', () => { save(sel.value); schedule(); sel.blur(); });
   document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(); });
   schedule();
 });
