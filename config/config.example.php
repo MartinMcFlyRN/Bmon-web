@@ -21,6 +21,16 @@ return [
     // Database written by bmon-collector (same server, SELECT grant only).
     'collector_db' => 'bmon_collector',
 
+    // Service actions (start, stop, restart, monitor, unmonitor) are sent to the
+    // Monit httpd of each host with the credentials found in its reports.
+    'monit' => [
+        // Same value as BMON_CREDENTIALS_KEY of bmon-collector (empty if not set there).
+        'credentials_key' => '',
+        // true to require a valid certificate on Monit httpd with SSL.
+        'tls_verify'      => false,
+        'timeout'         => 10,
+    ],
+
     'session' => [
         'secure'           => true,     // set false only to test over plain HTTP
         'idle_timeout'     => 3600,

@@ -234,6 +234,11 @@ body.guest { background: var(--topbar); min-height: 100vh; display: flex; align-
 .group-name { font-weight: 600; min-width: 90px; }
 .chip { display: inline-block; padding: 1px 9px; border-radius: 10px; background: var(--surface); border: 1px solid var(--border); font-size: 12px; }
 
+.action-form { display: flex; gap: 6px; margin: 0; }
+.action-form select { width: auto; padding: 4px 6px; font-size: 13px; }
+.btn-sm { padding: 4px 10px; font-size: 13px; }
+form .btn-sm { margin-top: 0; }
+
 /* labels */
 .stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 textarea { width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 4px; resize: vertical; }

@@ -8,6 +8,8 @@ use Bmon\Web\Auth;
 use Bmon\Web\Db;
 use Bmon\Web\HttpException;
 use Bmon\Web\Labels;
+use Bmon\Web\Audit;
+use Bmon\Web\MonitClient;
 use Bmon\Web\Monit;
 use Bmon\Web\View;
 
@@ -160,6 +162,8 @@ final class StatusController
             'labels' => Labels::forHost($id),
             'allLabels' => Labels::all(),
             'canEdit' => Auth::isAdmin(),
+            'canAct' => Auth::isAdmin() && MonitClient::available($host) && $host['offline_since'] === null,
+            'actionsNote' => self::actionsNote($host),
         ]);
     }
 
@@ -198,5 +202,64 @@ final class StatusController
             return $dir === 'asc' ? $c : -$c;
         });
         return [$sort, $dir];
+    }
+
+    /** POST /status/{id}/action: send start/stop/restart/monitor/unmonitor to the host's Monit. */
+    public function action(int $id): never
+    {
+        $host = Db::one('SELECT * FROM ' . Db::collector('hosts') . ' WHERE id = ?', [$id])
+            ?? throw new HttpException(404, 'Host not found.');
+        $service = is_string($_POST['service'] ?? null) ? $_POST['service'] : '';
+        $action = is_string($_POST['action'] ?? null) ? $_POST['action'] : '';
+
+        // back to the same view (sort order) of the host page
+        $back = '/status/' . $id;
+        $sort = $_POST['sort'] ?? '';
+        if (is_string($sort) && array_key_exists($sort, self::SERVICE_SORTS)) {
+            $back .= '?' . http_build_query(['sort' => $sort, 'dir' => ($_POST['dir'] ?? '') === 'asc' ? 'asc' : 'desc']);
+        }
+
+        $exists = Db::value('SELECT COUNT(*) FROM ' . Db::collector('services') . ' WHERE host_id = ? AND name = ?', [$id, $service]);
+        if (!$exists || !array_key_exists($action, MonitClient::ACTIONS)) {
+            flash('error', 'Choose a service and an action.');
+            redirect($back);
+        }
+        if ($host['offline_since'] !== null) {
+            flash('error', "{$host['hostname']} is offline: the action was not sent.");
+            redirect($back);
+        }
+
+        $label = MonitClient::ACTIONS[$action];
+        $res = MonitClient::action($host, $service, $action);
+        Audit::log(
+            'service.' . $action,
+            "{$host['hostname']} (id $id) / $service: " . ($res['ok'] ? 'sent' : 'failed — ' . $res['message'])
+        );
+        if ($res['ok']) {
+            flash('success', "$label sent to “{$service}” on {$host['hostname']}. Monit runs it now; "
+                . 'the new state appears with the next report.');
+        } else {
+            flash('error', "$label of “{$service}” failed: {$res['message']}");
+        }
+        redirect($back);
+    }
+
+    /** Why actions are not available on this host (null = they are). */
+    private static function actionsNote(array $host): ?string
+    {
+        if (!Auth::isAdmin()) {
+            return null;
+        }
+        if ((int) $host['httpd_port'] <= 0) {
+            return 'Actions are not available: Monit httpd is not enabled on this host ("set httpd" in monitrc).';
+        }
+        if (($host['httpd_password'] ?? '') === '') {
+            return 'Actions are not available: the reports of this host carry no httpd credentials. '
+                . 'Remove "and register without credentials" from "set mmonit" in its monitrc.';
+        }
+        if ($host['offline_since'] !== null) {
+            return 'Actions are disabled while the host is offline.';
+        }
+        return null;
     }
 }

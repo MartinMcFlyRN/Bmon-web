@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.5.0 — 2026-11-12
+
+Requires **bmon-collector 0.5.0** (it stores the Monit httpd credentials). No migrations.
+If the collector has `BMON_CREDENTIALS_KEY`, set the same value in `monit.credentials_key`.
+
+- Host page: Action column (administrators) with Start, Stop, Restart, Monitor / Unmonitor for every service, sent to the host's Monit httpd like M/Monit
+- Clear messages when an action cannot be sent (httpd disabled, no credentials, wrong key, unreachable, 401, 403, Monit errors) and a note on the page when actions are not available
+- Actions disabled for offline hosts; every action is written to the audit log
+- New config section `monit` (`credentials_key`, `tls_verify`, `timeout`)
+
 ## 0.4.0 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new tables `labels`, `host_labels`).

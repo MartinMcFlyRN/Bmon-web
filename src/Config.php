@@ -32,6 +32,12 @@ final class Config
             // Database written by bmon-collector, on the same MySQL/MariaDB server.
             // The web user only needs SELECT on it.
             'collector_db' => 'bmon_collector',
+            // Actions (start/stop/...) sent to the Monit httpd of the hosts.
+            'monit' => [
+                'credentials_key' => '',    // = BMON_CREDENTIALS_KEY of bmon-collector, if set there
+                'tls_verify'      => false, // Monit httpd usually has a self-signed certificate
+                'timeout'         => 10,    // seconds
+            ],
             'session' => [
                 'name'             => 'bmon_session',
                 'secure'           => true,     // cookie sent over HTTPS only

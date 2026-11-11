@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.4.0**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.5.0**. Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -31,6 +31,7 @@ Composer dependencies: copy the files, configure, run the migrations.
 - **Auto-refresh** (off, 5 s, 10 s, 30 s, 1 min) on Dashboard, Status and host pages, remembered per browser; it pauses while the tab is hidden, you are typing or an "All values" panel is open. The sort order is kept across refreshes.
 
 - **Labels**: define labels (name and description) in the Labels menu, edit or delete them; each label page lists the hosts that carry it. On a host's status page, the Labels box under the Host box shows its labels and lets administrators add (from the defined labels) or remove them. Deleting a label removes it from every host. Everyone can see labels; only administrators can change them.
+- **Service actions** (administrators): on the host page every service has Start, Stop, Restart and Monitor/Unmonitor, sent to the Monit agent of the host like M/Monit does. See [Service actions](#service-actions).
 
 Coming next: Reports.
 
@@ -101,6 +102,28 @@ cd /opt/bmon-web && git pull
 BMON_WEB_CONFIG=/etc/bmon-web/config.php php bin/bmon-web migrate
 ```
 
+## Service actions
+
+Bmon-web sends the action to Monit's httpd on the host
+(`POST /_doaction`, the same request as `monit restart nginx`), using the address,
+port, SSL flag and credentials that the host puts in its reports and that
+**bmon-collector ≥ 0.5.0** stores. Monit accepts the action at once and runs it in
+the background; the result shows up with the next report (the service shows
+"pending: …" meanwhile, and the action appears in Recent events).
+
+Requirements on each host (details in the Bmon-collector README):
+
+- `set mmonit` without `and register without credentials`;
+- `set httpd` listening on an address the Bmon-web server can reach, with
+  `allow <Bmon-web server address>`;
+- the host must be online in Bmon (actions are disabled for offline hosts).
+
+If bmon-collector encrypts the passwords (`BMON_CREDENTIALS_KEY`), put the same
+key in `monit.credentials_key`. Every action, successful or not, is written to the
+audit log. When something is missing, the host page says what (no httpd, no
+credentials, key mismatch, Monit unreachable, credentials refused, address not
+in the `allow` list).
+
 ## Configuration
 
 `/etc/bmon-web/config.php` returns a PHP array; keys not set keep their default
@@ -115,6 +138,9 @@ BMON_WEB_CONFIG=/etc/bmon-web/config.php php bin/bmon-web migrate
 | `app.debug` | `false` | shows stack traces: never in production |
 | `db.dsn` / `db.user` / `db.password` | `bmon_web` on localhost | PDO DSN |
 | `collector_db` | `bmon_collector` | database of bmon-collector |
+| `monit.credentials_key` | `''` | same value as `BMON_CREDENTIALS_KEY` of bmon-collector |
+| `monit.tls_verify` | `false` | require a valid certificate on Monit httpd with SSL |
+| `monit.timeout` | `10` | seconds, for each action |
 | `session.secure` | `true` | cookie over HTTPS only |
 | `session.idle_timeout` | `3600` | seconds |
 | `session.absolute_timeout` | `43200` | seconds |

@@ -25,6 +25,7 @@ final class App
 
         $r->get('/status', [StatusController::class, 'index']);
         $r->get('/status/{id}', [StatusController::class, 'host']);
+        $r->post('/status/{id}/action', [StatusController::class, 'action'], 'admin');
         $r->post('/status/{id}/labels', [LabelController::class, 'assign'], 'admin');
         $r->post('/status/{id}/labels/{labelId}/delete', [LabelController::class, 'unassign'], 'admin');
 

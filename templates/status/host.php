@@ -1,6 +1,7 @@
 <?php
 /** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir
- * @var array $labels @var array $allLabels @var bool $canEdit */
+ * @var array $labels @var array $allLabels @var bool $canEdit @var bool $canAct @var string|null $actionsNote */
+use Bmon\Web\MonitClient;
 use Bmon\Web\Monit;
 
 $offline = $host['offline_since'] !== null;
@@ -101,6 +102,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
 
 <section class="panel">
   <h2>Services <span class="muted">(<?= count($services) ?>)</span></h2>
+  <?php if ($actionsNote !== null): ?><p class="hint"><?= e($actionsNote) ?></p><?php endif ?>
   <?php if (!$services): ?>
     <div class="card muted">No services reported.</div>
   <?php else: ?>
@@ -111,6 +113,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <?= $th('type', 'Type / details') ?>
       <?= $th('since', 'Since') ?>
       <?= $th('checked', 'Checked') ?>
+      <?php if ($canAct): ?><th>Action</th><?php endif ?>
     </tr></thead>
     <tbody>
     <?php foreach ($services as $s):
@@ -148,6 +151,27 @@ $th = static fn (string $key, string $label, string $class = ''): string
         </td>
         <td class="nowrap" title="<?= e(fmt_dt($s['status_changed_at'], 'Y-m-d H:i:s')) ?>"><?= e(since($s['status_changed_at'])) ?></td>
         <td class="nowrap muted" title="<?= e(fmt_dt($s['collected_at'], 'Y-m-d H:i:s')) ?>"><?= e(since($s['collected_at'])) ?> ago</td>
+        <?php if ($canAct): ?>
+        <td class="nowrap">
+          <form method="post" action="<?= e(url('/status/' . $host['id'] . '/action')) ?>" class="action-form"
+                data-confirm="Send the selected action to “<?= e($s['name']) ?>” on <?= e($host['hostname']) ?>?">
+            <?= csrf_field() ?>
+            <input type="hidden" name="service" value="<?= e($s['name']) ?>">
+            <input type="hidden" name="sort" value="<?= e($sort) ?>">
+            <input type="hidden" name="dir" value="<?= e($dir) ?>">
+            <select name="action" required aria-label="Action for <?= e($s['name']) ?>">
+              <option value="">Action…</option>
+              <?php foreach (MonitClient::ACTIONS as $value => $name):
+                  // offer only the monitoring toggle that changes something
+                  if ($value === 'monitor' && (int) $s['monitor'] !== 0) continue;
+                  if ($value === 'unmonitor' && (int) $s['monitor'] === 0) continue; ?>
+                <option value="<?= e($value) ?>"><?= e($name) ?></option>
+              <?php endforeach ?>
+            </select>
+            <button type="submit" class="btn btn-sm">Run</button>
+          </form>
+        </td>
+        <?php endif ?>
       </tr>
     <?php endforeach ?>
     </tbody>
