@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.4.0 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new tables `labels`, `host_labels`).
+
+- Labels menu (replaces the Events placeholder): list with description and host count, create, edit, delete
+- Label page: lists the hosts that carry the label
+- Host page: Labels box under the Host box, to add labels chosen from the list and remove them
+- Label changes and assignments are written to the audit log; only administrators can change labels
+- Router: routes can have several numeric parameters
+
 ## 0.3.1 — 2026-11-11
 
 - Host page: services table sortable by Status, Service, Type, Since and Checked (click the column header; click again to reverse)

@@ -5,7 +5,8 @@ declare(strict_types=1);
 namespace Bmon\Web;
 
 /**
- * Minimal router. Patterns may contain {id} (digits only).
+ * Minimal router. Patterns may contain numeric placeholders such as {id} or
+ * {labelId}; they are passed to the handler as named int arguments.
  * Access levels: 'guest' (anyone), 'auth' (logged in), 'admin'.
  */
 final class Router
@@ -28,7 +29,7 @@ final class Router
     {
         $methodMismatch = false;
         foreach ($this->routes as [$m, $pattern, $handler, $access]) {
-            $regex = '#^' . preg_replace('#\\\{id\\\}#', '(?P<id>\d{1,10})', preg_quote($pattern, '#')) . '$#';
+            $regex = '#^' . preg_replace('#\\\\\{([a-zA-Z]+)\\\\\}#', '(?P<$1>\d{1,10})', preg_quote($pattern, '#')) . '$#';
             if (!preg_match($regex, $path, $mm)) {
                 continue;
             }

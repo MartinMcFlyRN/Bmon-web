@@ -7,6 +7,7 @@ namespace Bmon\Web;
 use Bmon\Web\Controllers\AdminController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
+use Bmon\Web\Controllers\LabelController;
 use Bmon\Web\Controllers\ProfileController;
 use Bmon\Web\Controllers\StatusController;
 
@@ -24,6 +25,15 @@ final class App
 
         $r->get('/status', [StatusController::class, 'index']);
         $r->get('/status/{id}', [StatusController::class, 'host']);
+        $r->post('/status/{id}/labels', [LabelController::class, 'assign'], 'admin');
+        $r->post('/status/{id}/labels/{labelId}/delete', [LabelController::class, 'unassign'], 'admin');
+
+        $r->get('/labels', [LabelController::class, 'index']);
+        $r->get('/labels/new', [LabelController::class, 'newLabel'], 'admin');
+        $r->post('/labels', [LabelController::class, 'create'], 'admin');
+        $r->get('/labels/{id}', [LabelController::class, 'show']);
+        $r->post('/labels/{id}', [LabelController::class, 'update'], 'admin');
+        $r->post('/labels/{id}/delete', [LabelController::class, 'delete'], 'admin');
 
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);

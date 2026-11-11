@@ -1,5 +1,6 @@
 <?php
-/** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir */
+/** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir
+ * @var array $labels @var array $allLabels @var bool $canEdit */
 use Bmon\Web\Monit;
 
 $offline = $host['offline_since'] !== null;
@@ -29,6 +30,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
 <?php endif ?>
 
 <div class="grid-2">
+  <div class="stack">
   <section class="card">
     <h2>Host</h2>
     <dl class="kv">
@@ -39,6 +41,49 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <dt>Memory</dt><dd><?= e(fmt_bytes((int) $host['memory_kb'] * 1024)) ?> <span class="muted">· swap <?= e(fmt_bytes((int) $host['swap_kb'] * 1024)) ?></span></dd>
     </dl>
   </section>
+
+  <section class="card" id="labels">
+    <h2>Labels</h2>
+    <?php if ($labels): ?>
+      <ul class="label-list">
+        <?php foreach ($labels as $l): ?>
+          <li class="label-chip" title="<?= e($l['description']) ?>">
+            <a href="<?= e(url('/labels/' . $l['id'])) ?>"><?= e($l['name']) ?></a>
+            <?php if ($canEdit): ?>
+              <form method="post" action="<?= e(url('/status/' . $host['id'] . '/labels/' . $l['id'] . '/delete')) ?>">
+                <?= csrf_field() ?>
+                <button type="submit" class="chip-remove" title="Remove label <?= e($l['name']) ?>" aria-label="Remove label <?= e($l['name']) ?>">×</button>
+              </form>
+            <?php endif ?>
+          </li>
+        <?php endforeach ?>
+      </ul>
+    <?php else: ?>
+      <p class="muted">No labels on this host.</p>
+    <?php endif ?>
+
+    <?php if ($canEdit):
+        $assigned = array_column($labels, 'id');
+        $available = array_filter($allLabels, static fn ($l) => !in_array($l['id'], $assigned, true)); ?>
+      <?php if ($available): ?>
+        <form method="post" action="<?= e(url('/status/' . $host['id'] . '/labels')) ?>" class="inline-form">
+          <?= csrf_field() ?>
+          <select name="label_id" aria-label="Label to add" required>
+            <option value="">Add a label…</option>
+            <?php foreach ($available as $l): ?>
+              <option value="<?= e($l['id']) ?>"><?= e($l['name']) ?><?= $l['description'] !== '' ? ' — ' . e(mb_strimwidth($l['description'], 0, 60, '…')) : '' ?></option>
+            <?php endforeach ?>
+          </select>
+          <button type="submit" class="btn">Add</button>
+        </form>
+      <?php elseif (!$allLabels): ?>
+        <p class="hint">No labels defined yet: <a href="<?= e(url('/labels/new')) ?>">create one</a>.</p>
+      <?php else: ?>
+        <p class="hint">All labels are already on this host. <a href="<?= e(url('/labels/new')) ?>">New label</a></p>
+      <?php endif ?>
+    <?php endif ?>
+  </section>
+  </div>
   <section class="card">
     <h2>Monit</h2>
     <dl class="kv">
