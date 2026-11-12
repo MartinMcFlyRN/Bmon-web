@@ -58,6 +58,18 @@ h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
 .linklike { background: none; border: 0; padding: 0; color: var(--topbar-text); font: inherit; cursor: pointer; }
 .linklike:hover { color: #fff; text-decoration: underline; }
 
+.tab-menu { position: relative; display: flex; align-items: stretch; }
+.tab-menu-btn { display: flex; align-items: center; gap: 5px; padding: 0 14px; background: none; border: 0;
+  color: var(--topbar-text); font: inherit; font-weight: 500; cursor: pointer; }
+.tab-menu-btn:hover, .tab-menu.open .tab-menu-btn { color: #fff; background: rgba(255,255,255,.06); }
+.tab-menu.active .tab-menu-btn { color: #fff; background: rgba(46,157,79,.25); box-shadow: inset 0 -3px 0 var(--accent); }
+.caret { font-size: 10px; opacity: .8; }
+.tab-menu-list { display: none; position: absolute; top: 100%; left: 0; z-index: 50; min-width: 190px; padding: 6px 0;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 0 0 6px 6px; box-shadow: 0 8px 24px rgba(0,0,0,.15); }
+.tab-menu:hover .tab-menu-list, .tab-menu:focus-within .tab-menu-list, .tab-menu.open .tab-menu-list { display: block; }
+.tabs .tab-menu-list a { display: block; padding: 8px 16px; color: var(--text); font-weight: 500; }
+.tabs .tab-menu-list a:hover { background: #f0f4f2; color: var(--text); text-decoration: none; }
+.tabs .tab-menu-list a.active { color: var(--accent-dark); background: #eef7f1; box-shadow: inset 3px 0 0 var(--accent); }
 .subnav { display: flex; gap: 4px; background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 20px; }
 .subnav a { padding: 10px 14px; color: var(--muted); font-weight: 500; }
 .subnav a:hover { color: var(--text); text-decoration: none; }
@@ -324,9 +336,26 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; }
 .danger-zone .btn { margin-top: 0; }
 
+/* configuration */
+.config-form { display: flex; flex-direction: column; gap: 20px; }
+.config-section h2 { margin-bottom: 4px; }
+.config-field { padding: 12px 0; border-bottom: 1px solid var(--border); }
+.config-field:last-child { border-bottom: 0; padding-bottom: 0; }
+.config-label { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+.config-label label { margin: 0 0 4px; }
+.config-label label.check { margin: 0; }
+.config-key { color: var(--muted); font-size: 11px; }
+.config-field input[type=number] { max-width: 200px; }
+.config-field select { max-width: 360px; }
+.config-source { margin: 6px 0 0; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.config-source .badge { font-size: 11px; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--accent-dark); cursor: pointer; font: inherit; text-decoration: underline; }
+.config-actions { position: sticky; bottom: 0; padding: 12px 0; background: linear-gradient(transparent, var(--bg) 35%); }
+.config-actions .btn { margin-top: 0; }
+
 @media (max-width: 760px) {
   .topbar { flex-wrap: wrap; height: auto; padding: 8px 12px; gap: 8px 16px; }
-  .tabs { order: 3; flex-basis: 100%; overflow-x: auto; }
+  .tabs { order: 3; flex-basis: 100%; overflow-x: visible; flex-wrap: wrap; }
   .tabs a, .tabs .tab-soon { padding: 8px 10px; }
   .table { display: block; overflow-x: auto; }
   .search input[type=search] { width: 100%; }

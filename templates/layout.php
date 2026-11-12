@@ -31,7 +31,16 @@ $tab = static fn (string $id): string => $nav === $id ? ' class="active" aria-cu
       <a href="<?= e(url('/agentconf')) ?>"<?= $tab('agentconf') ?>>AgentConf</a>
     <?php endif ?>
     <?php if ($isAdmin): ?>
-      <a href="<?= e(url('/admin/users')) ?>"<?= $tab('admin') ?>>Admin</a>
+      <?php $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
+            $sub = static fn (string $p): string => str_starts_with($uri, url($p)) ? ' class="active" aria-current="page"' : ''; ?>
+      <div class="tab-menu<?= $nav === 'admin' ? ' active' : '' ?>" data-menu>
+        <button type="button" class="tab-menu-btn" aria-haspopup="true" aria-expanded="false">Admin <span class="caret" aria-hidden="true">▾</span></button>
+        <div class="tab-menu-list" role="menu">
+          <a role="menuitem" href="<?= e(url('/admin/users')) ?>"<?= $sub('/admin/users') ?>>Users</a>
+          <a role="menuitem" href="<?= e(url('/admin/config')) ?>"<?= $sub('/admin/config') ?>>Configuration</a>
+          <a role="menuitem" href="<?= e(url('/admin/audit')) ?>"<?= $sub('/admin/audit') ?>>Audit log</a>
+        </div>
+      </div>
     <?php endif ?>
   </nav>
   <div class="usermenu">
@@ -45,14 +54,6 @@ $tab = static fn (string $id): string => $nav === $id ? ' class="active" aria-cu
     </form>
   </div>
 </header>
-
-<?php if ($nav === 'admin'): ?>
-<nav class="subnav" aria-label="Admin">
-  <a href="<?= e(url('/admin/users')) ?>"<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', url('/admin/users')) ? ' class="active"' : '' ?>>Users</a>
-  <a href="<?= e(url('/admin/audit')) ?>"<?= str_starts_with($_SERVER['REQUEST_URI'] ?? '', url('/admin/audit')) ? ' class="active"' : '' ?>>Audit log</a>
-</nav>
-<?php endif ?>
-
 <main class="container">
   <?php require __DIR__ . '/partials/flashes.php' ?>
   <?= $content ?>

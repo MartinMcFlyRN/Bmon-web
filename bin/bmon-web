@@ -90,6 +90,9 @@ foreach ($args as $a) {
 
 try {
     Config::load();
+    if ($cmd !== 'migrate') {
+        \Bmon\Web\Settings::apply();
+    }
     $cli = ['id' => null, 'username' => 'cli'];
 
     switch ($cmd) {

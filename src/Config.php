@@ -14,6 +14,12 @@ namespace Bmon\Web;
 final class Config
 {
     private static ?array $values = null;
+    /** defaults + config.php, before the settings of Admin → Configuration */
+    private static ?array $fileValues = null;
+    /** keys present in config.php */
+    private static array $fileRaw = [];
+    /** keys overridden from the database (Admin → Configuration) */
+    private static array $dbKeys = [];
 
     public static function defaults(): array
     {
@@ -92,7 +98,57 @@ final class Config
         if (!preg_match('/^[A-Za-z0-9_]+$/', (string) $values['collector_db'])) {
             throw new \RuntimeException('collector_db must be a plain database name');
         }
-        self::$values = $values;
+        self::$values = self::$fileValues = $values;
+        self::$fileRaw = isset($file) && is_array($file) ? $file : [];
+        self::$dbKeys = [];
+    }
+
+    /** Sets a value (used for the settings stored in the database). */
+    public static function set(string $key, mixed $value): void
+    {
+        if (self::$values === null) {
+            self::load();
+        }
+        $ref = &self::$values;
+        foreach (explode('.', $key) as $part) {
+            if (!isset($ref[$part]) || !is_array($ref[$part])) {
+                $ref[$part] = $ref[$part] ?? [];
+            }
+            $ref = &$ref[$part];
+        }
+        $ref = $value;
+        self::$dbKeys[$key] = true;
+    }
+
+    /** Value without the database settings: config.php, or the default. */
+    public static function inherited(string $key): mixed
+    {
+        return self::lookup(self::$fileValues ?? [], $key);
+    }
+
+    /** Where the current value comes from: database | file | default */
+    public static function source(string $key): string
+    {
+        if (isset(self::$dbKeys[$key])) {
+            return 'database';
+        }
+        return self::lookup(self::$fileRaw, $key, "\0missing") !== "\0missing" ? 'file' : 'default';
+    }
+
+    public static function defaultValue(string $key): mixed
+    {
+        return self::lookup(self::defaults(), $key);
+    }
+
+    private static function lookup(array $v, string $key, mixed $default = null): mixed
+    {
+        foreach (explode('.', $key) as $part) {
+            if (!is_array($v) || !array_key_exists($part, $v)) {
+                return $default;
+            }
+            $v = $v[$part];
+        }
+        return $v;
     }
 
     public static function locate(): ?string

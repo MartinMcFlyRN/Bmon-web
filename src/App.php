@@ -67,6 +67,9 @@ final class App
         $r->post('/admin/users/{id}', [AdminController::class, 'updateUser'], 'admin');
         $r->post('/admin/users/{id}/delete', [AdminController::class, 'deleteUser'], 'admin');
         $r->get('/admin/audit', [AdminController::class, 'audit'], 'admin');
+        $r->get('/admin/config', [AdminController::class, 'config'], 'admin');
+        $r->post('/admin/config', [AdminController::class, 'saveConfig'], 'admin');
+        $r->post('/admin/config/reset', [AdminController::class, 'resetConfig'], 'admin');
 
         return $r;
     }
@@ -75,6 +78,7 @@ final class App
     {
         try {
             Config::load();
+            Settings::apply();
             ini_set('display_errors', Config::get('app.debug') ? '1' : '0');
             self::securityHeaders();
 

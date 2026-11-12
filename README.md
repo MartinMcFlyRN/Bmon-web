@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.10.1**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.11.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -284,41 +284,30 @@ not in the PATH, or to `'none'` to disable the checks.
 
 ## Configuration
 
-`/etc/bmon-web/config.php` returns a PHP array; keys not set keep their default
-(see `src/Config.php`). Lookup order: `$BMON_WEB_CONFIG`, `/etc/bmon-web/config.php`,
-`config/config.php`.
+Most settings are edited in **Admin → Configuration** (administrators): name,
+public URL, time zone, sessions and sign-in limits, trusted proxies, Monit
+actions, Slack report, AgentConf. Each field shows where its value comes from —
+*set here*, *from config.php* or *default* — and can be reset. Precedence:
+value saved in Admin → Configuration > `config.php` > default; a value equal to
+the `config.php` one is not stored, so it keeps following the file. The Slack
+webhook is a secret: it is never shown again, only whether it is set.
+
+`/etc/bmon-web/config.php` (PHP array; lookup: `$BMON_WEB_CONFIG`,
+`/etc/bmon-web/config.php`, `config/config.php`) keeps what must not be changed
+from the browser:
 
 | Key | Default | |
 |---|---|---|
-| `app.name` | `Bmon` | shown in the header and page titles |
-| `app.base_path` | `''` | e.g. `/bmon` when published in a subdirectory |
-| `app.timezone` | `Europe/Rome` | display timezone; the database stores UTC |
-| `app.debug` | `false` | shows stack traces: never in production |
-| `app.url` | `''` | public URL of Bmon-web, for links in Slack reports |
-| `db.dsn` / `db.user` / `db.password` | `bmon_web` on localhost | PDO DSN |
+| `db.dsn` / `db.user` / `db.password` | `bmon_web` on localhost | PDO DSN of the Bmon-web database |
 | `collector_db` | `bmon_collector` | database of bmon-collector |
-| `monit.credentials_key` | `''` | same value as `BMON_CREDENTIALS_KEY` of bmon-collector |
-| `monit.tls_verify` | `false` | require a valid certificate on Monit httpd with SSL |
-| `monit.timeout` | `10` | seconds, for each action |
-| `agentconf.monit_binary` | `''` | monit used for `monit -t` (`''` = search PATH, `'none'` = no validation) |
-| `agentconf.monit_dir` | `/etc/monit/conf.d` | where the zip is installed on the agents (scripts in its `bmon-scripts/`) |
-| `agentconf.script_dir` | `''` | directory of the attached scripts on the agents (`''` = `<monit_dir>/bmon-scripts`) |
-| `agentconf.link_ttl_hours` | `24` | lifetime of the download links (no sign-in) |
-| `agentconf.collector_url` | `''` | default collector URL of the "Reporting to Bmon" template |
-| `agentconf.web_address` | `''` | default address of Bmon-web in that template (`allow`) |
-| `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |
-| `slack.title` | `Active alerts summary:` | first line of the report |
-| `slack.no_alerts` | `No active alerts.` | text when nothing is failing |
-| `slack.proxy` | `''` | outgoing proxy, e.g. `http://proxy:3128` |
-| `slack.timeout` | `10` | seconds |
-| `session.secure` | `true` | cookie over HTTPS only |
-| `session.idle_timeout` | `3600` | seconds |
-| `session.absolute_timeout` | `43200` | seconds |
-| `security.password_min_length` | `10` | |
-| `security.login_window` | `900` | seconds |
-| `security.login_max_per_ip` | `20` | failed logins per IP in the window |
-| `security.login_max_per_user` | `5` | failed logins per username+IP in the window |
-| `security.trusted_proxies` | `[]` | CIDRs allowed to set `X-Forwarded-For` / `X-Real-IP` |
+| `app.base_path` | `''` | e.g. `/bmon` when published in a subdirectory |
+| `app.debug` | `false` | shows stack traces: never in production |
+| `monit.credentials_key` | `''` | same value as `BMON_CREDENTIALS_KEY` of bmon-collector (a key must not be stored next to what it protects) |
+| `agentconf.monit_binary` | `''` | monit used for `monit -t` (`''` = search PATH, `'none'` = no validation) — a program run by the server |
+
+The keys of Admin → Configuration can also be set in `config.php`, as initial
+values (see `config/config.example.php`); the CLI (`report:slack`) uses the same
+values as the web interface.
 
 ## Command line
 

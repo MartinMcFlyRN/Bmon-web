@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.11.0 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new table `settings`). Nothing to change in `config.php`: its values become the initial values of the new page.
+
+- The Admin menu is now a drop-down: **Users**, **Configuration**, **Audit log** (the Admin sub-navigation bar is gone)
+- New **Admin → Configuration** page with the settings of `config.php` except the database connection and the deployment/secret ones (`collector_db`, `app.base_path`, `app.debug`, `monit.credentials_key`, `agentconf.monit_binary`): general, sign-in and sessions, Monit actions, Slack report, AgentConf. Each field is validated and shows its source (set here / config.php / default) with a reset; the Slack webhook is write-only. Changes in the audit log
+- Precedence: saved setting > `config.php` > default; the CLI applies the same settings
+- `config/config.example.php` reduced to what belongs in the file
+
 ## 0.10.1 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new columns in `host_meta`).

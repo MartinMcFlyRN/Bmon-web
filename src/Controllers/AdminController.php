@@ -8,6 +8,7 @@ use Bmon\Web\Audit;
 use Bmon\Web\Auth;
 use Bmon\Web\HttpException;
 use Bmon\Web\Password;
+use Bmon\Web\Settings;
 use Bmon\Web\Users;
 use Bmon\Web\View;
 
@@ -167,5 +168,45 @@ final class AdminController
             return ['password_confirm' => 'The two passwords do not match.'];
         }
         return [];
+    }
+
+    // --- Admin → Configuration --------------------------------------------------
+
+    public function config(array $errors = [], array $submitted = []): string
+    {
+        return View::render('admin/config', [
+            'title' => 'Configuration',
+            'nav' => 'admin',
+            'fields' => Settings::fields(),
+            'stored' => Settings::stored(),
+            'errors' => $errors,
+            'submitted' => $submitted,
+            'configFile' => \Bmon\Web\Config::locate(),
+        ]);
+    }
+
+    public function saveConfig(): string
+    {
+        [$errors, $changed] = Settings::save($_POST, (string) Auth::user()['username']);
+        if ($errors) {
+            http_response_code(422);
+            flash('error', 'Nothing was saved: fix the highlighted fields.');
+            return $this->config($errors, $_POST);
+        }
+        if ($changed) {
+            Audit::log('config.update', implode(', ', $changed));
+        }
+        flash('success', $changed ? 'Configuration saved (' . count($changed) . ' change' . (count($changed) === 1 ? '' : 's') . ').' : 'Nothing changed.');
+        redirect('/admin/config');
+    }
+
+    public function resetConfig(): never
+    {
+        $key = is_string($_POST['key'] ?? null) ? $_POST['key'] : '';
+        if (Settings::reset($key)) {
+            Audit::log('config.reset', $key);
+            flash('success', "“{$key}” follows config.php / the default again.");
+        }
+        redirect('/admin/config#' . str_replace('.', '-', $key));
     }
 }

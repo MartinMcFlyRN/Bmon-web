@@ -1,17 +1,13 @@
 <?php
 
 // Copy to /etc/bmon-web/config.php (or config/config.php) and edit.
-// Only the keys you set override the defaults (see src/Config.php).
+//
+// This file keeps the database connection and the settings that must not be
+// changed from the browser. Everything else is in Admin → Configuration: the
+// keys listed at the bottom can still be set here, as initial values, and a
+// value saved in Admin → Configuration overrides them.
 
 return [
-    'app' => [
-        'name'      => 'Bmon',
-        'base_path' => '',              // '/bmon' if published in a subdirectory
-        'timezone'  => 'Europe/Rome',
-        'debug'     => false,           // never true in production
-        'url'       => 'https://bmon.example.com',  // public URL, for links in Slack reports
-    ],
-
     'db' => [
         'dsn'      => 'mysql:host=localhost;dbname=bmon_web;charset=utf8mb4',
         // or a unix socket: 'mysql:unix_socket=/run/mysqld/mysqld.sock;dbname=bmon_web;charset=utf8mb4'
@@ -22,55 +18,31 @@ return [
     // Database written by bmon-collector (same server, SELECT grant only).
     'collector_db' => 'bmon_collector',
 
-    // Service actions (start, stop, restart, monitor, unmonitor) are sent to the
-    // Monit httpd of each host with the credentials found in its reports.
+    'app' => [
+        'base_path' => '',              // '/bmon' if published in a subdirectory
+        'debug'     => false,           // never true in production
+    ],
+
     'monit' => [
         // Same value as BMON_CREDENTIALS_KEY of bmon-collector (empty if not set there).
         'credentials_key' => '',
-        // true to require a valid certificate on Monit httpd with SSL.
-        'tls_verify'      => false,
-        'timeout'         => 10,
     ],
 
-    // AgentConf: Monit checks prepared for the agents and downloaded as a zip.
     'agentconf' => [
         // monit binary used to validate the checks with "monit -t" ('' = search PATH, 'none' = never).
-        'monit_binary'  => '',
-        // Directory of the Monit include files on the agents.
-        'monit_dir'     => '/etc/monit/conf.d',
-        // Directory of the scripts attached to the checks, on the agents
-        // ('' = <monit_dir>/bmon-scripts). Never monit_dir itself: Monit would read the scripts.
-        'script_dir'    => '',
-        // Lifetime of the download links of the zips (usable without signing in, e.g. with curl).
-        'link_ttl_hours' => 24,
-        // Defaults of the "Reporting to Bmon" template.
-        'collector_url' => 'https://monit:PASSWORD@collector.example.com/collector',
-        'web_address'   => '203.0.113.5',
+        'monit_binary' => '',
     ],
 
-    // bin/bmon-web report:slack: report of the failing services to a Slack channel.
-    // Create an Incoming Webhook for the channel: https://api.slack.com/messaging/webhooks
-    'slack' => [
-        'webhook_url' => '',            // https://hooks.slack.com/services/T…/B…/…
-        'title'       => 'Active alerts summary:',   // e.g. 'Riepilogo Allarmi Attivi:'
-        'no_alerts'   => 'No active alerts.',
-        'proxy'       => '',            // only if outgoing HTTPS goes through a proxy
-        'timeout'     => 10,
-    ],
-
-    'session' => [
-        'secure'           => true,     // set false only to test over plain HTTP
-        'idle_timeout'     => 3600,
-        'absolute_timeout' => 43200,
-    ],
-
-    'security' => [
-        'password_min_length' => 10,
-        'login_window'        => 900,
-        'login_max_per_ip'    => 20,
-        'login_max_per_user'  => 5,
-        // Only if another reverse proxy sits in front of the nginx that runs PHP:
-        // 'trusted_proxies' => ['10.0.0.0/8'],
-        'trusted_proxies'     => [],
-    ],
+    // Optional initial values of Admin → Configuration, e.g.:
+    // 'app'     => ['name' => 'Bmon', 'url' => 'https://bmon.example.com', 'timezone' => 'Europe/Rome'],
+    // 'session' => ['secure' => true, 'idle_timeout' => 3600, 'absolute_timeout' => 43200],
+    // 'security'=> ['password_min_length' => 10, 'login_window' => 900, 'login_max_per_ip' => 20,
+    //               'login_max_per_user' => 5, 'trusted_proxies' => []],
+    // 'monit'   => ['tls_verify' => false, 'timeout' => 10],
+    // 'slack'   => ['webhook_url' => '', 'title' => 'Active alerts summary:', 'no_alerts' => 'No active alerts.',
+    //               'proxy' => '', 'timeout' => 10],
+    // 'agentconf' => ['monit_dir' => '/etc/monit/conf.d', 'script_dir' => '', 'link_ttl_hours' => 24,
+    //               'collector_url' => '', 'web_address' => ''],
+    // Note: PHP keeps only the last 'app' / 'monit' / 'agentconf' key of an array:
+    // merge them with the ones above instead of repeating them.
 ];

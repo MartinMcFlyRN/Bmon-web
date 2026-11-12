@@ -135,3 +135,27 @@ document.addEventListener('submit', (ev) => {
     .catch((e) => { window.alert('The link could not be created: ' + e.message); })
     .finally(() => { button.disabled = false; });
 });
+
+// Dropdown menus in the top bar: <div data-menu><button>…</button><div class="tab-menu-list">…</div></div>
+// (hover and keyboard focus open them with CSS; click/tap toggles, Escape and outside clicks close)
+document.addEventListener('click', (ev) => {
+  const btn = ev.target.closest('[data-menu] > .tab-menu-btn');
+  document.querySelectorAll('[data-menu].open').forEach((m) => {
+    if (!btn || m !== btn.parentElement) {
+      m.classList.remove('open');
+      m.querySelector('.tab-menu-btn').setAttribute('aria-expanded', 'false');
+    }
+  });
+  if (btn) {
+    const open = btn.parentElement.classList.toggle('open');
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  }
+});
+document.addEventListener('keydown', (ev) => {
+  if (ev.key !== 'Escape') return;
+  document.querySelectorAll('[data-menu]').forEach((m) => {
+    m.classList.remove('open');
+    m.querySelector('.tab-menu-btn').setAttribute('aria-expanded', 'false');
+    if (m.contains(document.activeElement)) document.activeElement.blur();
+  });
+});
