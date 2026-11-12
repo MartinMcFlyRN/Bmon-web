@@ -232,6 +232,11 @@ the agents, to install on each node with all its checks ready.
   host page and in the Status list instead of the kernel. The value appears
   after about two runs of the check (Monit reads a program's result at the
   following run).
+  Next to it Bmon-web shows the distribution's logo when
+  `public/assets/os/<id>.svg|png|webp` exists (`<id>` as in `/etc/os-release`,
+  e.g. `debian.svg`); no logos are shipped, as they are trademarks of their
+  owners — put there the official files you may use. Otherwise a neutral badge
+  with the initials is shown. Those files are ignored by git.
 - **Service groups**: Monit groups (`group <name>`) are defined in Admin →
   Service groups and chosen with checkboxes when adding or editing a check. They
   are not written in the editable text: the zip (and `monit -t`) adds a

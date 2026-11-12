@@ -265,6 +265,27 @@ form .btn-sm { margin-top: 0; }
 #notes textarea { margin-bottom: 0; }
 #notes form .btn-sm { margin-top: 8px; }
 
+/* OS icons (logos from public/assets/os/, or neutral badges) */
+.os-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.os-logo { display: inline-block; object-fit: contain; vertical-align: middle; }
+.os-logo-md { width: 22px; height: 22px; }
+.os-logo-sm { width: 15px; height: 15px; margin-top: -2px; }
+.os-badge { display: inline-flex; align-items: center; justify-content: center; border-radius: 50%; color: #fff; font-weight: 700; vertical-align: middle; letter-spacing: -.3px; }
+.os-badge-md { width: 22px; height: 22px; font-size: 10px; }
+.os-badge-sm { width: 15px; height: 15px; font-size: 7.5px; margin-top: -2px; }
+.os-hue-0 { background: #5b6b8c; }
+.os-hue-1 { background: #6b8c5b; }
+.os-hue-2 { background: #8c5b6b; }
+.os-hue-3 { background: #5b8c86; }
+.os-hue-4 { background: #8c7a5b; }
+.os-hue-5 { background: #735b8c; }
+.os-hue-6 { background: #5b7f8c; }
+.os-hue-7 { background: #8c665b; }
+.os-hue-8 { background: #668c5b; }
+.os-hue-9 { background: #8c5b84; }
+.os-hue-10 { background: #5b8c6f; }
+.os-hue-11 { background: #7d8c5b; }
+
 /* inventory */
 .stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 textarea { width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 4px; resize: vertical; }

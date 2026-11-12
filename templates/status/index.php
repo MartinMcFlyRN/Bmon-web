@@ -85,7 +85,7 @@ $bar = static function (float|int|string|null $v): string {
             $h['monit_version'] !== '' ? 'Monit ' . $h['monit_version'] : '',
         ])); ?>
         <div class="muted small">
-          <?= e($h['remote_addr']) ?><span class="hide-sm"><?= $h['remote_addr'] !== '' && $meta !== '' ? ' · ' : '' ?><?= e($meta) ?></span>
+          <?= e($h['remote_addr']) ?><span class="hide-sm"><?= $h['remote_addr'] !== '' && $meta !== '' ? ' · ' : '' ?><?= $os !== null ? \Bmon\Web\OsInfo::icon($os, 'sm') . ' ' : '' ?><?= e($meta) ?></span>
         </div>
       </td>
       <td class="nowrap"><?= $bar($h['cpu']) ?></td>

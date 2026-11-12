@@ -30,6 +30,48 @@ final class OsInfo
         return $out['pretty'] !== '' || $out['id'] !== '' ? $out : null;
     }
 
+    /**
+     * Logo of an OS id: public/assets/os/<id>.svg|png|webp provided by the
+     * administrator (no logos are shipped: they are trademarks). Null if none.
+     */
+    public static function logoUrl(string $id): ?string
+    {
+        static $cache = [];
+        $id = strtolower($id);
+        if (!preg_match('/^[a-z0-9][a-z0-9._-]{0,40}$/', $id)) {
+            return null;
+        }
+        if (!array_key_exists($id, $cache)) {
+            $cache[$id] = null;
+            foreach (['svg', 'png', 'webp'] as $ext) {
+                $file = BMON_ROOT . "/public/assets/os/$id.$ext";
+                if (is_file($file)) {
+                    $cache[$id] = url("/assets/os/$id.$ext") . '?v=' . filemtime($file);
+                    break;
+                }
+            }
+        }
+        return $cache[$id];
+    }
+
+    /**
+     * HTML of the OS icon: the logo if available, otherwise a neutral badge with
+     * the initials and a colour derived from the id (not a brand colour).
+     */
+    public static function icon(array $os, string $size = 'md'): string
+    {
+        $label = $os['pretty'] !== '' ? $os['pretty'] : $os['id'];
+        if (($src = self::logoUrl($os['id'])) !== null) {
+            return '<img class="os-logo os-logo-' . e($size) . '" src="' . e($src) . '" alt="" title="' . e($label) . '">';
+        }
+        $base = $os['id'] !== '' ? $os['id'] : $label;
+        $letters = preg_replace('/[^A-Za-z0-9]/', '', $base);
+        $initials = mb_strtoupper(mb_substr($letters, 0, 1)) . mb_strtolower(mb_substr($letters, 1, 1));
+        $hue = hexdec(substr(md5(strtolower($base)), 0, 4)) % 12;   // one of 12 neutral hues
+        return '<span class="os-badge os-badge-' . e($size) . ' os-hue-' . $hue . '" title="' . e($label) . '" aria-hidden="true">'
+            . e($initials !== '' ? $initials : '?') . '</span>';
+    }
+
     /** From the services of a host (rows with decoded `data`). */
     public static function fromServices(array $services): ?array
     {

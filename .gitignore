@@ -3,3 +3,6 @@
 .DS_Store
 .idea/
 .vscode/
+/public/assets/os/*.svg
+/public/assets/os/*.png
+/public/assets/os/*.webp

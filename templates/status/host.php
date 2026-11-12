@@ -60,7 +60,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <?php endif ?>
       <dt>Address</dt><dd class="mono"><?= e($host['remote_addr'] ?: '—') ?></dd>
       <?php if ($osInfo !== null): ?>
-        <dt>OS</dt><dd><span class="strong"><?= e($osInfo['pretty']) ?></span>
+        <dt>OS</dt><dd class="os-row"><?= \Bmon\Web\OsInfo::icon($osInfo, 'md') ?><span class="strong"><?= e($osInfo['pretty']) ?></span>
           <?php if ($osInfo['codename'] !== '' && !str_contains(strtolower($osInfo['pretty']), strtolower($osInfo['codename']))): ?><span class="muted">(<?= e($osInfo['codename']) ?>)</span><?php endif ?></dd>
       <?php endif ?>
       <dt><?= $osInfo !== null ? 'Kernel' : 'System' ?></dt><dd><?= e(trim($host['os_name'] . ' ' . $host['os_release']) ?: '—') ?> <span class="muted"><?= e($host['machine']) ?></span></dd>

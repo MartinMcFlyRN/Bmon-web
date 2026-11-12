@@ -7,6 +7,7 @@ No migrations.
 - AgentConf: new template **OS information** (System), a `check program` with an attached script `bmon-osinfo.sh` (shipped in `resources/agentconf/`) that reports the distribution and version from `/etc/os-release` as a `BMON_OS …` line; it never alerts
 - Templates can now ship a script, attached automatically when the check is created
 - The OS reported by that check is shown on the host page ("OS", with codename) and in the Status list instead of the kernel; the service summary shows "OS" and "Arch"
+- OS icon next to it: the distribution's logo from `public/assets/os/<id>.svg|png|webp` when the administrator provides it (no logos shipped: they are trademarks), otherwise a neutral badge with the initials
 
 ## 0.12.0 — 2026-11-12
 
