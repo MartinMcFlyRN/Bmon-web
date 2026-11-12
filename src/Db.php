@@ -89,7 +89,8 @@ final class Db
     {
         $row = self::one(
             'SELECT h.*, h.hostname AS monit_hostname, ' . self::hostName() . ' AS display_hostname,
-                    hm.display_name, hm.notes, hm.name_updated_at, hm.name_updated_by, hm.notes_updated_at, hm.notes_updated_by
+                    hm.display_name, hm.notes, hm.name_updated_at, hm.name_updated_by, hm.notes_updated_at, hm.notes_updated_by,
+                    hm.monit_address, hm.monit_port, hm.addr_updated_at, hm.addr_updated_by
                FROM ' . self::collector('hosts') . ' h ' . self::hostMetaJoin() . ' WHERE h.id = ?',
             [$id]
         );

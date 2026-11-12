@@ -249,6 +249,7 @@ form .btn-sm { margin-top: 0; }
 .inline-edit[open] summary { color: var(--muted); }
 .inline-edit .inline-form { margin-top: 6px; }
 .inline-edit .inline-form input { flex: 1; min-width: 0; }
+.inline-edit .inline-form input.port-input { flex: 0 0 72px; }
 #notes textarea { margin-bottom: 0; }
 #notes form .btn-sm { margin-top: 8px; }
 

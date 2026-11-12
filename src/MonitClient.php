@@ -150,10 +150,12 @@ final class MonitClient
         if ($port <= 0 || $port > 65535) {
             throw new \RuntimeException('Monit httpd is not enabled on this host (no "set httpd" in monitrc).');
         }
-        $addr = trim((string) $host['httpd_address']);
-        // httpd on all interfaces or on loopback: use the address the reports come from
-        if ($addr === '' || in_array($addr, ['0.0.0.0', '::', '*'], true) || self::isLoopback($addr)) {
-            $addr = trim((string) $host['remote_addr']);
+        // address set in Bmon-web (e.g. the public IP instead of the private one Monit reports)
+        $addr = trim((string) ($host['monit_address'] ?? ''));
+        if ($addr !== '') {
+            $port = (int) ($host['monit_port'] ?? 0) ?: $port;
+        } else {
+            $addr = self::reportedAddress($host);
         }
         if ($addr === '') {
             throw new \RuntimeException('The address of Monit httpd is not known.');
@@ -166,6 +168,32 @@ final class MonitClient
             $addr = "[$addr]";
         }
         return ((int) $host['httpd_ssl'] ? 'https' : 'http') . "://$addr:$port";
+    }
+
+    /**
+     * Address Bmon-web would use from the reports alone: the httpd address, or the
+     * address the reports come from when httpd listens on all interfaces or loopback.
+     */
+    public static function reportedAddress(array $host): string
+    {
+        $addr = trim((string) $host['httpd_address']);
+        if ($addr === '' || in_array($addr, ['0.0.0.0', '::', '*'], true) || self::isLoopback($addr)) {
+            $addr = trim((string) $host['remote_addr']);
+        }
+        return $addr;
+    }
+
+    /** Validation of an address typed in Bmon-web (IP or host name). */
+    public static function addressError(string $addr): ?string
+    {
+        if ($addr === '') {
+            return null;
+        }
+        if (filter_var($addr, FILTER_VALIDATE_IP)
+            || preg_match('/^(?=.{1,253}$)([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)*[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/i', $addr)) {
+            return null;
+        }
+        return 'Enter an IP address or a host name (without http:// or port).';
     }
 
     /** Whether actions can be attempted at all (for showing the controls). */

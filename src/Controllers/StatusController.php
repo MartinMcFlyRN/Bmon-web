@@ -307,4 +307,38 @@ final class StatusController
         flash('success', 'Notes saved.');
         redirect('/status/' . $id . '#notes');
     }
+
+    /** POST /status/{id}/monit-address: address (and port) of Monit httpd to use; empty = automatic. */
+    public function monitAddress(int $id): never
+    {
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
+        $addr = trim(is_string($_POST['monit_address'] ?? null) ? $_POST['monit_address'] : '');
+        $portIn = trim(is_string($_POST['monit_port'] ?? null) ? $_POST['monit_port'] : '');
+        $addr = preg_replace('#^https?://#i', '', $addr);
+        if (preg_match('/^\[(.+)\]$/', $addr, $m)) {
+            $addr = $m[1];   // [IPv6]
+        }
+        if (($err = MonitClient::addressError($addr)) !== null) {
+            flash('error', $err);
+            redirect('/status/' . $id);
+        }
+        $port = null;
+        if ($portIn !== '') {
+            if (!ctype_digit($portIn) || (int) $portIn < 1 || (int) $portIn > 65535) {
+                flash('error', 'The port must be a number between 1 and 65535 (or empty for the reported one).');
+                redirect('/status/' . $id);
+            }
+            $port = (int) $portIn;
+        }
+        HostMeta::setMonitAddress($id, $addr, $port, (string) Auth::user()['username']);
+        $hp = static fn (string $a, int $p): string => (str_contains($a, ':') ? "[$a]" : $a) . ':' . $p;
+        $reported = $hp(MonitClient::reportedAddress($host), (int) $host['httpd_port']);
+        $chosen = $hp($addr, $port ?? (int) $host['httpd_port']);
+        Audit::log('host.monit_address', "{$host['hostname']} (id $id): "
+            . ($addr === '' ? "automatic ($reported)" : "$chosen instead of $reported"));
+        flash('success', $addr === ''
+            ? "Monit httpd is reached again at the reported address ($reported)."
+            : "Monit httpd will be reached at $chosen (reported: $reported).");
+        redirect('/status/' . $id);
+    }
 }

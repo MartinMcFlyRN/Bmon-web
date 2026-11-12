@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.1 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new columns in `host_meta`).
+
+- Host page, Monit box: "Edit address" under Service monit sets the address (IP or host name) and optionally the port used to reach Monit httpd, e.g. the public IP instead of the private one Monit reports; used for actions and the reachability check. The reported address stays visible ("httpd (reported)", "Reports from"); empty = automatic
+- Audit log entry for each change; administrators only
+
 ## 0.10.0 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new table `host_meta`).

@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.10.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.10.1**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -123,6 +123,14 @@ Requirements on each host (details in the Bmon-collector README):
 - `set httpd` listening on an address the Bmon-web server can reach, with
   `allow <Bmon-web server address>`;
 - the host must be online in Bmon (actions are disabled for offline hosts).
+
+Bmon-web connects to the httpd address Monit reports, or to the address the
+reports come from when httpd listens on all interfaces or on loopback. When that
+is not reachable — typically a private IP while Bmon-web must use the public one
+— set the address (and, if a NAT changes it, the port) with **Edit address**
+under "Service monit" in the Monit box of the host page. It is used for the
+actions and for the reachability dot; the reported address stays visible as
+"httpd (reported)". Empty = automatic again.
 
 If bmon-collector encrypts the passwords (`BMON_CREDENTIALS_KEY`), put the same
 key in `monit.credentials_key`. Every action, successful or not, is written to the

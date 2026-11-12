@@ -31,6 +31,17 @@ final class HostMeta
         );
     }
 
+    /** Address/port of Monit httpd to use instead of the reported ones ('' / null = automatic). */
+    public static function setMonitAddress(int $hostId, string $address, ?int $port, string $by): void
+    {
+        Db::exec(
+            'INSERT INTO host_meta (host_id, monit_address, monit_port, addr_updated_at, addr_updated_by) VALUES (?, ?, ?, ?, ?)
+             ON DUPLICATE KEY UPDATE monit_address = VALUES(monit_address), monit_port = VALUES(monit_port),
+                 addr_updated_at = VALUES(addr_updated_at), addr_updated_by = VALUES(addr_updated_by)',
+            [$hostId, $address, $address === '' ? null : $port, now_utc(), $by]
+        );
+    }
+
     public static function nameError(string $name): ?string
     {
         if (mb_strlen($name) > self::MAX_NAME) {
