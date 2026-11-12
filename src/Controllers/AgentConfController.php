@@ -24,9 +24,10 @@ final class AgentConfController
     {
         $all = ($_GET['all'] ?? '') === '1';
         $agents = Db::all(
-            'SELECT id, hostname, remote_addr, monit_version, os_name, os_release, services_total, last_seen, offline_since
-               FROM ' . Db::collector('hosts')
-            . ($all ? '' : ' WHERE offline_since IS NULL') . ' ORDER BY hostname'
+            'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.monit_version, h.os_name, h.os_release,
+                    h.services_total, h.last_seen, h.offline_since
+               FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin()
+            . ($all ? '' : ' WHERE h.offline_since IS NULL') . ' ORDER BY hostname'
         );
         $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
         return View::render('agentconf/index', [
@@ -41,7 +42,7 @@ final class AgentConfController
         $checks = AgentChecks::forHost($id);
         $managed = [];
         foreach ($checks as &$c) {
-            $c['services'] = AgentChecks::definedServices($c['config'], $host['hostname']);
+            $c['services'] = AgentChecks::definedServices($c['config'], $host['monit_hostname']);
             foreach ($c['services'] as $svc) {
                 $managed[$svc] = $c;
             }
@@ -133,7 +134,7 @@ final class AgentConfController
             'host' => $host, 'check' => $check, 'form' => $form ?? $check, 'errors' => $errors,
             'syntax' => $syntax, 'scriptSyntax' => $scriptSyntax, 'tplInfo' => AgentTemplates::get($check['template']),
             'scriptDir' => AgentChecks::scriptDir(), 'monitDir' => AgentChecks::monitDir(),
-            'services' => AgentChecks::definedServices($form['config'] ?? $check['config'], $host['hostname']),
+            'services' => AgentChecks::definedServices($form['config'] ?? $check['config'], $host['monit_hostname']),
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
     }
@@ -259,7 +260,7 @@ final class AgentConfController
         header('Referrer-Policy: no-referrer');
         [$state, $row] = DownloadLinks::resolve($token);
         $host = $state === 'ok'
-            ? Db::one('SELECT id, hostname FROM ' . Db::collector('hosts') . ' WHERE id = ?', [(int) $row['host_id']])
+            ? Db::host((int) $row['host_id'])
             : null;
         if ($state !== 'ok' || $host === null) {
             http_response_code($state === 'expired' || $state === 'revoked' ? 410 : 404);
@@ -288,10 +289,7 @@ final class AgentConfController
 
     private function hostRow(int $id): array
     {
-        return Db::one('SELECT id, hostname, remote_addr, monit_version, os_name, os_release, services_total,
-                               last_seen, offline_since, control_file
-                          FROM ' . Db::collector('hosts') . ' WHERE id = ?', [$id])
-            ?? throw new HttpException(404, 'Agent not found.');
+        return Db::host($id) ?? throw new HttpException(404, 'Agent not found.');
     }
 
     private function check(int $id, int $checkId): array

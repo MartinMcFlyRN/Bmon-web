@@ -131,7 +131,7 @@ final class InventoryController
 
     private function host(int $id): array
     {
-        return Db::one('SELECT id, hostname FROM ' . Db::collector('hosts') . ' WHERE id = ?', [$id])
+        return Db::host($id)
             ?? throw new HttpException(404, 'Host not found.');
     }
 }

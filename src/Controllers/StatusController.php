@@ -6,6 +6,7 @@ namespace Bmon\Web\Controllers;
 
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
+use Bmon\Web\HostMeta;
 use Bmon\Web\HttpException;
 use Bmon\Web\Inventory;
 use Bmon\Web\Audit;
@@ -21,7 +22,7 @@ final class StatusController
     /** sort key => SQL expression (computed columns of the list query) */
     private const SORTS = [
         'state'    => 'state',
-        'host'     => 'h.hostname',
+        'host'     => 'hostname',
         'cpu'      => 'cpu',
         'mem'      => 'mem',
         'load'     => 'load1',
@@ -54,9 +55,9 @@ final class StatusController
             $where = [];
             $params = [];
             if ($q !== '') {
-                $where[] = '(h.hostname LIKE ? OR h.remote_addr LIKE ?)';
+                $where[] = "(h.hostname LIKE ? OR hm.display_name LIKE ? OR h.remote_addr LIKE ?)";
                 $like = '%' . addcslashes($q, '%_\\') . '%';
-                array_push($params, $like, $like);
+                array_push($params, $like, $like, $like);
             }
             $searchWhere = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
@@ -66,7 +67,7 @@ final class StatusController
                         COALESCE(SUM(h.offline_since IS NULL AND h.services_failed = 0), 0) AS ok,
                         COALESCE(SUM(h.offline_since IS NULL AND h.services_failed > 0), 0) AS failing,
                         COALESCE(SUM(h.offline_since IS NOT NULL), 0) AS offline
-                   FROM $h h $searchWhere",
+                   FROM $h h " . Db::hostMetaJoin() . " $searchWhere",
                 $params
             );
 
@@ -91,10 +92,10 @@ final class StatusController
             $order = self::SORTS[$sort] . ' ' . strtoupper($dir);
             // nulls (no system service) last, then a stable tiebreak on the name
             $nullsLast = in_array($sort, ['cpu', 'mem', 'load'], true) ? self::SORTS[$sort] . ' IS NULL, ' : '';
-            $tiebreak = $sort === 'state' ? ', h.services_failed DESC, h.hostname' : ', h.hostname';
+            $tiebreak = $sort === 'state' ? ', h.services_failed DESC, hostname' : ', hostname';
 
             $vars['hosts'] = Db::all(
-                "SELECT h.id, h.hostname, h.remote_addr, h.monit_version, h.os_name, h.os_release,
+                'SELECT h.id, ' . Db::hostName() . " AS hostname, h.hostname AS monit_hostname, h.remote_addr, h.monit_version, h.os_name, h.os_release,
                         h.cpu_count, h.memory_kb, h.services_total, h.services_failed,
                         h.last_seen, h.offline_since, h.poll_interval,
                         CASE WHEN h.offline_since IS NOT NULL THEN 2 WHEN h.services_failed > 0 THEN 1 ELSE 0 END AS state,
@@ -106,6 +107,7 @@ final class StatusController
                         IF(sys.id IS NULL, NULL, JSON_EXTRACT(sys.data, '$.system.load.avg15') + 0) AS load15
                    FROM $h h
                    LEFT JOIN $s sys ON sys.host_id = h.id AND sys.type = 5
+                   " . Db::hostMetaJoin() . "
                    $whereSql
                   ORDER BY $nullsLast$order$tiebreak
                   LIMIT " . self::PER_PAGE . " OFFSET $offset",
@@ -122,7 +124,7 @@ final class StatusController
     {
         $h = Db::collector('hosts');
         $s = Db::collector('services');
-        $host = Db::one("SELECT * FROM $h WHERE id = ?", [$id]) ?? throw new HttpException(404, 'Host not found.');
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
 
         $services = Db::all(
             "SELECT id, name, type, status, status_hint, monitor, monitor_mode, pending_action,
@@ -207,8 +209,7 @@ final class StatusController
     /** POST /status/{id}/action: send start/stop/restart/monitor/unmonitor to the host's Monit. */
     public function action(int $id): never
     {
-        $host = Db::one('SELECT * FROM ' . Db::collector('hosts') . ' WHERE id = ?', [$id])
-            ?? throw new HttpException(404, 'Host not found.');
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
         $service = is_string($_POST['service'] ?? null) ? $_POST['service'] : '';
         $action = is_string($_POST['action'] ?? null) ? $_POST['action'] : '';
 
@@ -266,9 +267,44 @@ final class StatusController
     /** GET /status/{id}/monit-check: JSON reachability of the host's Monit httpd (used by app.js). */
     public function monitCheck(int $id): string
     {
-        $host = Db::one('SELECT * FROM ' . Db::collector('hosts') . ' WHERE id = ?', [$id])
-            ?? throw new HttpException(404, 'Host not found.');
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
         header('Content-Type: application/json; charset=utf-8');
         return json_encode(MonitClient::ping($host), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    }
+
+    /** POST /status/{id}/name: display name in Bmon-web ('' = the name sent by Monit). */
+    public function rename(int $id): never
+    {
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
+        $name = trim(preg_replace('/\s+/', ' ', is_string($_POST['display_name'] ?? null) ? $_POST['display_name'] : ''));
+        if ($name === $host['monit_hostname']) {
+            $name = '';   // same as Monit's: no override
+        }
+        if (($err = HostMeta::nameError($name)) !== null) {
+            flash('error', $err);
+            redirect('/status/' . $id);
+        }
+        HostMeta::setName($id, $name, (string) Auth::user()['username']);
+        Audit::log('host.rename', "id $id: " . ($host['display_name'] ?: $host['monit_hostname'])
+            . ' → ' . ($name !== '' ? $name : $host['monit_hostname'] . ' (name sent by Monit)'));
+        flash('success', $name !== ''
+            ? "The host is now shown as “{$name}” (Monit calls it “{$host['monit_hostname']}”)."
+            : "The host is shown again with the name sent by Monit, “{$host['monit_hostname']}”.");
+        redirect('/status/' . $id);
+    }
+
+    /** POST /status/{id}/notes */
+    public function notes(int $id): never
+    {
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
+        $notes = rtrim(str_replace(["\r\n", "\r"], "\n", is_string($_POST['notes'] ?? null) ? $_POST['notes'] : ''));
+        if (mb_strlen($notes) > HostMeta::MAX_NOTES) {
+            flash('error', 'The notes are too long (max ' . HostMeta::MAX_NOTES . ' characters).');
+            redirect('/status/' . $id . '#notes');
+        }
+        HostMeta::setNotes($id, $notes, (string) Auth::user()['username']);
+        Audit::log('host.notes', "{$host['hostname']} (id $id): " . ($notes === '' ? 'notes cleared' : mb_strlen($notes) . ' characters'));
+        flash('success', 'Notes saved.');
+        redirect('/status/' . $id . '#notes');
     }
 }

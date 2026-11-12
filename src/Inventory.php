@@ -60,11 +60,11 @@ final class Inventory
     public static function hosts(int $itemId): array
     {
         return Db::all(
-            'SELECT h.id, h.hostname, h.remote_addr, h.services_failed, h.offline_since
+            'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.services_failed, h.offline_since
                FROM host_inventory hi
-               JOIN ' . Db::collector('hosts') . ' h ON h.id = hi.host_id
+               JOIN ' . Db::collector('hosts') . ' h ON h.id = hi.host_id ' . Db::hostMetaJoin() . '
               WHERE hi.item_id = ?
-              ORDER BY h.hostname',
+              ORDER BY hostname',
             [$itemId]
         );
     }

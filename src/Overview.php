@@ -29,10 +29,10 @@ final class Overview
     public static function offlineHosts(int $limit): array
     {
         return Db::all(
-            'SELECT id, hostname, remote_addr, last_seen, offline_since
-               FROM ' . Db::collector('hosts') . '
-              WHERE offline_since IS NOT NULL
-              ORDER BY offline_since, hostname
+            'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.last_seen, h.offline_since
+               FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin() . '
+              WHERE h.offline_since IS NOT NULL
+              ORDER BY h.offline_since, hostname
               LIMIT ' . max(1, $limit)
         );
     }
@@ -40,10 +40,10 @@ final class Overview
     public static function failingHosts(int $limit): array
     {
         return Db::all(
-            'SELECT id, hostname, remote_addr, services_failed, services_total, last_seen
-               FROM ' . Db::collector('hosts') . '
-              WHERE offline_since IS NULL AND services_failed > 0
-              ORDER BY services_failed DESC, hostname
+            'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.services_failed, h.services_total, h.last_seen
+               FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin() . '
+              WHERE h.offline_since IS NULL AND h.services_failed > 0
+              ORDER BY h.services_failed DESC, hostname
               LIMIT ' . max(1, $limit)
         );
     }
@@ -53,14 +53,14 @@ final class Overview
     {
         $events = Db::collector('events');
         return Db::all(
-            "SELECT h.id AS host_id, h.hostname, h.remote_addr, s.name, s.type, s.status, s.status_changed_at,
+            'SELECT h.id AS host_id, ' . Db::hostName() . " AS hostname, h.remote_addr, s.name, s.type, s.status, s.status_changed_at,
                     (SELECT e.message FROM $events e
                       WHERE e.host_id = s.host_id AND e.service = s.name AND e.state = 1
                       ORDER BY e.collected_at DESC LIMIT 1) AS message
                FROM " . Db::collector('services') . ' s
-               JOIN ' . Db::collector('hosts') . ' h ON h.id = s.host_id
+               JOIN ' . Db::collector('hosts') . ' h ON h.id = s.host_id ' . Db::hostMetaJoin() . '
               WHERE s.status <> 0 AND h.offline_since IS NULL
-              ORDER BY h.hostname, s.name
+              ORDER BY hostname, s.name
               LIMIT ' . max(1, $limit)
         );
     }

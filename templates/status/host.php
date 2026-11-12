@@ -35,6 +35,28 @@ $th = static fn (string $key, string $label, string $class = ''): string
   <section class="card">
     <h2>Host</h2>
     <dl class="kv">
+      <dt>Name</dt>
+      <dd>
+        <span class="strong"><?= e($host['hostname']) ?></span>
+        <?php if ($host['display_name'] !== null && $host['display_name'] !== ''): ?>
+          <span class="muted small">· set in Bmon<?= $host['name_updated_by'] !== '' ? ' by ' . e($host['name_updated_by']) : '' ?></span>
+        <?php endif ?>
+        <?php if ($canEdit): ?>
+          <details class="inline-edit">
+            <summary>Edit</summary>
+            <form method="post" action="<?= e(url('/status/' . $host['id'] . '/name')) ?>" class="inline-form">
+              <?= csrf_field() ?>
+              <input type="text" name="display_name" maxlength="255" value="<?= e($host['display_name'] ?? '') ?>"
+                     placeholder="<?= e($host['monit_hostname']) ?>" aria-label="Name shown in Bmon" spellcheck="false">
+              <button type="submit" class="btn btn-sm">Save</button>
+            </form>
+            <p class="hint">Shown everywhere in Bmon instead of the name sent by Monit. Leave empty to use Monit's name.</p>
+          </details>
+        <?php endif ?>
+      </dd>
+      <?php if ($host['monit_hostname'] !== $host['hostname']): ?>
+        <dt>Name in Monit</dt><dd class="mono"><?= e($host['monit_hostname']) ?></dd>
+      <?php endif ?>
       <dt>Address</dt><dd class="mono"><?= e($host['remote_addr'] ?: '—') ?></dd>
       <dt>System</dt><dd><?= e(trim($host['os_name'] . ' ' . $host['os_release']) ?: '—') ?> <span class="muted"><?= e($host['machine']) ?></span></dd>
       <dt>Kernel</dt><dd class="small"><?= e($host['os_version'] ?: '—') ?></dd>
@@ -82,6 +104,25 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <?php else: ?>
         <p class="hint">All inventory items are already on this host. <a href="<?= e(url('/inventory/new')) ?>">New item</a></p>
       <?php endif ?>
+    <?php endif ?>
+  </section>
+
+  <section class="card" id="notes">
+    <h2>Notes</h2>
+    <?php if ($canEdit): ?>
+      <form method="post" action="<?= e(url('/status/' . $host['id'] . '/notes')) ?>">
+        <?= csrf_field() ?>
+        <textarea name="notes" rows="<?= max(4, min(20, substr_count((string) $host['notes'], "\n") + 2)) ?>" maxlength="10000"
+                  aria-label="Notes about this host" placeholder="Anything useful about this host: customer, contacts, contract, location, special procedures…"><?= e($host['notes'] ?? '') ?></textarea>
+        <button type="submit" class="btn btn-sm">Save notes</button>
+      </form>
+    <?php elseif (($host['notes'] ?? '') !== ''): ?>
+      <p class="pre-line"><?= e($host['notes']) ?></p>
+    <?php else: ?>
+      <p class="muted">No notes.</p>
+    <?php endif ?>
+    <?php if ($host['notes_updated_at'] !== null): ?>
+      <p class="hint">Updated <?= e(fmt_dt($host['notes_updated_at'])) ?><?= $host['notes_updated_by'] !== '' ? ' by ' . e($host['notes_updated_by']) : '' ?>.</p>
     <?php endif ?>
   </section>
   </div>

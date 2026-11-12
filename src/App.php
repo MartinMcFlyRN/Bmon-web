@@ -28,6 +28,8 @@ final class App
         $r->get('/status/{id}', [StatusController::class, 'host']);
         $r->get('/status/{id}/monit-check', [StatusController::class, 'monitCheck']);
         $r->post('/status/{id}/action', [StatusController::class, 'action'], 'admin');
+        $r->post('/status/{id}/name', [StatusController::class, 'rename'], 'admin');
+        $r->post('/status/{id}/notes', [StatusController::class, 'notes'], 'admin');
         $r->post('/status/{id}/inventory', [InventoryController::class, 'assign'], 'admin');
         $r->post('/status/{id}/inventory/{itemId}/delete', [InventoryController::class, 'unassign'], 'admin');
 

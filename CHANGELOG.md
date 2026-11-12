@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.0 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new table `host_meta`).
+
+- Host page: the host name can be edited (administrators). The name set in Bmon replaces the one sent by Monit everywhere in Bmon-web — Status list, search (both names), sorting, dashboard, Inventory, AgentConf, Slack report — and is never overwritten by the reports; the page also shows the name in Monit. Empty restores Monit's name
+- Host page: **Notes** box under Inventory, free text (max 10000 characters), editable by administrators and visible to every user, with who/when
+- Renames and notes changes in the audit log
+- AgentConf keeps matching `$HOST` with the name Monit uses
+
 ## 0.9.0 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new table `download_links`). Set `app.url` to the address the agents use to reach Bmon-web.

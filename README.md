@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.9.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.10.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -30,6 +30,7 @@ Composer dependencies: copy the files, configure, run the migrations.
 - **Host page** (click a host): host and Monit details, every service with its state (failing checks decoded from the Monit status, not monitored, initializing, pending action) and a summary per type: load/CPU/memory/swap for the system, space and inodes for filesystems, PID/uptime/CPU/memory for processes, response time for remote host ports and ping, size and modification time for files, exit status and output for programs, link and traffic for network interfaces; "All values" shows every metric Monit sent. Plus service groups and the last 30 events. The services table can be sorted by status, name, type, "since" and last check.
 - **Auto-refresh** (off, 5 s, 10 s, 30 s, 1 min) on Dashboard, Status and host pages, remembered per browser; it pauses while the tab is hidden, you are typing or an "All values" panel is open. The sort order is kept across refreshes.
 
+- **Host name and notes** (host page, administrators): the name sent by Monit can be replaced by a name set in Bmon, used everywhere in Bmon-web (lists, search, sorting, dashboard, AgentConf, Slack report) while the page still shows the name in Monit; empty it to go back to Monit's name. Monit's reports never overwrite it. A **Notes** box keeps free text about the host (customer, contacts, procedures…), visible to every user.
 - **Inventory**: define inventory items (name and description) in the Inventory menu, edit or delete them; each item page lists the hosts that carry it. On a host's status page, the Inventory box under the Host box shows its items and lets administrators add (from the defined items) or remove them. Deleting an item removes it from every host. Everyone can see the inventory; only administrators can change it.
 - **Service actions** (administrators): on the host page every service has Start, Stop, Restart and Monitor/Unmonitor, sent to the Monit agent of the host like M/Monit does. See [Service actions](#service-actions).
 - **Slack report** from the command line: `bin/bmon-web report:slack` posts the failing services of this moment to a Slack channel. See [Slack report](#slack-report).
@@ -51,7 +52,7 @@ bin/bmon-web     command line tool
 
 ## Database
 
-Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`, `agent_checks`) in a
+Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`, `agent_checks`, `download_links`, `host_meta`) in a
 separate database and only **reads** the collector database. Both must be on the
 same MySQL/MariaDB server.
 

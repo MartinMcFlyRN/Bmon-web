@@ -243,6 +243,15 @@ body.guest { background: var(--topbar); min-height: 100vh; display: flex; align-
 .btn-sm { padding: 4px 10px; font-size: 13px; }
 form .btn-sm { margin-top: 0; }
 
+/* host name and notes */
+.inline-edit { margin-top: 4px; }
+.inline-edit summary { display: inline; cursor: pointer; color: var(--accent-dark); font-size: 12px; }
+.inline-edit[open] summary { color: var(--muted); }
+.inline-edit .inline-form { margin-top: 6px; }
+.inline-edit .inline-form input { flex: 1; min-width: 0; }
+#notes textarea { margin-bottom: 0; }
+#notes form .btn-sm { margin-top: 8px; }
+
 /* inventory */
 .stack { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 textarea { width: 100%; padding: 8px 10px; font: inherit; color: var(--text); background: #fff; border: 1px solid var(--border); border-radius: 4px; resize: vertical; }

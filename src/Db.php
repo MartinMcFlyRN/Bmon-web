@@ -67,6 +67,40 @@ final class Db
         return (int) self::pdo()->lastInsertId();
     }
 
+    /**
+     * Name of a host as shown by Bmon-web: the display name set in Bmon-web
+     * (host_meta), or the name Monit sends. Use with hostMetaJoin() on the same alias.
+     */
+    public static function hostName(string $alias = 'h'): string
+    {
+        return "COALESCE(NULLIF(hm.display_name, ''), $alias.hostname)";
+    }
+
+    public static function hostMetaJoin(string $alias = 'h'): string
+    {
+        return "LEFT JOIN host_meta hm ON hm.host_id = $alias.id";
+    }
+
+    /**
+     * A host of the collector with the Bmon-web data: hostname = displayed name,
+     * monit_hostname = the name Monit sends, display_name, notes, ...
+     */
+    public static function host(int $id): ?array
+    {
+        $row = self::one(
+            'SELECT h.*, h.hostname AS monit_hostname, ' . self::hostName() . ' AS display_hostname,
+                    hm.display_name, hm.notes, hm.name_updated_at, hm.name_updated_by, hm.notes_updated_at, hm.notes_updated_by
+               FROM ' . self::collector('hosts') . ' h ' . self::hostMetaJoin() . ' WHERE h.id = ?',
+            [$id]
+        );
+        if ($row === null) {
+            return null;
+        }
+        $row['hostname'] = $row['display_hostname'];
+        unset($row['display_hostname']);
+        return $row;
+    }
+
     /** Fully qualified name of a bmon-collector table, e.g. `bmon_collector`.`hosts`. */
     public static function collector(string $table): string
     {
