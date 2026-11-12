@@ -32,6 +32,15 @@ return [
         'timeout'         => 10,
     ],
 
+    // AgentConf: Monit checks prepared for the agents and downloaded as a zip.
+    'agentconf' => [
+        // monit binary used to validate the checks with "monit -t" ('' = search PATH, 'none' = never).
+        'monit_binary'  => '',
+        // Defaults of the "Reporting to Bmon" template.
+        'collector_url' => 'https://monit:PASSWORD@collector.example.com/collector',
+        'web_address'   => '203.0.113.5',
+    ],
+
     // bin/bmon-web report:slack: report of the failing services to a Slack channel.
     // Create an Incoming Webhook for the channel: https://api.slack.com/messaging/webhooks
     'slack' => [

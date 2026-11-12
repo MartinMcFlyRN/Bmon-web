@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Bmon\Web;
 
 use Bmon\Web\Controllers\AdminController;
+use Bmon\Web\Controllers\AgentConfController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
 use Bmon\Web\Controllers\InventoryController;
@@ -43,6 +44,15 @@ final class App
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);
         $r->post('/profile/password', [ProfileController::class, 'changePassword']);
+
+        $r->get('/agentconf', [AgentConfController::class, 'index'], 'admin');
+        $r->get('/agentconf/{id}', [AgentConfController::class, 'host'], 'admin');
+        $r->get('/agentconf/{id}/new', [AgentConfController::class, 'newCheck'], 'admin');
+        $r->post('/agentconf/{id}/new', [AgentConfController::class, 'create'], 'admin');
+        $r->get('/agentconf/{id}/checks/{checkId}', [AgentConfController::class, 'edit'], 'admin');
+        $r->post('/agentconf/{id}/checks/{checkId}', [AgentConfController::class, 'update'], 'admin');
+        $r->post('/agentconf/{id}/checks/{checkId}/delete', [AgentConfController::class, 'delete'], 'admin');
+        $r->get('/agentconf/{id}/download', [AgentConfController::class, 'download'], 'admin');
 
         $r->get('/admin/users', [AdminController::class, 'users'], 'admin');
         $r->get('/admin/users/new', [AdminController::class, 'newUser'], 'admin');

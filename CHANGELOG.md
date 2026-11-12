@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.8.0 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new table `agent_checks`). Optional: install `monit` on the Bmon-web server (not running) to validate the checks.
+
+- New **AgentConf** menu (administrators), between Reports and Admin
+- Agent list (active agents, optionally offline ones) with reported services and prepared checks
+- Agent page: checks prepared in Bmon, and the checks currently on the agent from the reports, with "Create check" for those not managed yet
+- 27 check templates based on the Monit manual (system, filesystem, common services, remote checks, files, programs, network, Monit settings for Bmon, custom); each one verified with `monit -t` 5.33
+- Checks editable after creation (file name, enabled, configuration), validated with `monit -t` together with the agent's other enabled checks; `include` not allowed
+- Download of a zip with `conf.d/bmon-<name>.conf` files and a README with the install commands; no php-zip extension needed
+- Config section `agentconf` (`monit_binary`, `collector_url`, `web_address`); audit log entries for every change and download
+
 ## 0.7.1 — 2026-11-12
 
 - `report:slack`: new compact format, one numbered line per alert (`N) host: message`), like M/Monit's summary; offline hosts are lines of the same list ("No report from Monit … Last report was …"), everything sorted by host name

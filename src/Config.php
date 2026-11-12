@@ -39,6 +39,12 @@ final class Config
                 'tls_verify'      => false, // Monit httpd usually has a self-signed certificate
                 'timeout'         => 10,    // seconds
             ],
+            // AgentConf: Monit configurations prepared for the agents
+            'agentconf' => [
+                'monit_binary'  => '',      // path of monit for "monit -t" checks; '' = search PATH, 'none' = no checks
+                'collector_url' => '',      // default of the "Reporting to Bmon" template (set mmonit)
+                'web_address'   => '',      // default "allow" address of Bmon-web in that template
+            ],
             // bin/bmon-web report:slack
             'slack' => [
                 'webhook_url' => '',        // Incoming Webhook of the channel

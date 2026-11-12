@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.7.1**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.8.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -33,6 +33,7 @@ Composer dependencies: copy the files, configure, run the migrations.
 - **Inventory**: define inventory items (name and description) in the Inventory menu, edit or delete them; each item page lists the hosts that carry it. On a host's status page, the Inventory box under the Host box shows its items and lets administrators add (from the defined items) or remove them. Deleting an item removes it from every host. Everyone can see the inventory; only administrators can change it.
 - **Service actions** (administrators): on the host page every service has Start, Stop, Restart and Monitor/Unmonitor, sent to the Monit agent of the host like M/Monit does. See [Service actions](#service-actions).
 - **Slack report** from the command line: `bin/bmon-web report:slack` posts the failing services of this moment to a Slack channel. See [Slack report](#slack-report).
+- **AgentConf** (administrators): prepare the Monit checks of each agent from 27 templates, edit them, check them with `monit -t` and download them as a zip for `/etc/monit/conf.d/`. See [AgentConf](#agentconf).
 
 Coming next: Reports.
 
@@ -50,7 +51,7 @@ bin/bmon-web     command line tool
 
 ## Database
 
-Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`) in a
+Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`, `agent_checks`) in a
 separate database and only **reads** the collector database. Both must be on the
 same MySQL/MariaDB server.
 
@@ -188,6 +189,52 @@ periodic reports use cron, as the user that can read the config:
 Very long lists: Slack truncates messages over 40000 characters, so the list
 stops before that with "…and N more alerts" (a few hundred lines).
 
+## AgentConf
+
+The **AgentConf** menu (administrators only) prepares Monit configurations for
+the agents, to install on each node with all its checks ready.
+
+- **Agents**: the list shows the active agents (those sending reports; a button
+  shows the offline ones too), with the services they report and the checks
+  prepared in Bmon.
+- **Agent page**: the checks prepared in Bmon (one file each), and the checks
+  currently on the agent as Monit reports them, marked *managed* when a Bmon
+  file defines them. For those not managed, **Create check** opens the closest
+  template with the same name.
+- **Add check**: a gallery of templates based on the Monit manual, with the
+  paths of Debian/Ubuntu packages and systemd units: system resources,
+  filesystem; nginx, Apache, MariaDB/MySQL, PHP-FPM, OpenSSH, Postfix, Dovecot,
+  Redis, Memcached, cron, any service by PID file or command line; HTTPS website
+  with certificate expiry, HTTP page, TCP port, ping; file integrity, freshness,
+  size and content, directory freshness; custom script, network interface;
+  "Reporting to Bmon" (`set mmonit` + `set httpd` for actions); custom. A
+  template asks for a few values (checked, so they cannot break the syntax) and
+  produces the configuration, which can then be **edited freely**, renamed,
+  disabled or deleted.
+- **Validation**: when `monit` is installed on the Bmon-web server, every save
+  runs `monit -t` on the agent's enabled checks together, so syntax errors and
+  duplicate service names are caught before the download (with "Save anyway"
+  for syntax that only a newer Monit on the agents understands). `include` is
+  not allowed in a check.
+- **Download zip**: `conf.d/bmon-<name>.conf` for each enabled check, plus a
+  `README.txt` with the commands to install it:
+
+  ```sh
+  rm -f /etc/monit/conf.d/bmon-*.conf          # checks deleted in Bmon go away
+  unzip -o -j bmon-agentconf-HOST-….zip 'conf.d/*' -d /etc/monit/conf.d/
+  chmod 600 /etc/monit/conf.d/bmon-*.conf
+  monit -t && monit reload
+  ```
+
+  If a check has the same name as a service defined in another file on the
+  host, Monit refuses the configuration ("Service name conflict"): remove the
+  old definition when you move a check to Bmon.
+
+To enable the validation, install Monit on the Bmon-web server without running
+it (`apt install monit && systemctl disable --now monit`); PHP-FPM must allow
+`proc_open` (it is enabled by default). Set `agentconf.monit_binary` if it is
+not in the PATH, or to `'none'` to disable the checks.
+
 ## Configuration
 
 `/etc/bmon-web/config.php` returns a PHP array; keys not set keep their default
@@ -206,6 +253,9 @@ stops before that with "…and N more alerts" (a few hundred lines).
 | `monit.credentials_key` | `''` | same value as `BMON_CREDENTIALS_KEY` of bmon-collector |
 | `monit.tls_verify` | `false` | require a valid certificate on Monit httpd with SSL |
 | `monit.timeout` | `10` | seconds, for each action |
+| `agentconf.monit_binary` | `''` | monit used for `monit -t` (`''` = search PATH, `'none'` = no validation) |
+| `agentconf.collector_url` | `''` | default collector URL of the "Reporting to Bmon" template |
+| `agentconf.web_address` | `''` | default address of Bmon-web in that template (`allow`) |
 | `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |
 | `slack.title` | `Active alerts summary:` | first line of the report |
 | `slack.no_alerts` | `No active alerts.` | text when nothing is failing |
