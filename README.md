@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.7.1**. Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.7.1**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -241,4 +241,10 @@ If every administrator is locked out: `bin/bmon-web user:passwd admin` and
 
 ## License
 
-To be defined.
+Bmon-web is free software, released under the **GNU Affero General Public
+License, version 3** (AGPL-3.0). The full text is in [LICENSE](LICENSE), from
+<https://www.gnu.org/licenses/agpl-3.0.txt>.
+
+In short: you may use, study, modify and redistribute it. If you distribute it,
+or let other people use a modified version over a network, you must make the
+corresponding source code available to them under the same license.
