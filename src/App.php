@@ -53,6 +53,9 @@ final class App
         $r->post('/agentconf/{id}/checks/{checkId}', [AgentConfController::class, 'update'], 'admin');
         $r->post('/agentconf/{id}/checks/{checkId}/delete', [AgentConfController::class, 'delete'], 'admin');
         $r->get('/agentconf/{id}/download', [AgentConfController::class, 'download'], 'admin');
+        $r->post('/agentconf/{id}/link', [AgentConfController::class, 'createLink'], 'admin');
+        $r->post('/agentconf/{id}/link/revoke', [AgentConfController::class, 'revokeLink'], 'admin');
+        $r->get('/dl/{token}', [AgentConfController::class, 'publicDownload'], 'public');
 
         $r->get('/admin/users', [AdminController::class, 'users'], 'admin');
         $r->get('/admin/users/new', [AdminController::class, 'newUser'], 'admin');
@@ -71,11 +74,18 @@ final class App
             Config::load();
             ini_set('display_errors', Config::get('app.debug') ? '1' : '0');
             self::securityHeaders();
-            Session::start();
 
             $method = $_SERVER['REQUEST_METHOD'] ?? 'GET';
             $method = $method === 'HEAD' ? 'GET' : $method;
             [$handler, $access, $params] = self::routes()->match($method, self::path());
+
+            // 'public': no session, no sign-in, GET only (download links for the agents)
+            if ($access === 'public') {
+                [$class, $action] = $handler;
+                echo (new $class())->$action(...$params);
+                return;
+            }
+            Session::start();
 
             $user = Auth::user();
             if ($access !== 'guest' && $user === null) {

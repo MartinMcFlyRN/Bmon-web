@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.8.2**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.9.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -246,6 +246,23 @@ the agents, to install on each node with all its checks ready.
   ```
 
   The README inside the zip has these commands with the real directories.
+- **Download link for the servers**: the Download button opens a dialog with
+  "Download zip now" (to your computer) and **Create link**: a URL that works
+  without signing in, to download the zip directly on the agent, shown together
+  with the commands to paste there (curl + install):
+
+  ```
+  https://bmon.example.com/dl/<43 random characters>
+  ```
+
+  The token has 256 random bits and only its SHA-256 is stored, so the link is
+  shown once, when it is created. It expires after `agentconf.link_ttl_hours`
+  (24); creating a new link disables the previous one, and it can be revoked.
+  The zip is built at download time, with the current checks. Every download
+  is in the audit log with its IP address. Expired, revoked or unknown links
+  answer `410`/`404` with a plain-text message. Links are built on `app.url`,
+  which must be reachable from the agents; note that the token is also written
+  in the web server's access log.
 
   If a check has the same name as a service defined in another file on the
   host, Monit refuses the configuration ("Service name conflict"): remove the
@@ -277,6 +294,7 @@ not in the PATH, or to `'none'` to disable the checks.
 | `agentconf.monit_binary` | `''` | monit used for `monit -t` (`''` = search PATH, `'none'` = no validation) |
 | `agentconf.monit_dir` | `/etc/monit/conf.d` | where the zip is installed on the agents (scripts in its `bmon-scripts/`) |
 | `agentconf.script_dir` | `''` | directory of the attached scripts on the agents (`''` = `<monit_dir>/bmon-scripts`) |
+| `agentconf.link_ttl_hours` | `24` | lifetime of the download links (no sign-in) |
 | `agentconf.collector_url` | `''` | default collector URL of the "Reporting to Bmon" template |
 | `agentconf.web_address` | `''` | default address of Bmon-web in that template (`allow`) |
 | `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |

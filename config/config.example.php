@@ -41,6 +41,8 @@ return [
         // Directory of the scripts attached to the checks, on the agents
         // ('' = <monit_dir>/bmon-scripts). Never monit_dir itself: Monit would read the scripts.
         'script_dir'    => '',
+        // Lifetime of the download links of the zips (usable without signing in, e.g. with curl).
+        'link_ttl_hours' => 24,
         // Defaults of the "Reporting to Bmon" template.
         'collector_url' => 'https://monit:PASSWORD@collector.example.com/collector',
         'web_address'   => '203.0.113.5',

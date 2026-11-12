@@ -44,6 +44,7 @@ final class Config
                 'monit_binary'  => '',      // path of monit for "monit -t" checks; '' = search PATH, 'none' = no checks
                 'monit_dir'     => '/etc/monit/conf.d',  // where the zip is installed on the agents
                 'script_dir'    => '',      // where the attached scripts go on the agents; '' = <monit_dir>/bmon-scripts
+                'link_ttl_hours' => 24,     // lifetime of the download links (no sign-in) of the zips
                 'collector_url' => '',      // default of the "Reporting to Bmon" template (set mmonit)
                 'web_address'   => '',      // default "allow" address of Bmon-web in that template
             ],

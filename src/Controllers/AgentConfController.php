@@ -9,6 +9,7 @@ use Bmon\Web\AgentTemplates;
 use Bmon\Web\Audit;
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
+use Bmon\Web\DownloadLinks;
 use Bmon\Web\HttpException;
 use Bmon\Web\Monit;
 use Bmon\Web\View;
@@ -34,7 +35,7 @@ final class AgentConfController
         ]);
     }
 
-    public function host(int $id): string
+    public function host(int $id, ?array $newLink = null): string
     {
         $host = $this->hostRow($id);
         $checks = AgentChecks::forHost($id);
@@ -60,6 +61,7 @@ final class AgentConfController
             'host' => $host, 'checks' => $checks, 'managed' => $managed,
             'missingScripts' => AgentChecks::missingScripts($checks),
             'reported' => $this->reported($id), 'syntax' => $syntax,
+            'link' => DownloadLinks::active($id), 'newLink' => $newLink,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
     }
@@ -210,6 +212,73 @@ final class AgentConfController
         Audit::log('agentconf.download', "{$host['hostname']} (id $id)");
         header('Content-Type: application/zip');
         header('Content-Disposition: attachment; filename="' . AgentChecks::zipName($host) . '"');
+        header('Content-Length: ' . strlen($bytes));
+        echo $bytes;
+        exit;
+    }
+
+    // --- download links (no sign-in, for the agents) ----------------------------
+
+    /**
+     * POST /agentconf/{id}/link: new link (revokes the previous ones). Answers JSON
+     * to app.js; without JavaScript, the agent page with the link in the dialog.
+     */
+    public function createLink(int $id): string
+    {
+        $host = $this->hostRow($id);
+        $link = DownloadLinks::create($id, (string) Auth::user()['username']);
+        Audit::log('agentconf.link_create', "{$host['hostname']} (id $id), expires " . fmt_dt($link['expires_at'], 'Y-m-d H:i'));
+        $payload = [
+            'url' => $link['url'],
+            'expires' => fmt_dt($link['expires_at'], 'Y-m-d H:i'),
+            'commands' => DownloadLinks::installCommands($link['url']),
+        ];
+        if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+            header('Content-Type: application/json; charset=utf-8');
+            return json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        }
+        return $this->host($id, $payload);
+    }
+
+    public function revokeLink(int $id): never
+    {
+        $host = $this->hostRow($id);
+        $n = DownloadLinks::revokeHost($id);
+        if ($n > 0) {
+            Audit::log('agentconf.link_revoke', "{$host['hostname']} (id $id)");
+        }
+        flash('success', $n > 0 ? 'Download link revoked: it no longer works.' : 'There was no active download link.');
+        redirect("/agentconf/$id");
+    }
+
+    /** GET /dl/{token}: the zip, without signing in. Plain-text errors, for curl. */
+    public function publicDownload(string $token): never
+    {
+        header('Cache-Control: no-store');
+        header('X-Robots-Tag: noindex, nofollow');
+        header('Referrer-Policy: no-referrer');
+        [$state, $row] = DownloadLinks::resolve($token);
+        $host = $state === 'ok'
+            ? Db::one('SELECT id, hostname FROM ' . Db::collector('hosts') . ' WHERE id = ?', [(int) $row['host_id']])
+            : null;
+        if ($state !== 'ok' || $host === null) {
+            http_response_code($state === 'expired' || $state === 'revoked' ? 410 : 404);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo match ($state) {
+                'expired' => "This download link has expired: create a new one in Bmon-web (AgentConf).\n",
+                'revoked' => "This download link has been revoked: create a new one in Bmon-web (AgentConf).\n",
+                default => "Unknown download link.\n",
+            };
+            exit;
+        }
+        $hostFull = $this->hostRow((int) $host['id']);
+        $bytes = AgentChecks::zip($hostFull);
+        $ip = client_ip();
+        DownloadLinks::markUsed((int) $row['id'], $ip);
+        Audit::log('agentconf.link_download', "{$host['hostname']} (id {$host['id']}) from $ip",
+            ['id' => null, 'username' => 'link:' . $row['created_by']]);
+        header('Content-Type: application/zip');
+        header('Content-Disposition: attachment; filename="' . AgentChecks::zipName($hostFull) . '"');
         header('Content-Length: ' . strlen($bytes));
         echo $bytes;
         exit;

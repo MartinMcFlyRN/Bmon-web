@@ -407,6 +407,22 @@ final class AgentChecks
         return 'bmon-agentconf-' . preg_replace('/[^A-Za-z0-9._-]+/', '_', $host['hostname']) . '-' . gmdate('Ymd-His') . '.zip';
     }
 
+    /** Commands that install a downloaded zip on the agent (as root). */
+    public static function installSteps(string $zip): string
+    {
+        $dir = self::monitDir();
+        $sdir = self::scriptDir();
+        $sub = self::SCRIPTS_SUBDIR;
+        $man = self::MANIFEST;
+        return "rm -f $dir/bmon-*.conf\n"
+            . "unzip -q -o $zip -x README.txt '$sub/*' -d $dir/\n"
+            . "chmod 600 $dir/bmon-*.conf\n"
+            . "mkdir -p $sdir\n"
+            . "[ -f $sdir/$man ] && (cd $sdir && xargs -r rm -f < $man)\n"
+            . "unzip -q -o -j $zip '$sub/*' -d $sdir/\n"
+            . "monit -t && monit reload\n";
+    }
+
     private static function readme(array $host, array $files, array $scripts): string
     {
         $dir = self::monitDir();

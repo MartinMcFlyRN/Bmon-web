@@ -2,6 +2,7 @@
 /**
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
+ * @var array|null $link @var array|null $newLink
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -24,7 +25,7 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
   <div class="head-actions">
     <a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/new')) ?>">Add check</a>
     <?php if ($enabledCount): ?>
-      <a class="btn btn-primary" href="<?= e(url('/agentconf/' . $host['id'] . '/download')) ?>">Download zip (<?= $enabledCount ?>)</a>
+      <a class="btn btn-primary" href="#download-dialog" data-open-dialog="download-dialog">Download zip (<?= $enabledCount ?>)</a>
     <?php else: ?>
       <span class="btn btn-disabled" title="No enabled checks">Download zip</span>
     <?php endif ?>
@@ -108,3 +109,46 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
     "Create check" starts from the closest template.</p>
   <?php endif ?>
 </section>
+
+<?php if ($enabledCount): ?>
+<dialog id="download-dialog" class="dialog"<?= $newLink !== null ? ' open' : '' ?> aria-labelledby="download-title">
+  <form method="dialog" class="dialog-close"><button type="submit" aria-label="Close">×</button></form>
+  <h2 id="download-title">Download the configuration of <?= e($host['hostname']) ?></h2>
+
+  <p><a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/download')) ?>">Download zip now</a>
+    <span class="muted small">to this computer, with your session</span></p>
+
+  <h3>Link for the server</h3>
+  <p class="hint">A link that works <strong>without signing in</strong>, to download the zip directly on the agent, e.g. with curl.
+    It expires after <?= e((int) \Bmon\Web\Config::get('agentconf.link_ttl_hours', 24)) ?> hours, and creating a new one disables the previous one.
+    The zip always contains the checks as they are at download time. For security the link is shown only once, now.</p>
+
+  <div data-link-result>
+    <?php if ($newLink !== null): require __DIR__ . '/_new_link.php'; endif ?>
+  </div>
+
+  <?php if ($link !== null && $newLink === null): ?>
+    <div class="link-status" data-link-status>
+      <span class="dot dot-ok"></span>
+      <span>An active link exists, created <?= e(fmt_dt($link['created_at'])) ?><?= $link['created_by'] !== '' ? ' by ' . e($link['created_by']) : '' ?>,
+        expiring <?= e(fmt_dt($link['expires_at'])) ?>;
+        <?= (int) $link['uses'] ? 'used ' . e($link['uses']) . ' time' . ((int) $link['uses'] === 1 ? '' : 's') . ', last from ' . e($link['last_used_ip']) . ' at ' . e(fmt_dt($link['last_used_at'])) : 'not used yet' ?>.
+        Its address cannot be shown again: create a new link if you need it.</span>
+    </div>
+  <?php endif ?>
+
+  <div class="dialog-actions">
+    <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/link')) ?>" data-link-form>
+      <?= csrf_field() ?>
+      <button type="submit" class="btn btn-primary"><?= $link !== null || $newLink !== null ? 'Create a new link' : 'Create link' ?></button>
+    </form>
+    <?php if ($link !== null || $newLink !== null): ?>
+      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/link/revoke')) ?>" data-revoke-form
+            data-confirm="Revoke the download link? It stops working immediately.">
+        <?= csrf_field() ?>
+        <button type="submit" class="btn btn-danger">Revoke link</button>
+      </form>
+    <?php endif ?>
+  </div>
+</dialog>
+<?php endif ?>

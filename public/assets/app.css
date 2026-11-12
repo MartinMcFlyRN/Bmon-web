@@ -294,6 +294,22 @@ textarea.code { tab-size: 4; background: #fbfcfc; }
 .input-affix input { border-radius: 0; width: 240px; font-family: inherit; }
 h1.mono { font-size: 20px; }
 .script-box { margin-top: 22px; }
+dialog.dialog { width: min(760px, calc(100vw - 32px)); border: 0; border-radius: 8px; padding: 22px 26px 24px; box-shadow: 0 12px 40px rgba(0,0,0,.25); color: var(--text); }
+dialog.dialog::backdrop { background: rgba(20,28,34,.55); }
+dialog.dialog h2 { font-size: 18px; margin: 0 28px 14px 0; }
+dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
+.dialog-close { position: absolute; top: 10px; right: 12px; margin: 0; }
+.dialog-close button { border: 0; background: none; font-size: 22px; line-height: 1; color: var(--muted); cursor: pointer; padding: 4px 8px; }
+.dialog-close button:hover { color: var(--text); }
+.dialog-actions { display: flex; gap: 10px; margin-top: 16px; }
+.dialog-actions form { margin: 0; }
+.dialog-actions .btn { margin-top: 0; }
+.copy-row { display: flex; gap: 8px; align-items: flex-start; }
+.copy-row input { flex: 1; font-family: var(--mono); font-size: 12.5px; }
+.copy-row textarea { flex: 1; white-space: pre; overflow-x: auto; }
+.copy-row .btn { margin-top: 0; }
+.new-link { background: #f3faf5; border: 1px solid #b7dfc3; border-radius: 6px; padding: 4px 14px 14px; margin: 10px 0 4px; }
+.link-status { display: flex; gap: 8px; align-items: baseline; font-size: 13px; background: #f6f8f9; border: 1px solid var(--border); border-radius: 6px; padding: 10px 12px; margin: 10px 0 0; }
 .script-box .input-affix input { width: 260px; }
 .danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; }
 .danger-zone .btn { margin-top: 0; }

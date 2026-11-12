@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.0 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new table `download_links`). Set `app.url` to the address the agents use to reach Bmon-web.
+
+- AgentConf: the Download button opens a dialog with "Download zip now" and a **download link for the servers**: `/dl/<token>`, usable without signing in (e.g. curl on the agent), shown with ready-to-paste download + install commands
+- Tokens: 256 random bits, only the SHA-256 stored (the link is shown once), valid `agentconf.link_ttl_hours` (default 24), a new link revokes the previous one, "Revoke link" button; the dialog shows when the active link was created, when it expires and when it was last used
+- `/dl/<token>` runs without session or cookies, answers plain text for expired/revoked/unknown links (410/404), is not cached nor indexed; every download is in the audit log with the IP address
+- Router: `{token}` placeholder; routes with access `public`
+
 ## 0.8.2 — 2026-11-12
 
 No migrations.
