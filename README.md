@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.11.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.12.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -52,7 +52,7 @@ bin/bmon-web     command line tool
 
 ## Database
 
-Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`, `agent_checks`, `download_links`, `host_meta`) in a
+Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`, `agent_checks`, `download_links`, `host_meta`, `settings`, `service_group_defs`, `agent_check_groups`) in a
 separate database and only **reads** the collector database. Both must be on the
 same MySQL/MariaDB server.
 
@@ -222,6 +222,12 @@ the agents, to install on each node with all its checks ready.
   text, edited freely for that service only — templates are never linked to the
   checks made from them, so no change elsewhere ever alters an existing check.
   Checks can be renamed, disabled or deleted.
+- **Service groups**: Monit groups (`group <name>`) are defined in Admin →
+  Service groups and chosen with checkboxes when adding or editing a check. They
+  are not written in the editable text: the zip (and `monit -t`) adds a
+  `group <name>` line after the check statement, so renaming or deleting a group
+  updates every check that uses it. The Admin page also lists the groups the
+  agents already report but that are not defined in Bmon, with an "Add" button.
 - **Attached script**: each check can carry one script (file name + text), for
   example the program run by a "Custom script" check. The zip installs it in
   the script directory, `agentconf.script_dir` (default

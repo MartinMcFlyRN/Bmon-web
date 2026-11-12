@@ -351,18 +351,27 @@ final class AgentChecks
      * Syntax check of the agent's enabled checks with one check added or replaced.
      * A disabled check is checked on its own.
      */
-    public static function checkWith(int $hostId, ?int $id, string $name, string $config, bool $enabled): array
+    public static function checkWith(int $hostId, ?int $id, string $name, string $config, bool $enabled, array $groupNames = []): array
     {
+        $set = $enabled ? self::enabledSet($hostId, $id) : [];
+        $set[$name] = ServiceGroups::apply(self::normalize($config), $groupNames);
+        return self::syntaxCheck($set);
+    }
+
+    /**
+     * Enabled checks of a host as installed by the zip (name => configuration
+     * with its "group" lines), optionally without one check.
+     */
+    public static function enabledSet(int $hostId, ?int $exceptId = null): array
+    {
+        $groups = ServiceGroups::namesByCheck($hostId);
         $set = [];
-        if ($enabled) {
-            foreach (self::forHost($hostId) as $c) {
-                if ((int) $c['enabled'] && (int) $c['id'] !== $id) {
-                    $set[$c['name']] = $c['config'];
-                }
+        foreach (self::forHost($hostId) as $c) {
+            if ((int) $c['enabled'] && (int) $c['id'] !== $exceptId) {
+                $set[$c['name']] = ServiceGroups::apply($c['config'], $groups[(int) $c['id']] ?? []);
             }
         }
-        $set[$name] = self::normalize($config);
-        return self::syntaxCheck($set);
+        return $set;
     }
 
     // --- zip --------------------------------------------------------------------
@@ -376,6 +385,7 @@ final class AgentChecks
     public static function zip(array $host): string
     {
         $checks = array_filter(self::forHost((int) $host['id']), static fn ($c) => (int) $c['enabled']);
+        $groups = ServiceGroups::namesByCheck((int) $host['id']);
         $zip = new ZipWriter();
         $files = [];
         $scripts = [];
@@ -387,8 +397,9 @@ final class AgentChecks
                 . "# change it in Bmon-web and download the zip again.\n"
                 . '# Check: ' . $c['name'] . ' · created from template: ' . $c['template'] . ' · updated ' . fmt_dt($c['updated_at'], 'Y-m-d H:i') . "\n"
                 . ($c['script_name'] !== '' ? '# Script: ' . self::scriptPath($c['script_name']) . "\n" : '')
+                . (!empty($groups[(int) $c['id']]) ? '# Service groups: ' . implode(', ', $groups[(int) $c['id']]) . "\n" : '')
                 . "\n";
-            $zip->add($file, $header . $c['config'], $time);
+            $zip->add($file, $header . ServiceGroups::apply($c['config'], $groups[(int) $c['id']] ?? []), $time);
             if ($c['script_name'] !== '' && $c['script'] !== null) {
                 $zip->add(self::SCRIPTS_SUBDIR . '/' . $c['script_name'], $c['script'], $time, 0755);
                 $scripts[] = self::SCRIPTS_SUBDIR . '/' . $c['script_name'];

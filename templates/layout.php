@@ -37,6 +37,7 @@ $tab = static fn (string $id): string => $nav === $id ? ' class="active" aria-cu
         <button type="button" class="tab-menu-btn" aria-haspopup="true" aria-expanded="false">Admin <span class="caret" aria-hidden="true">▾</span></button>
         <div class="tab-menu-list" role="menu">
           <a role="menuitem" href="<?= e(url('/admin/users')) ?>"<?= $sub('/admin/users') ?>>Users</a>
+          <a role="menuitem" href="<?= e(url('/admin/groups')) ?>"<?= $sub('/admin/groups') ?>>Service groups</a>
           <a role="menuitem" href="<?= e(url('/admin/config')) ?>"<?= $sub('/admin/config') ?>>Configuration</a>
           <a role="menuitem" href="<?= e(url('/admin/audit')) ?>"<?= $sub('/admin/audit') ?>>Audit log</a>
         </div>

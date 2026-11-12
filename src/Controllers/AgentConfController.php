@@ -12,6 +12,7 @@ use Bmon\Web\Db;
 use Bmon\Web\DownloadLinks;
 use Bmon\Web\HttpException;
 use Bmon\Web\Monit;
+use Bmon\Web\ServiceGroups;
 use Bmon\Web\View;
 
 /**
@@ -49,18 +50,14 @@ final class AgentConfController
         }
         unset($c);
 
-        $enabled = [];
-        foreach ($checks as $c) {
-            if ((int) $c['enabled']) {
-                $enabled[$c['name']] = $c['config'];
-            }
-        }
+        $enabled = AgentChecks::enabledSet($id);
         $syntax = $enabled ? AgentChecks::syntaxCheck($enabled) : ['ok' => null, 'output' => ''];
 
         return View::render('agentconf/host', [
             'title' => 'AgentConf · ' . $host['hostname'], 'nav' => 'agentconf',
             'host' => $host, 'checks' => $checks, 'managed' => $managed,
             'missingScripts' => AgentChecks::missingScripts($checks),
+            'groupsByCheck' => ServiceGroups::namesByCheck($id),
             'reported' => $this->reported($id), 'syntax' => $syntax,
             'link' => DownloadLinks::active($id), 'newLink' => $newLink,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
@@ -91,6 +88,8 @@ final class AgentConfController
             'values' => $values ?? [], 'errors' => $errors, 'syntax' => $syntax,
             'fromReported' => is_string($_GET['name'] ?? null) ? $_GET['name'] : '',
             'existing' => array_column(AgentChecks::forHost($id), 'name'),
+            'allGroups' => ServiceGroups::all(),
+            'selectedGroups' => array_map('intval', (array) ($_POST['groups'] ?? [])),
         ]);
     }
 
@@ -107,8 +106,9 @@ final class AgentConfController
             $errors = AgentChecks::validate($id, $name, $config);
         }
         $syntax = null;
+        $groupIds = array_map('intval', array_filter((array) ($_POST['groups'] ?? []), 'is_scalar'));
         if (!$errors) {
-            $syntax = AgentChecks::checkWith($id, null, $name, $config, true);
+            $syntax = AgentChecks::checkWith($id, null, $name, $config, true, ServiceGroups::namesFor($groupIds));
             if ($syntax['ok'] === false && !isset($_POST['force'])) {
                 $errors['_syntax'] = 'monit -t rejected the configuration.';
             }
@@ -120,7 +120,9 @@ final class AgentConfController
         }
 
         $checkId = AgentChecks::create($id, $name, $key, $config, true, (string) Auth::user()['username']);
-        Audit::log('agentconf.create', "{$host['hostname']} (id $id): $name (template $key)");
+        ServiceGroups::setForCheck($checkId, $groupIds);
+        $gNames = ServiceGroups::namesFor($groupIds);
+        Audit::log('agentconf.create', "{$host['hostname']} (id $id): $name (template $key)" . ($gNames ? ', groups ' . implode(', ', $gNames) : ''));
         flash('success', "Check “{$name}” added. You can now edit its configuration." . $this->syntaxNote($syntax));
         redirect("/agentconf/$id/checks/$checkId");
     }
@@ -134,6 +136,8 @@ final class AgentConfController
             'host' => $host, 'check' => $check, 'form' => $form ?? $check, 'errors' => $errors,
             'syntax' => $syntax, 'scriptSyntax' => $scriptSyntax, 'tplInfo' => AgentTemplates::get($check['template']),
             'scriptDir' => AgentChecks::scriptDir(), 'monitDir' => AgentChecks::monitDir(),
+            'allGroups' => ServiceGroups::all(),
+            'selectedGroups' => $form !== null && isset($form['groups']) ? $form['groups'] : ServiceGroups::idsForCheck($checkId),
             'services' => AgentChecks::definedServices($form['config'] ?? $check['config'], $host['monit_hostname']),
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
@@ -150,6 +154,7 @@ final class AgentConfController
             'enabled' => isset($_POST['enabled']) ? 1 : 0,
             'script_name' => trim($str('script_name')),
             'script' => $str('script'),
+            'groups' => array_map('intval', array_filter((array) ($_POST['groups'] ?? []), 'is_scalar')),
         ];
         if (trim($form['script']) === '' && isset($_POST['remove_script'])) {
             $form['script_name'] = '';
@@ -159,7 +164,8 @@ final class AgentConfController
         $syntax = null;
         $scriptSyntax = null;
         if (!$errors) {
-            $syntax = AgentChecks::checkWith($id, $checkId, $form['name'], $form['config'], (bool) $form['enabled']);
+            $syntax = AgentChecks::checkWith($id, $checkId, $form['name'], $form['config'], (bool) $form['enabled'],
+                ServiceGroups::namesFor($form['groups']));
             if ($syntax['ok'] === false && !isset($_POST['force'])) {
                 $errors['_syntax'] = 'monit -t rejected the configuration.';
             }
@@ -175,8 +181,11 @@ final class AgentConfController
             return $this->edit($id, $checkId, $errors, $form + $check, $syntax, $scriptSyntax);
         }
 
+        $oldGroups = ServiceGroups::namesFor(ServiceGroups::idsForCheck($checkId));
         AgentChecks::update($checkId, $form['name'], $form['config'], (bool) $form['enabled'], (string) Auth::user()['username'],
             $form['script_name'], $form['script']);
+        ServiceGroups::setForCheck($checkId, $form['groups']);
+        $newGroups = ServiceGroups::namesFor($form['groups']);
         $what = $form['name'] !== $check['name'] ? "{$check['name']} → {$form['name']}" : $form['name'];
         $scriptNote = match (true) {
             $form['script_name'] === '' && $check['script_name'] !== '' => ', script removed',
@@ -184,7 +193,8 @@ final class AgentConfController
                 || AgentChecks::normalizeScript($form['script']) !== (string) $check['script']) => ", script {$form['script_name']}",
             default => '',
         };
-        Audit::log('agentconf.update', "{$host['hostname']} (id $id): $what" . ($form['enabled'] ? '' : ' (disabled)') . $scriptNote);
+        $groupNote = $oldGroups !== $newGroups ? ', groups: ' . ($newGroups ? implode(', ', $newGroups) : 'none') : '';
+        Audit::log('agentconf.update', "{$host['hostname']} (id $id): $what" . ($form['enabled'] ? '' : ' (disabled)') . $scriptNote . $groupNote);
         $warn = $form['script_name'] !== '' && !str_starts_with(ltrim($form['script']), '#!')
             ? ' Note: the script has no "#!" line; add "#!/bin/sh" so that Monit can run it.' : '';
         $missing = AgentChecks::missingScripts(AgentChecks::forHost($id))[$form['name']] ?? [];

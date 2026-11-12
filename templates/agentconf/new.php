@@ -2,6 +2,7 @@
 /**
  * @var array $host @var string $templateKey @var array|null $tpl @var array $values @var array $errors
  * @var array|null $syntax @var string $fromReported @var array $existing
+ * @var array $allGroups @var array $selectedGroups
  */
 use Bmon\Web\AgentTemplates;
 
@@ -74,6 +75,7 @@ $base = '/agentconf/' . $host['id'];
         <p class="hint">File name: <span class="mono">bmon-<?= e($tpl['filename'] ?? $templateKey) ?>.conf</span></p>
         <?php $field = 'name'; require __DIR__ . '/../partials/field_error.php' ?>
       <?php endif ?>
+      <?php if (($tpl['category'] ?? '') !== 'global') require __DIR__ . '/_groups.php'; ?>
       <?php if (!empty($errors['_syntax'])): ?>
         <label class="check"><input type="checkbox" name="force" value="1"> Save anyway (e.g. the agents run a newer Monit than this server)</label>
       <?php endif ?>

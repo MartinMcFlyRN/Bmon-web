@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.12.0 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new tables `service_group_defs`, `agent_check_groups`).
+
+- New **Admin → Service groups**: create, edit (rename, description) and delete Monit service groups; for each group the AgentConf checks using it and the services Monit reports in it; groups reported by the agents but not defined yet can be added with one click
+- AgentConf: service groups chosen with checkboxes when adding a check and on its edit page, shown in the agent's check list
+- The `group <name>` lines are added to the files of the zip (and to the `monit -t` check) after the check statement, not stored in the text: renaming or deleting a group updates every check using it
+- Audit log entries for groups and group changes of checks
+
 ## 0.11.0 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new table `settings`). Nothing to change in `config.php`: its values become the initial values of the new page.

@@ -2,7 +2,7 @@
 /**
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
- * @var array|null $link @var array|null $newLink
+ * @var array|null $link @var array|null $newLink @var array $groupsByCheck
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -55,7 +55,7 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
       or create one from a service Monit already reports, below.</div>
   <?php else: ?>
   <table class="table">
-    <thead><tr><th>File</th><th>Defines</th><th>Script</th><th>Created from</th><th>Status</th><th>Updated</th></tr></thead>
+    <thead><tr><th>File</th><th>Defines</th><th>Groups</th><th>Script</th><th>Created from</th><th>Status</th><th>Updated</th></tr></thead>
     <tbody>
     <?php foreach ($checks as $c):
         $tpl = AgentTemplates::get($c['template']); ?>
@@ -63,6 +63,8 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
         <td class="nowrap"><a class="strong mono" href="<?= e(url('/agentconf/' . $host['id'] . '/checks/' . $c['id'])) ?>"><?= e(AgentChecks::fileName($c['name'])) ?></a></td>
         <td><?php foreach ($c['services'] as $s): ?><span class="chip"><?= e($s) ?></span> <?php endforeach ?>
           <?php if (!$c['services']): ?><span class="muted small">Monit settings</span><?php endif ?></td>
+        <td><?php foreach ($groupsByCheck[(int) $c['id']] ?? [] as $gn): ?><span class="chip chip-group"><?= e($gn) ?></span> <?php endforeach ?>
+          <?php if (empty($groupsByCheck[(int) $c['id']])): ?><span class="muted">—</span><?php endif ?></td>
         <td><?= $c['script_name'] !== '' ? '<span class="mono small">' . e(AgentChecks::SCRIPTS_SUBDIR . '/' . $c['script_name']) . '</span>' : '<span class="muted">—</span>' ?></td>
         <td class="muted"><?= e($tpl['label'] ?? $c['template']) ?></td>
         <td><?= (int) $c['enabled'] ? '<span class="badge badge-ok">Enabled</span>' : '<span class="badge badge-off">Disabled</span>' ?></td>

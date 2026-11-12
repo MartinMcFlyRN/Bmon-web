@@ -316,6 +316,11 @@ textarea.code { tab-size: 4; background: #fbfcfc; }
 .input-affix input { border-radius: 0; width: 240px; font-family: inherit; }
 h1.mono { font-size: 20px; }
 .script-box { margin-top: 22px; }
+.group-picker { margin-top: 20px; }
+.group-options { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 4px 0 2px; }
+.group-option { margin: 0; gap: 6px; }
+.chip-lg { font-size: 15px; padding: 2px 11px; vertical-align: middle; }
+.chip-group { background: #eef7f1; border-color: #b7dfc3; color: #1d5f30; }
 dialog.dialog { width: min(760px, calc(100vw - 32px)); border: 0; border-radius: 8px; padding: 22px 26px 24px; box-shadow: 0 12px 40px rgba(0,0,0,.25); color: var(--text); }
 dialog.dialog::backdrop { background: rgba(20,28,34,.55); }
 dialog.dialog h2 { font-size: 18px; margin: 0 28px 14px 0; }

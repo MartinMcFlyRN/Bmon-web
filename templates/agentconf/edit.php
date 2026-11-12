@@ -3,6 +3,7 @@
  * @var array $host @var array $check @var array $form @var array $errors @var array|null $syntax
  * @var array|null $tplInfo @var array $services @var bool $monitAvailable
  * @var array|null $scriptSyntax @var string $scriptDir @var string $monitDir
+ * @var array $allGroups @var array $selectedGroups
  */
 use Bmon\Web\AgentChecks;
 
@@ -49,6 +50,8 @@ $base = '/agentconf/' . $host['id'];
     · <?= $monitAvailable ? 'checked with monit -t when saved' : 'not checked: monit is not installed on this server' ?>.
     Syntax reference: <a href="https://mmonit.com/monit/documentation/monit.html" target="_blank" rel="noopener noreferrer">Monit manual</a>.
   </p>
+  <?php if ($services) require __DIR__ . '/_groups.php'; ?>
+
   <fieldset class="script-box">
     <legend>Attached script <span class="muted small">(optional)</span></legend>
     <p class="hint">A script installed with the zip on the agent, in <span class="mono"><?= e($scriptDir) ?>/</span> (mode 0755).
