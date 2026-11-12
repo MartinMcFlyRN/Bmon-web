@@ -168,6 +168,12 @@ final class AgentChecks
         return ['ok' => $code === 0, 'output' => "$shell -n: " . ($out !== '' ? $out : 'exit status ' . $code)];
     }
 
+    public static function setScript(int $id, string $scriptName, string $script): void
+    {
+        Db::exec('UPDATE agent_checks SET script_name = ?, script = ? WHERE id = ?',
+            [$scriptName, $scriptName === '' ? null : self::normalizeScript($script), $id]);
+    }
+
     public static function delete(int $id): void
     {
         Db::exec('DELETE FROM agent_checks WHERE id = ?', [$id]);

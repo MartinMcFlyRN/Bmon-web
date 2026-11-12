@@ -79,8 +79,9 @@ $bar = static function (float|int|string|null $v): string {
       </td>
       <td>
         <a class="strong" href="<?= e(url('/status/' . $h['id'])) ?>"><?= e($h['hostname']) ?></a>
-        <?php $meta = implode(' · ', array_filter([
-            trim($h['os_name'] . ' ' . $h['os_release']),
+        <?php $os = \Bmon\Web\OsInfo::parse($h['os_info']);
+              $meta = implode(' · ', array_filter([
+            $os !== null ? $os['pretty'] : trim($h['os_name'] . ' ' . $h['os_release']),
             $h['monit_version'] !== '' ? 'Monit ' . $h['monit_version'] : '',
         ])); ?>
         <div class="muted small">

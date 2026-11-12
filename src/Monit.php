@@ -187,6 +187,13 @@ final class Monit
                 break;
 
             case 7: // program
+                if (($os = OsInfo::parse($g($d, 'program.output'))) !== null) {
+                    $out['OS'] = $os['pretty'];
+                    if ($os['arch'] !== '') {
+                        $out['Arch'] = $os['arch'];
+                    }
+                    break;
+                }
                 if (($st = $g($d, 'program.status')) !== null) {
                     $out['Exit status'] = (string) $st;
                 }

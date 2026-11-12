@@ -102,8 +102,14 @@ final class AgentConfController
         [$values, $errors] = AgentTemplates::values($tpl, $_POST);
         $name = $values['name'] ?? ($tpl['filename'] ?? $key);
         $config = AgentTemplates::render($tpl, AgentTemplates::derive($key, $values));
+        $tplScript = AgentTemplates::script($tpl);
         if (!$errors) {
-            $errors = AgentChecks::validate($id, $name, $config);
+            $errors = AgentChecks::validate($id, $name, $config)
+                + ($tplScript ? AgentChecks::validateScript($id, $tplScript['name'], $tplScript['content'], null) : []);
+            if (isset($errors['script_name'])) {
+                $errors['name'] = 'This agent already has the script ' . $tplScript['name'] . ' (another "' . $tpl['label'] . '" check?).';
+                unset($errors['script_name']);
+            }
         }
         $syntax = null;
         $groupIds = array_map('intval', array_filter((array) ($_POST['groups'] ?? []), 'is_scalar'));
@@ -121,6 +127,9 @@ final class AgentConfController
 
         $checkId = AgentChecks::create($id, $name, $key, $config, true, (string) Auth::user()['username']);
         ServiceGroups::setForCheck($checkId, $groupIds);
+        if ($tplScript) {
+            AgentChecks::setScript($checkId, $tplScript['name'], $tplScript['content']);
+        }
         $gNames = ServiceGroups::namesFor($groupIds);
         Audit::log('agentconf.create', "{$host['hostname']} (id $id): $name (template $key)" . ($gNames ? ', groups ' . implode(', ', $gNames) : ''));
         flash('success', "Check “{$name}” added. You can now edit its configuration." . $this->syntaxNote($syntax));

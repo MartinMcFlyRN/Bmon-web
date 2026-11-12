@@ -57,6 +57,16 @@ final class AgentTemplates
         return self::all()[$key] ?? null;
     }
 
+    /** Script shipped with a template (resources/agentconf/), or null. */
+    public static function script(array $tpl): ?array
+    {
+        if (empty($tpl['script'])) {
+            return null;
+        }
+        $content = (string) file_get_contents(BMON_ROOT . '/resources/agentconf/' . basename($tpl['script']['file']));
+        return ['name' => $tpl['script']['name'], 'content' => $content];
+    }
+
     /**
      * Validates the submitted values of a template.
      * @return array{0:array<string,string>,1:array<string,string>} [values, errors]
@@ -177,6 +187,19 @@ final class AgentTemplates
                     . "    if cpu usage > {{cpu}}% for {{cycles}} cycles then alert\n"
                     . "    if memory usage > {{memory}}% for {{cycles}} cycles then alert\n"
                     . "    if swap usage > {{swap}}% then alert\n",
+            ],
+            'os-info' => [
+                'category' => 'system',
+                'label' => 'OS information',
+                'description' => 'Reports the distribution and its version (e.g. Debian 12, Ubuntu 24.04) to Bmon-web, shown on the host page and in Status. Uses an attached script that reads /etc/os-release; it never alerts.',
+                'fields' => [
+                    self::nameField('os-info'),
+                    self::f('every', 'Run every (cycles)', '10', self::INT, 'Monit reads the result of a program at the following run, so the OS appears in Bmon after about two runs: with a 30 s cycle, 10 = every 5 minutes.', true, 'A whole number.'),
+                ],
+                'script' => ['name' => 'bmon-osinfo.sh', 'file' => 'bmon-osinfo.sh'],
+                'body' => "check program {{name}} with path \"" . AgentChecks::scriptPath('bmon-osinfo.sh') . "\" with timeout 10 seconds\n"
+                    . "    every {{every}} cycles\n"
+                    . "    if status != 0 then alert\n",
             ],
             'filesystem' => [
                 'category' => 'system',

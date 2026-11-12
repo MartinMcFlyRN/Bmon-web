@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.13.0 — 2026-11-12
+
+No migrations.
+
+- AgentConf: new template **OS information** (System), a `check program` with an attached script `bmon-osinfo.sh` (shipped in `resources/agentconf/`) that reports the distribution and version from `/etc/os-release` as a `BMON_OS …` line; it never alerts
+- Templates can now ship a script, attached automatically when the check is created
+- The OS reported by that check is shown on the host page ("OS", with codename) and in the Status list instead of the kernel; the service summary shows "OS" and "Arch"
+
 ## 0.12.0 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new tables `service_group_defs`, `agent_check_groups`).

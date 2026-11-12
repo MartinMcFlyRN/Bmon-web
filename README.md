@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.12.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.13.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -212,7 +212,7 @@ the agents, to install on each node with all its checks ready.
   template with the same name.
 - **Add check**: a gallery of templates based on the Monit manual, with the
   paths of Debian/Ubuntu packages and systemd units: system resources,
-  filesystem; nginx, Apache, MariaDB/MySQL, PHP-FPM, OpenSSH, Postfix, Dovecot,
+  OS information, filesystem; nginx, Apache, MariaDB/MySQL, PHP-FPM, OpenSSH, Postfix, Dovecot,
   Redis, Memcached, cron, any service by PID file or command line; HTTPS website
   with certificate expiry, HTTP page, TCP port, ping; file integrity, freshness,
   size and content, directory freshness; custom script, network interface;
@@ -222,6 +222,16 @@ the agents, to install on each node with all its checks ready.
   text, edited freely for that service only — templates are never linked to the
   checks made from them, so no change elsewhere ever alters an existing check.
   Checks can be renamed, disabled or deleted.
+- **OS information**: Monit reports only the kernel ("Linux 6.12…"). The
+  "OS information" template (System category) adds a `check program` with an
+  attached script, `bmon-osinfo.sh`, that reads `/etc/os-release` (parsed, never
+  executed; fallbacks for lsb_release, redhat/debian/alpine release files,
+  macOS and BSD) and prints one line, `BMON_OS pretty="Debian GNU/Linux 12
+  (bookworm)" id="debian" version="12" …`. It always exits 0, so it never
+  alerts. Bmon-web reads that line from the reports and shows the OS on the
+  host page and in the Status list instead of the kernel. The value appears
+  after about two runs of the check (Monit reads a program's result at the
+  following run).
 - **Service groups**: Monit groups (`group <name>`) are defined in Admin →
   Service groups and chosen with checkboxes when adding or editing a check. They
   are not written in the editable text: the zip (and `monit -t`) adds a

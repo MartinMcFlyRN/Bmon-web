@@ -1,5 +1,6 @@
 <?php
 /** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir
+ * @var array|null $osInfo
  * @var array $inventory @var array $allItems @var bool $canEdit @var bool $canAct @var string|null $actionsNote */
 use Bmon\Web\MonitClient;
 use Bmon\Web\Monit;
@@ -58,8 +59,12 @@ $th = static fn (string $key, string $label, string $class = ''): string
         <dt>Name in Monit</dt><dd class="mono"><?= e($host['monit_hostname']) ?></dd>
       <?php endif ?>
       <dt>Address</dt><dd class="mono"><?= e($host['remote_addr'] ?: '—') ?></dd>
-      <dt>System</dt><dd><?= e(trim($host['os_name'] . ' ' . $host['os_release']) ?: '—') ?> <span class="muted"><?= e($host['machine']) ?></span></dd>
-      <dt>Kernel</dt><dd class="small"><?= e($host['os_version'] ?: '—') ?></dd>
+      <?php if ($osInfo !== null): ?>
+        <dt>OS</dt><dd><span class="strong"><?= e($osInfo['pretty']) ?></span>
+          <?php if ($osInfo['codename'] !== '' && !str_contains(strtolower($osInfo['pretty']), strtolower($osInfo['codename']))): ?><span class="muted">(<?= e($osInfo['codename']) ?>)</span><?php endif ?></dd>
+      <?php endif ?>
+      <dt><?= $osInfo !== null ? 'Kernel' : 'System' ?></dt><dd><?= e(trim($host['os_name'] . ' ' . $host['os_release']) ?: '—') ?> <span class="muted"><?= e($host['machine']) ?></span></dd>
+      <dt>Kernel build</dt><dd class="small"><?= e($host['os_version'] ?: '—') ?></dd>
       <dt>CPUs</dt><dd><?= e($host['cpu_count'] ?: '—') ?></dd>
       <dt>Memory</dt><dd><?= e(fmt_bytes((int) $host['memory_kb'] * 1024)) ?> <span class="muted">· swap <?= e(fmt_bytes((int) $host['swap_kb'] * 1024)) ?></span></dd>
     </dl>

@@ -11,6 +11,7 @@ use Bmon\Web\HttpException;
 use Bmon\Web\Inventory;
 use Bmon\Web\Audit;
 use Bmon\Web\MonitClient;
+use Bmon\Web\OsInfo;
 use Bmon\Web\Monit;
 use Bmon\Web\View;
 
@@ -98,6 +99,7 @@ final class StatusController
                 'SELECT h.id, ' . Db::hostName() . " AS hostname, h.hostname AS monit_hostname, h.remote_addr, h.monit_version, h.os_name, h.os_release,
                         h.cpu_count, h.memory_kb, h.services_total, h.services_failed,
                         h.last_seen, h.offline_since, h.poll_interval,
+                        " . OsInfo::sql() . " AS os_info,
                         CASE WHEN h.offline_since IS NOT NULL THEN 2 WHEN h.services_failed > 0 THEN 1 ELSE 0 END AS state,
                         IF(sys.id IS NULL, NULL, LEAST(100, $cpuExpr)) AS cpu,
                         IF(sys.id IS NULL, NULL, JSON_EXTRACT(sys.data, '$.system.memory.percent') + 0) AS mem,
@@ -162,6 +164,7 @@ final class StatusController
             'groups' => $groups,
             'events' => $events,
             'inventory' => Inventory::forHost($id),
+            'osInfo' => OsInfo::fromServices($services),
             'allItems' => Inventory::all(),
             'canEdit' => Auth::isAdmin(),
             'canAct' => Auth::isAdmin() && MonitClient::available($host) && $host['offline_since'] === null,
