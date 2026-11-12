@@ -1,7 +1,7 @@
 <?php
 /**
  * @var array $host @var array $checks @var array $managed @var array $reported
- * @var array $syntax @var bool $monitAvailable
+ * @var array $syntax @var bool $monitAvailable @var array $missingScripts
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -9,6 +9,9 @@ use Bmon\Web\Monit;
 
 $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled']));
 ?>
+<?php if (($cfgProblem = \Bmon\Web\AgentChecks::configProblem()) !== null): ?>
+  <div class="alert alert-error"><?= e($cfgProblem) ?></div>
+<?php endif ?>
 <div class="page-head">
   <div>
     <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> /</p>
@@ -39,6 +42,11 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
     <?php elseif (!$monitAvailable): ?>
       <p class="hint">Syntax not checked: monit is not installed on this server (see agentconf.monit_binary).</p>
     <?php endif ?>
+    <?php foreach ($missingScripts as $checkName => $paths): ?>
+      <div class="syntax syntax-fail"><span class="dot dot-fail"></span>
+        <span><span class="mono"><?= e(AgentChecks::fileName($checkName)) ?></span> uses <span class="mono"><?= e(implode(', ', $paths)) ?></span>,
+        but no enabled check of this agent attaches it: Monit on the agent would refuse the configuration.</span></div>
+    <?php endforeach ?>
   <?php endif ?>
 
   <?php if (!$checks): ?>

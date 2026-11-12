@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.2 — 2026-11-12
+
+No migrations.
+
+- AgentConf: the directory of the attached scripts on the agents is configurable, `agentconf.script_dir` (default `<monit_dir>/bmon-scripts`); invalid values (relative path, `..`, the Monit include directory itself) are reported on the AgentConf pages and the default is used
+- The zip lists the scripts it installs (`bmon-scripts/.bmon-files`) and its README removes only those files before installing the new ones, so the script directory can be shared with other files; scripts and checks are installed by separate `unzip` commands
+- Warning (agent page and on save) when an enabled check uses a file of the script directory that no enabled check attaches: Monit on the agent would refuse it
+
+Changing `script_dir`: existing checks keep the path they were written with (they are copies), so update the path in their configuration. Scripts installed by 0.8.1 in `<monit_dir>/bmon-scripts/` can be removed from the agents once.
+
 ## 0.8.1 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new columns `agent_checks.script_name`, `agent_checks.script`).

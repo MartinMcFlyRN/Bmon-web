@@ -9,6 +9,9 @@ use Bmon\Web\AgentChecks;
 $err = static fn (string $f): string => !empty($errors[$f]) ? ' aria-invalid="true" aria-describedby="' . e($f) . '-error"' : '';
 $base = '/agentconf/' . $host['id'];
 ?>
+<?php if (($cfgProblem = \Bmon\Web\AgentChecks::configProblem()) !== null): ?>
+  <div class="alert alert-error"><?= e($cfgProblem) ?></div>
+<?php endif ?>
 <div class="page-head">
   <div>
     <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url($base)) ?>"><?= e($host['hostname']) ?></a> /</p>

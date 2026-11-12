@@ -58,6 +58,7 @@ final class AgentConfController
         return View::render('agentconf/host', [
             'title' => 'AgentConf · ' . $host['hostname'], 'nav' => 'agentconf',
             'host' => $host, 'checks' => $checks, 'managed' => $managed,
+            'missingScripts' => AgentChecks::missingScripts($checks),
             'reported' => $this->reported($id), 'syntax' => $syntax,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
@@ -183,6 +184,11 @@ final class AgentConfController
         Audit::log('agentconf.update', "{$host['hostname']} (id $id): $what" . ($form['enabled'] ? '' : ' (disabled)') . $scriptNote);
         $warn = $form['script_name'] !== '' && !str_starts_with(ltrim($form['script']), '#!')
             ? ' Note: the script has no "#!" line; add "#!/bin/sh" so that Monit can run it.' : '';
+        $missing = AgentChecks::missingScripts(AgentChecks::forHost($id))[$form['name']] ?? [];
+        if ($missing) {
+            $warn .= ' Warning: the configuration uses ' . implode(', ', $missing)
+                . ', but no check of this agent attaches it: Monit on the agent will refuse the configuration.';
+        }
         flash('success', "Check “{$form['name']}” saved." . $this->syntaxNote($syntax) . $warn);
         redirect("/agentconf/$id");
     }

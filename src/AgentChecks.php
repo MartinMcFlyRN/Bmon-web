@@ -14,7 +14,8 @@ final class AgentChecks
 {
     public const NAME_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/';
     public const SCRIPT_NAME_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/';
-    public const SCRIPTS_SUBDIR = 'bmon-scripts';
+    public const SCRIPTS_SUBDIR = 'bmon-scripts';   // folder of the scripts inside the zip (and default on the agents)
+    public const MANIFEST = '.bmon-files';         // list of the scripts installed by Bmon, in the script directory
     private const MAX_CONFIG = 20000;
     private const MAX_SCRIPT = 200000;
 
@@ -24,10 +25,34 @@ final class AgentChecks
         return rtrim((string) Config::get('agentconf.monit_dir', '/etc/monit/conf.d'), '/') ?: '/etc/monit/conf.d';
     }
 
-    /** Directory of the attached scripts on the agents: a subdirectory, ignored by "include conf.d/*". */
+    /**
+     * Directory of the attached scripts on the agents: agentconf.script_dir, or by
+     * default <monit_dir>/bmon-scripts (a subdirectory, ignored by "include conf.d/*").
+     */
     public static function scriptDir(): string
     {
-        return self::monitDir() . '/' . self::SCRIPTS_SUBDIR;
+        $dir = rtrim(trim((string) Config::get('agentconf.script_dir', '')), '/');
+        if ($dir === '' || self::configProblem() !== null) {
+            return self::monitDir() . '/' . self::SCRIPTS_SUBDIR;
+        }
+        return $dir;
+    }
+
+    /** Why agentconf.script_dir cannot be used (null = fine or not set). */
+    public static function configProblem(): ?string
+    {
+        $dir = rtrim(trim((string) Config::get('agentconf.script_dir', '')), '/');
+        if ($dir === '') {
+            return null;
+        }
+        if (!preg_match('#^/[A-Za-z0-9._/@+-]+$#', $dir) || str_contains($dir, '/../') || str_ends_with($dir, '/..')) {
+            return "agentconf.script_dir “{$dir}” is not a plain absolute path: using " . self::monitDir() . '/' . self::SCRIPTS_SUBDIR . '.';
+        }
+        if ($dir === self::monitDir()) {
+            return "agentconf.script_dir cannot be the Monit include directory itself (Monit would read the scripts as configuration): using "
+                . self::monitDir() . '/' . self::SCRIPTS_SUBDIR . '.';
+        }
+        return null;
     }
 
     public static function scriptPath(string $scriptName): string
@@ -197,6 +222,43 @@ final class AgentChecks
         return $errors;
     }
 
+    /**
+     * Enabled checks whose configuration uses a file of the script directory that
+     * no enabled check of the agent attaches (Monit on the agent would refuse it).
+     * @param array $checks rows of agent_checks; $override = [id, name, config, script_name, enabled] being saved
+     * @return array<string,list<string>> check name => missing script paths
+     */
+    public static function missingScripts(array $checks, ?array $override = null): array
+    {
+        $rows = [];
+        foreach ($checks as $c) {
+            $rows[(int) $c['id']] = $c;
+        }
+        if ($override !== null) {
+            $rows[(int) ($override['id'] ?? 0)] = $override + ($rows[(int) ($override['id'] ?? 0)] ?? []);
+        }
+        $attached = [];
+        foreach ($rows as $c) {
+            if ((int) $c['enabled'] && ($c['script_name'] ?? '') !== '') {
+                $attached[$c['script_name']] = true;
+            }
+        }
+        $dir = preg_quote(self::scriptDir() . '/', '#');
+        $missing = [];
+        foreach ($rows as $c) {
+            if (!(int) $c['enabled']) {
+                continue;
+            }
+            preg_match_all('#' . $dir . '([A-Za-z0-9][A-Za-z0-9._-]*)#', (string) $c['config'], $m);
+            foreach (array_unique($m[1]) as $file) {
+                if (!isset($attached[$file])) {
+                    $missing[$c['name']][] = self::scriptPath($file);
+                }
+            }
+        }
+        return $missing;
+    }
+
     // --- syntax check with monit -t ---------------------------------------------
 
     /** Path of the monit binary used for validation, or null if not available. */
@@ -332,6 +394,10 @@ final class AgentChecks
                 $scripts[] = self::SCRIPTS_SUBDIR . '/' . $c['script_name'];
             }
         }
+        // list of the scripts installed by this zip: the next install removes exactly
+        // these files from the script directory, and nothing else
+        $zip->add(self::SCRIPTS_SUBDIR . '/' . self::MANIFEST,
+            implode("\n", array_map(static fn ($p) => basename($p), $scripts)) . ($scripts ? "\n" : ''));
         $zip->add('README.txt', self::readme($host, $files, $scripts));
         return $zip->bytes();
     }
@@ -344,33 +410,41 @@ final class AgentChecks
     private static function readme(array $host, array $files, array $scripts): string
     {
         $dir = self::monitDir();
+        $sdir = self::scriptDir();
         $sub = self::SCRIPTS_SUBDIR;
+        $man = self::MANIFEST;
         $list = $files ? '  ' . implode("\n  ", $files) : '  (no enabled checks)';
-        $slist = $scripts ? '  ' . implode("\n  ", $scripts) : '  (none)';
+        $slist = $scripts ? '  ' . implode("\n  ", array_map(static fn ($p) => $sdir . '/' . basename($p), $scripts)) : '  (none)';
         $when = fmt_dt(now_utc(), 'Y-m-d H:i T');
         return <<<TXT
         Monit configuration for {$host['hostname']}
         Generated by Bmon-web AgentConf on $when
 
-        Checks:
+        Checks (to $dir/):
         $list
 
-        Scripts (used by the checks):
+        Scripts used by the checks (to $sdir/):
         $slist
 
         Install on the host, as root (monitrc must include $dir/*,
         the default on Debian/Ubuntu):
 
-          # remove the files of a previous zip, so that deleted checks go away
+          # 1. checks: remove those of a previous zip, so that deleted checks go away
           rm -f $dir/bmon-*.conf
-          rm -rf $dir/$sub
-          unzip -o this-file.zip -x README.txt -d $dir/
+          unzip -o this-file.zip -x README.txt '$sub/*' -d $dir/
           chmod 600 $dir/bmon-*.conf
+
+          # 2. scripts: remove only the ones a previous zip installed (listed in $man)
+          mkdir -p $sdir
+          [ -f $sdir/$man ] && (cd $sdir && xargs -r rm -f < $man)
+          unzip -o -j this-file.zip '$sub/*' -d $sdir/
+
+          # 3. check and apply
           monit -t && monit reload
 
-        The scripts go in the subdirectory $sub/ (mode 0755): Monit does not
-        read subdirectories of an "include $dir/*", so they are not mistaken
-        for configuration. Do not copy README.txt into $dir/.
+        The scripts are installed with mode 0755. They must not be placed directly
+        in $dir/: Monit would read them as configuration. Do not copy
+        README.txt into $dir/ either.
 
         "monit -t" checks the syntax before reloading: if it reports an error,
         nothing changes until you fix it (in Bmon-web) and reload again.

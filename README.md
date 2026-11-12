@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.8.1**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.8.2**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -215,10 +215,14 @@ the agents, to install on each node with all its checks ready.
   Checks can be renamed, disabled or deleted.
 - **Attached script**: each check can carry one script (file name + text), for
   example the program run by a "Custom script" check. The zip installs it in
-  `<monit_dir>/bmon-scripts/` (mode 0755) — a subdirectory, because a script
-  directly in `/etc/monit/conf.d/` would be read by Monit as configuration.
-  Shell scripts are checked with `sh -n` / `bash -n` when saved, and Windows
-  line endings are converted.
+  the script directory, `agentconf.script_dir` (default
+  `<monit_dir>/bmon-scripts/`), with mode 0755. It must not be the Monit include
+  directory itself: Monit would read the scripts as configuration. Shell
+  scripts are checked with `sh -n` / `bash -n` when saved, Windows line endings
+  are converted, and Bmon warns when a check uses a file of the script
+  directory that no check attaches. The zip carries the list of the scripts it
+  installs (`.bmon-files`), so the next install removes exactly those files and
+  never anything else in that directory.
 - **Validation**: when `monit` is installed on the Bmon-web server, every save
   runs `monit -t` on the agent's enabled checks together, so syntax errors and
   duplicate service names are caught before the download (with "Save anyway"
@@ -230,12 +234,18 @@ the agents, to install on each node with all its checks ready.
   scripts in `bmon-scripts/`, and a `README.txt` with the commands to install it:
 
   ```sh
-  rm -f /etc/monit/conf.d/bmon-*.conf          # checks deleted in Bmon go away
-  rm -rf /etc/monit/conf.d/bmon-scripts
-  unzip -o bmon-agentconf-HOST-….zip -x README.txt -d /etc/monit/conf.d/
+  # checks (deleted checks go away)
+  rm -f /etc/monit/conf.d/bmon-*.conf
+  unzip -o FILE.zip -x README.txt 'bmon-scripts/*' -d /etc/monit/conf.d/
   chmod 600 /etc/monit/conf.d/bmon-*.conf
+  # scripts (only those a previous zip installed are removed)
+  mkdir -p SCRIPT_DIR
+  [ -f SCRIPT_DIR/.bmon-files ] && (cd SCRIPT_DIR && xargs -r rm -f < .bmon-files)
+  unzip -o -j FILE.zip 'bmon-scripts/*' -d SCRIPT_DIR/
   monit -t && monit reload
   ```
+
+  The README inside the zip has these commands with the real directories.
 
   If a check has the same name as a service defined in another file on the
   host, Monit refuses the configuration ("Service name conflict"): remove the
@@ -266,6 +276,7 @@ not in the PATH, or to `'none'` to disable the checks.
 | `monit.timeout` | `10` | seconds, for each action |
 | `agentconf.monit_binary` | `''` | monit used for `monit -t` (`''` = search PATH, `'none'` = no validation) |
 | `agentconf.monit_dir` | `/etc/monit/conf.d` | where the zip is installed on the agents (scripts in its `bmon-scripts/`) |
+| `agentconf.script_dir` | `''` | directory of the attached scripts on the agents (`''` = `<monit_dir>/bmon-scripts`) |
 | `agentconf.collector_url` | `''` | default collector URL of the "Reporting to Bmon" template |
 | `agentconf.web_address` | `''` | default address of Bmon-web in that template (`allow`) |
 | `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |
