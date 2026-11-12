@@ -413,7 +413,7 @@ final class AgentTemplates
                 'description' => 'Run a script and alert when its exit status is not 0; its output appears in the alert (e.g. certificate expiry, queue length).',
                 'fields' => [
                     self::nameField('check-script'),
-                    self::f('path', 'Script', '/usr/local/bin/check-something', '^/[^"\\\\\r\n]{0,250}$', 'Absolute path of the executable, followed by its arguments if needed.', true, 'An absolute path, without quotes or backslashes.'),
+                    self::f('path', 'Script', AgentChecks::scriptPath('check_something.sh'), '^/[^"\\\\\r\n]{0,250}$', 'Absolute path of the executable, followed by its arguments if needed. After adding the check you can attach the script itself, installed in ' . AgentChecks::scriptDir() . '/.', true, 'An absolute path, without quotes or backslashes.'),
                     self::f('timeout', 'Timeout (seconds)', '30', self::INT, '', true, 'A whole number.'),
                     self::f('every', 'Run every (cycles)', '', self::INT, 'Leave empty to run at every cycle.', false, 'A whole number.'),
                 ],

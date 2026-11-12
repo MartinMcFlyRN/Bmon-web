@@ -10,12 +10,16 @@ namespace Bmon\Web;
  */
 final class ZipWriter
 {
-    /** @var list<array{name:string,data:string,time:int}> */
+    /** @var list<array{name:string,data:string,time:int,mode:int}> */
     private array $files = [];
 
-    public function add(string $name, string $data, ?int $mtime = null): void
+    /** $mode: Unix permissions restored by unzip (e.g. 0755 for scripts). */
+    public function add(string $name, string $data, ?int $mtime = null, int $mode = 0644): void
     {
-        $this->files[] = ['name' => ltrim(str_replace('\\', '/', $name), '/'), 'data' => $data, 'time' => $mtime ?? time()];
+        $this->files[] = [
+            'name' => ltrim(str_replace('\\', '/', $name), '/'), 'data' => $data,
+            'time' => $mtime ?? time(), 'mode' => $mode & 0777,
+        ];
     }
 
     public function bytes(): string
@@ -36,7 +40,7 @@ final class ZipWriter
 
             $central .= pack('VvvvvvvVVVvvvvvVV', 0x02014b50, 0x0314, 20, $flags, $method, $dosTime, $dosDate,
                 $crc, strlen($payload), $size, strlen($f['name']), 0, 0, 0, 0,
-                (0100644 << 16), $offset) . $f['name'];   // external attributes: regular file 0644
+                ((0100000 | $f['mode']) << 16), $offset) . $f['name'];   // external attributes: regular file + mode
         }
         return $out . $central . pack('VvvvvVVv', 0x06054b50, 0, 0, count($this->files), count($this->files),
             strlen($central), strlen($out), 0);

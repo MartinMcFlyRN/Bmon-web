@@ -42,6 +42,7 @@ final class Config
             // AgentConf: Monit configurations prepared for the agents
             'agentconf' => [
                 'monit_binary'  => '',      // path of monit for "monit -t" checks; '' = search PATH, 'none' = no checks
+                'monit_dir'     => '/etc/monit/conf.d',  // where the zip is installed on the agents
                 'collector_url' => '',      // default of the "Reporting to Bmon" template (set mmonit)
                 'web_address'   => '',      // default "allow" address of Bmon-web in that template
             ],

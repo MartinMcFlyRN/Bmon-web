@@ -293,6 +293,8 @@ textarea.code { tab-size: 4; background: #fbfcfc; }
 .input-affix span:last-child { border-radius: 0 4px 4px 0; border-left: 0; }
 .input-affix input { border-radius: 0; width: 240px; font-family: inherit; }
 h1.mono { font-size: 20px; }
+.script-box { margin-top: 22px; }
+.script-box .input-affix input { width: 260px; }
 .danger-zone { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-top: 16px; }
 .danger-zone .btn { margin-top: 0; }
 

@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.8.1 — 2026-11-12
+
+**Run `bin/bmon-web migrate` after upgrading** (new columns `agent_checks.script_name`, `agent_checks.script`).
+
+- AgentConf: each check can have an attached script (file name + text), installed by the zip in `<monit_dir>/bmon-scripts/` with mode 0755; shell scripts checked with `sh -n` / `bash -n`, CRLF converted, file names unique per agent
+- Zip layout changed: files at the root (`bmon-<name>.conf`, `bmon-scripts/…`, `README.txt`), installed with `unzip -o … -x README.txt -d /etc/monit/conf.d/` (see the README in the zip)
+- Validation: `check program` paths are replaced by a stub for `monit -t` (the programs exist on the agents, not on the Bmon-web server), and "Program does not exist" warnings are ignored — before, a "Custom script" check whose script was not on the Bmon-web server could not be saved
+- The UI states that a check is a copy of its template ("Created from"): editing a check never affects other checks
+- New config key `agentconf.monit_dir`
+
 ## 0.8.0 — 2026-11-12
 
 **Run `bin/bmon-web migrate` after upgrading** (new table `agent_checks`). Optional: install `monit` on the Bmon-web server (not running) to validate the checks.

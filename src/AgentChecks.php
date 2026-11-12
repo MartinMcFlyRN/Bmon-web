@@ -13,7 +13,27 @@ namespace Bmon\Web;
 final class AgentChecks
 {
     public const NAME_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/';
+    public const SCRIPT_NAME_PATTERN = '/^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/';
+    public const SCRIPTS_SUBDIR = 'bmon-scripts';
     private const MAX_CONFIG = 20000;
+    private const MAX_SCRIPT = 200000;
+
+    /** Directory of the Monit include files on the agents (Debian/Ubuntu default). */
+    public static function monitDir(): string
+    {
+        return rtrim((string) Config::get('agentconf.monit_dir', '/etc/monit/conf.d'), '/') ?: '/etc/monit/conf.d';
+    }
+
+    /** Directory of the attached scripts on the agents: a subdirectory, ignored by "include conf.d/*". */
+    public static function scriptDir(): string
+    {
+        return self::monitDir() . '/' . self::SCRIPTS_SUBDIR;
+    }
+
+    public static function scriptPath(string $scriptName): string
+    {
+        return self::scriptDir() . '/' . $scriptName;
+    }
 
     public static function forHost(int $hostId): array
     {
@@ -45,10 +65,82 @@ final class AgentChecks
         );
     }
 
-    public static function update(int $id, string $name, string $config, bool $enabled, string $by): void
+    public static function update(int $id, string $name, string $config, bool $enabled, string $by,
+                                  string $scriptName = '', string $script = ''): void
     {
-        Db::exec('UPDATE agent_checks SET name = ?, config = ?, enabled = ?, updated_at = ?, updated_by = ? WHERE id = ?',
-            [$name, self::normalize($config), $enabled ? 1 : 0, now_utc(), $by, $id]);
+        $script = $scriptName === '' ? null : self::normalizeScript($script);
+        Db::exec('UPDATE agent_checks SET name = ?, config = ?, script_name = ?, script = ?, enabled = ?, updated_at = ?, updated_by = ?
+                   WHERE id = ?',
+            [$name, self::normalize($config), $scriptName, $script, $enabled ? 1 : 0, now_utc(), $by, $id]);
+    }
+
+    /** Scripts keep their tabs; only the line endings are fixed (CRLF breaks sh). */
+    public static function normalizeScript(string $script): string
+    {
+        return rtrim(str_replace(["\r\n", "\r"], "\n", $script)) . "\n";
+    }
+
+    /**
+     * Checks on the attached script (both fields empty = no script).
+     * @return array<string,string> field => error
+     */
+    public static function validateScript(int $hostId, string $scriptName, string $script, ?int $id): array
+    {
+        if ($scriptName === '' && trim($script) === '') {
+            return [];
+        }
+        if ($scriptName === '') {
+            return ['script_name' => 'Give the script a file name (or empty the script to remove it).'];
+        }
+        if (!preg_match(self::SCRIPT_NAME_PATTERN, $scriptName)) {
+            return ['script_name' => 'Use letters, digits, dot, dash or underscore (max 100), e.g. check_queue.sh.'];
+        }
+        if (trim($script) === '') {
+            return ['script' => 'The script is empty.'];
+        }
+        if (strlen($script) > self::MAX_SCRIPT) {
+            return ['script' => 'The script is too long (max ' . self::MAX_SCRIPT . ' bytes).'];
+        }
+        $other = Db::one('SELECT id, name FROM agent_checks WHERE host_id = ? AND script_name = ? AND id <> ?',
+            [$hostId, $scriptName, (int) $id]);
+        if ($other !== null) {
+            return ['script_name' => "Check “{$other['name']}” of this agent already has a script with this file name."];
+        }
+        return [];
+    }
+
+    /**
+     * Syntax check of a shell script ("sh -n", or "bash -n" for bash scripts).
+     * @return array{ok:bool|null,output:string} ok null = not a shell script or no shell here
+     */
+    public static function scriptSyntax(string $script): array
+    {
+        $first = strtok($script, "\n") ?: '';
+        $shell = match (true) {
+            !str_starts_with($first, '#!') => 'sh',
+            (bool) preg_match('#^\#!\s*(/usr)?/bin/(env\s+)?bash\b#', $first) => 'bash',
+            (bool) preg_match('#^\#!\s*(/usr)?/bin/(env\s+)?(sh|dash)\b#', $first) => 'sh',
+            default => null,   // python, perl, ...: not checked
+        };
+        if ($shell === null || !function_exists('proc_open')) {
+            return ['ok' => null, 'output' => ''];
+        }
+        $bin = trim((string) @shell_exec('command -v ' . $shell . ' 2>/dev/null'));
+        if ($bin === '') {
+            return ['ok' => null, 'output' => ''];
+        }
+        $proc = proc_open([$bin, '-n'], [0 => ['pipe', 'r'], 1 => ['pipe', 'w'], 2 => ['pipe', 'w']], $pipes, sys_get_temp_dir(), ['PATH' => '/usr/bin:/bin']);
+        if (!is_resource($proc)) {
+            return ['ok' => null, 'output' => ''];
+        }
+        fwrite($pipes[0], self::normalizeScript($script));
+        fclose($pipes[0]);
+        $out = stream_get_contents($pipes[1]) . stream_get_contents($pipes[2]);
+        fclose($pipes[1]);
+        fclose($pipes[2]);
+        $code = proc_close($proc);
+        $out = preg_replace('#^' . preg_quote($bin, '#') . ':\s*#m', '', trim($out));
+        return ['ok' => $code === 0, 'output' => "$shell -n: " . ($out !== '' ? $out : 'exit status ' . $code)];
     }
 
     public static function delete(int $id): void
@@ -144,7 +236,18 @@ final class AgentChecks
             return ['ok' => null, 'output' => 'cannot create a temporary directory'];
         }
         try {
+            // Programs exist on the agents, not on this server: monit -t refuses a
+            // "check program" whose executable is missing, so for the check only it
+            // points to a stub (same line, so line numbers in the messages still match).
+            $stub = "$dir/program-stub";
+            file_put_contents($stub, "#!/bin/sh\nexit 0\n");
+            chmod($stub, 0755);
             foreach ($snippets as $name => $config) {
+                $config = preg_replace_callback(
+                    '/^(\s*check\s+program\s+(?:"[^"]*"|\S+)\s+with\s+path\s+)(?:"(\S+)([^"]*)"|(\S+))/mi',
+                    static fn ($m) => $m[1] . (isset($m[4]) && $m[4] !== '' ? $stub : '"' . $stub . $m[3] . '"'),
+                    $config
+                );
                 file_put_contents("$dir/conf.d/" . self::fileName($name), $config);
             }
             $rc = "set daemon 60\nset idfile $dir/monit.id\nset statefile $dir/monit.state\ninclude $dir/conf.d/*\n";
@@ -164,6 +267,9 @@ final class AgentChecks
             // show the file names of the zip, not the temporary paths
             $out = str_replace(["$dir/conf.d/", "$dir/"], '', trim($out));
             $out = preg_replace('/^Control file syntax OK\s*$/m', '', $out);
+            // start/stop/exec programs exist on the agents, not here: not an error
+            $out = preg_replace('/^.*: Program does not exist: .*$\n?/m', '', $out);
+            $out = preg_replace('/^\s*(New Monit id: .*|Stored in .*)$\n?/m', '', $out);
             // an incomplete statement at the end of a file is reported on the include line
             $out = preg_replace('/^monitrc:\d+: /m', 'end of a file (incomplete statement?): ', $out);
             return ['ok' => $code === 0, 'output' => trim($out)];
@@ -199,21 +305,34 @@ final class AgentChecks
 
     // --- zip --------------------------------------------------------------------
 
-    /** Zip with the enabled checks of a host and a README with the instructions. */
+    /**
+     * Zip with the enabled checks of a host, their scripts and a README:
+     *   bmon-<name>.conf           -> <monit_dir>/
+     *   bmon-scripts/<script>      -> <monit_dir>/bmon-scripts/ (0755)
+     *   README.txt                 (not to be copied: Monit would read it)
+     */
     public static function zip(array $host): string
     {
         $checks = array_filter(self::forHost((int) $host['id']), static fn ($c) => (int) $c['enabled']);
         $zip = new ZipWriter();
         $files = [];
+        $scripts = [];
         foreach ($checks as $c) {
+            $time = strtotime($c['updated_at'] . ' UTC') ?: null;
             $file = self::fileName($c['name']);
             $files[] = $file;
             $header = "# Generated by Bmon-web AgentConf for {$host['hostname']} — do not edit here,\n"
                 . "# change it in Bmon-web and download the zip again.\n"
-                . '# Check: ' . $c['name'] . ' · template: ' . $c['template'] . ' · updated ' . fmt_dt($c['updated_at'], 'Y-m-d H:i') . "\n\n";
-            $zip->add('conf.d/' . $file, $header . $c['config'], strtotime($c['updated_at'] . ' UTC') ?: null);
+                . '# Check: ' . $c['name'] . ' · created from template: ' . $c['template'] . ' · updated ' . fmt_dt($c['updated_at'], 'Y-m-d H:i') . "\n"
+                . ($c['script_name'] !== '' ? '# Script: ' . self::scriptPath($c['script_name']) . "\n" : '')
+                . "\n";
+            $zip->add($file, $header . $c['config'], $time);
+            if ($c['script_name'] !== '' && $c['script'] !== null) {
+                $zip->add(self::SCRIPTS_SUBDIR . '/' . $c['script_name'], $c['script'], $time, 0755);
+                $scripts[] = self::SCRIPTS_SUBDIR . '/' . $c['script_name'];
+            }
         }
-        $zip->add('README.txt', self::readme($host, $files));
+        $zip->add('README.txt', self::readme($host, $files, $scripts));
         return $zip->bytes();
     }
 
@@ -222,28 +341,36 @@ final class AgentChecks
         return 'bmon-agentconf-' . preg_replace('/[^A-Za-z0-9._-]+/', '_', $host['hostname']) . '-' . gmdate('Ymd-His') . '.zip';
     }
 
-    private static function readme(array $host, array $files): string
+    private static function readme(array $host, array $files, array $scripts): string
     {
+        $dir = self::monitDir();
+        $sub = self::SCRIPTS_SUBDIR;
         $list = $files ? '  ' . implode("\n  ", $files) : '  (no enabled checks)';
+        $slist = $scripts ? '  ' . implode("\n  ", $scripts) : '  (none)';
         $when = fmt_dt(now_utc(), 'Y-m-d H:i T');
         return <<<TXT
         Monit configuration for {$host['hostname']}
         Generated by Bmon-web AgentConf on $when
 
-        Files (conf.d/):
+        Checks:
         $list
 
-        Install on the host (Debian/Ubuntu: monitrc includes /etc/monit/conf.d/*):
+        Scripts (used by the checks):
+        $slist
+
+        Install on the host, as root (monitrc must include $dir/*,
+        the default on Debian/Ubuntu):
 
           # remove the files of a previous zip, so that deleted checks go away
-          rm -f /etc/monit/conf.d/bmon-*.conf
-          unzip -o -j this-file.zip 'conf.d/*' -d /etc/monit/conf.d/
-          chmod 600 /etc/monit/conf.d/bmon-*.conf
+          rm -f $dir/bmon-*.conf
+          rm -rf $dir/$sub
+          unzip -o this-file.zip -x README.txt -d $dir/
+          chmod 600 $dir/bmon-*.conf
           monit -t && monit reload
 
-        Other systems: copy the files where your monitrc includes them, e.g. add
-          include /etc/monit.d/*
-        to monitrc.
+        The scripts go in the subdirectory $sub/ (mode 0755): Monit does not
+        read subdirectories of an "include $dir/*", so they are not mistaken
+        for configuration. Do not copy README.txt into $dir/.
 
         "monit -t" checks the syntax before reloading: if it reports an error,
         nothing changes until you fix it (in Bmon-web) and reload again.

@@ -121,14 +121,15 @@ final class AgentConfController
         redirect("/agentconf/$id/checks/$checkId");
     }
 
-    public function edit(int $id, int $checkId, array $errors = [], ?array $form = null, ?array $syntax = null): string
+    public function edit(int $id, int $checkId, array $errors = [], ?array $form = null, ?array $syntax = null, ?array $scriptSyntax = null): string
     {
         $host = $this->hostRow($id);
         $check = $this->check($id, $checkId);
         return View::render('agentconf/edit', [
             'title' => $check['name'] . ' · ' . $host['hostname'], 'nav' => 'agentconf',
             'host' => $host, 'check' => $check, 'form' => $form ?? $check, 'errors' => $errors,
-            'syntax' => $syntax, 'template' => AgentTemplates::get($check['template']),
+            'syntax' => $syntax, 'scriptSyntax' => $scriptSyntax, 'tplInfo' => AgentTemplates::get($check['template']),
+            'scriptDir' => AgentChecks::scriptDir(), 'monitDir' => AgentChecks::monitDir(),
             'services' => AgentChecks::definedServices($form['config'] ?? $check['config'], $host['hostname']),
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
@@ -138,28 +139,51 @@ final class AgentConfController
     {
         $host = $this->hostRow($id);
         $check = $this->check($id, $checkId);
+        $str = static fn (string $k): string => is_string($_POST[$k] ?? null) ? $_POST[$k] : '';
         $form = [
-            'name' => trim(is_string($_POST['name'] ?? null) ? $_POST['name'] : ''),
-            'config' => is_string($_POST['config'] ?? null) ? $_POST['config'] : '',
+            'name' => trim($str('name')),
+            'config' => $str('config'),
             'enabled' => isset($_POST['enabled']) ? 1 : 0,
+            'script_name' => trim($str('script_name')),
+            'script' => $str('script'),
         ];
-        $errors = AgentChecks::validate($id, $form['name'], $form['config'], $checkId);
+        if (trim($form['script']) === '' && isset($_POST['remove_script'])) {
+            $form['script_name'] = '';
+        }
+        $errors = AgentChecks::validate($id, $form['name'], $form['config'], $checkId)
+            + AgentChecks::validateScript($id, $form['script_name'], $form['script'], $checkId);
         $syntax = null;
+        $scriptSyntax = null;
         if (!$errors) {
             $syntax = AgentChecks::checkWith($id, $checkId, $form['name'], $form['config'], (bool) $form['enabled']);
             if ($syntax['ok'] === false && !isset($_POST['force'])) {
                 $errors['_syntax'] = 'monit -t rejected the configuration.';
             }
+            if ($form['script_name'] !== '') {
+                $scriptSyntax = AgentChecks::scriptSyntax($form['script']);
+                if ($scriptSyntax['ok'] === false && !isset($_POST['force'])) {
+                    $errors['_script'] = 'The shell rejected the script.';
+                }
+            }
         }
         if ($errors) {
             http_response_code(422);
-            return $this->edit($id, $checkId, $errors, $form + $check, $syntax);
+            return $this->edit($id, $checkId, $errors, $form + $check, $syntax, $scriptSyntax);
         }
 
-        AgentChecks::update($checkId, $form['name'], $form['config'], (bool) $form['enabled'], (string) Auth::user()['username']);
+        AgentChecks::update($checkId, $form['name'], $form['config'], (bool) $form['enabled'], (string) Auth::user()['username'],
+            $form['script_name'], $form['script']);
         $what = $form['name'] !== $check['name'] ? "{$check['name']} → {$form['name']}" : $form['name'];
-        Audit::log('agentconf.update', "{$host['hostname']} (id $id): $what" . ($form['enabled'] ? '' : ' (disabled)'));
-        flash('success', "Check “{$form['name']}” saved." . $this->syntaxNote($syntax));
+        $scriptNote = match (true) {
+            $form['script_name'] === '' && $check['script_name'] !== '' => ', script removed',
+            $form['script_name'] !== '' && ($form['script_name'] !== $check['script_name']
+                || AgentChecks::normalizeScript($form['script']) !== (string) $check['script']) => ", script {$form['script_name']}",
+            default => '',
+        };
+        Audit::log('agentconf.update', "{$host['hostname']} (id $id): $what" . ($form['enabled'] ? '' : ' (disabled)') . $scriptNote);
+        $warn = $form['script_name'] !== '' && !str_starts_with(ltrim($form['script']), '#!')
+            ? ' Note: the script has no "#!" line; add "#!/bin/sh" so that Monit can run it.' : '';
+        flash('success', "Check “{$form['name']}” saved." . $this->syntaxNote($syntax) . $warn);
         redirect("/agentconf/$id");
     }
 

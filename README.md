@@ -1,6 +1,6 @@
 # Bmon-web
 
-Version **0.8.0**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
+Version **0.8.1**. License: [AGPL-3.0](LICENSE). Web interface of Bmon, a replacement for M/Monit. It reads
 the data that [Bmon collector](https://github.com/MartinMcFlyRN/Bmon-collector)
 stores in MySQL/MariaDB and presents it with a layout inspired by M/Monit.
 
@@ -209,19 +209,30 @@ the agents, to install on each node with all its checks ready.
   size and content, directory freshness; custom script, network interface;
   "Reporting to Bmon" (`set mmonit` + `set httpd` for actions); custom. A
   template asks for a few values (checked, so they cannot break the syntax) and
-  produces the configuration, which can then be **edited freely**, renamed,
-  disabled or deleted.
+  produces the configuration. The check is a **copy**: from then on it is plain
+  text, edited freely for that service only — templates are never linked to the
+  checks made from them, so no change elsewhere ever alters an existing check.
+  Checks can be renamed, disabled or deleted.
+- **Attached script**: each check can carry one script (file name + text), for
+  example the program run by a "Custom script" check. The zip installs it in
+  `<monit_dir>/bmon-scripts/` (mode 0755) — a subdirectory, because a script
+  directly in `/etc/monit/conf.d/` would be read by Monit as configuration.
+  Shell scripts are checked with `sh -n` / `bash -n` when saved, and Windows
+  line endings are converted.
 - **Validation**: when `monit` is installed on the Bmon-web server, every save
   runs `monit -t` on the agent's enabled checks together, so syntax errors and
   duplicate service names are caught before the download (with "Save anyway"
-  for syntax that only a newer Monit on the agents understands). `include` is
-  not allowed in a check.
-- **Download zip**: `conf.d/bmon-<name>.conf` for each enabled check, plus a
-  `README.txt` with the commands to install it:
+  for syntax that only a newer Monit on the agents understands). Programs and
+  scripts exist on the agents, not on the Bmon-web server, so for the check the
+  path of a `check program` is replaced by a stub, and "Program does not exist"
+  warnings are ignored. `include` is not allowed in a check.
+- **Download zip**: `bmon-<name>.conf` for each enabled check, the attached
+  scripts in `bmon-scripts/`, and a `README.txt` with the commands to install it:
 
   ```sh
   rm -f /etc/monit/conf.d/bmon-*.conf          # checks deleted in Bmon go away
-  unzip -o -j bmon-agentconf-HOST-….zip 'conf.d/*' -d /etc/monit/conf.d/
+  rm -rf /etc/monit/conf.d/bmon-scripts
+  unzip -o bmon-agentconf-HOST-….zip -x README.txt -d /etc/monit/conf.d/
   chmod 600 /etc/monit/conf.d/bmon-*.conf
   monit -t && monit reload
   ```
@@ -254,6 +265,7 @@ not in the PATH, or to `'none'` to disable the checks.
 | `monit.tls_verify` | `false` | require a valid certificate on Monit httpd with SSL |
 | `monit.timeout` | `10` | seconds, for each action |
 | `agentconf.monit_binary` | `''` | monit used for `monit -t` (`''` = search PATH, `'none'` = no validation) |
+| `agentconf.monit_dir` | `/etc/monit/conf.d` | where the zip is installed on the agents (scripts in its `bmon-scripts/`) |
 | `agentconf.collector_url` | `''` | default collector URL of the "Reporting to Bmon" template |
 | `agentconf.web_address` | `''` | default address of Bmon-web in that template (`allow`) |
 | `slack.webhook_url` | `''` | Incoming Webhook for `report:slack` |

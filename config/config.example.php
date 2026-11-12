@@ -36,6 +36,8 @@ return [
     'agentconf' => [
         // monit binary used to validate the checks with "monit -t" ('' = search PATH, 'none' = never).
         'monit_binary'  => '',
+        // Directory of the Monit include files on the agents (scripts go in its bmon-scripts/).
+        'monit_dir'     => '/etc/monit/conf.d',
         // Defaults of the "Reporting to Bmon" template.
         'collector_url' => 'https://monit:PASSWORD@collector.example.com/collector',
         'web_address'   => '203.0.113.5',
