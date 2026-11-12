@@ -31,9 +31,8 @@ $th = static fn (string $key, string $label, string $class = ''): string
   <div class="alert alert-info">No report from Monit since <?= e(fmt_dt($host['last_seen'], 'Y-m-d H:i:s')) ?>. The values below are from the last report and may be out of date.</div>
 <?php endif ?>
 
-<div class="grid-2">
-  <div class="stack">
-  <section class="card">
+<div class="host-grid">
+  <section class="card host-card">
     <h2>Host</h2>
     <dl class="kv">
       <dt>Name</dt>
@@ -69,7 +68,47 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <dt>Memory</dt><dd><?= e(fmt_bytes((int) $host['memory_kb'] * 1024)) ?> <span class="muted">· swap <?= e(fmt_bytes((int) $host['swap_kb'] * 1024)) ?></span></dd>
     </dl>
   </section>
-
+  <section class="card monit-card">
+    <h2>Monit</h2>
+    <dl class="kv">
+      <dt>Version</dt><dd><?= e($host['monit_version']) ?></dd>
+      <dt>Uptime</dt><dd><?= e(fmt_duration((int) $host['monit_uptime'])) ?></dd>
+      <dt>Poll interval</dt><dd><?= e($host['poll_interval']) ?>s</dd>
+      <dt>Last report</dt><dd><?= e(fmt_dt($host['last_seen'], 'Y-m-d H:i:s')) ?> <span class="muted">(<?= e(since($host['last_seen'])) ?> ago)</span></dd>
+      <dt>First seen</dt><dd><?= e(fmt_dt($host['first_seen'])) ?></dd>
+      <dt>Service monit</dt>
+      <dd>
+        <div class="monit-check" data-monit-check="<?= e(url('/status/' . $host['id'] . '/monit-check')) ?>">
+          <span class="dot dot-unknown"></span> <span class="monit-check-label muted">Checking…</span>
+        </div>
+        <?php if (($host['monit_address'] ?? '') !== ''): ?>
+          <span class="muted small">address set in Bmon<?= $host['addr_updated_by'] !== '' ? ' by ' . e($host['addr_updated_by']) : '' ?></span>
+        <?php endif ?>
+        <?php if ($canEdit && (int) $host['httpd_port'] > 0): ?>
+          <details class="inline-edit">
+            <summary>Edit address</summary>
+            <form method="post" action="<?= e(url('/status/' . $host['id'] . '/monit-address')) ?>" class="inline-form">
+              <?= csrf_field() ?>
+              <input type="text" name="monit_address" maxlength="255" value="<?= e($host['monit_address'] ?? '') ?>"
+                     placeholder="<?= e(\Bmon\Web\MonitClient::reportedAddress($host) ?: 'IP or host name') ?>" aria-label="Address of Monit httpd" spellcheck="false">
+              <input type="text" name="monit_port" maxlength="5" inputmode="numeric" class="port-input" value="<?= e($host['monit_port'] ?? '') ?>"
+                     placeholder="<?= e($host['httpd_port']) ?>" aria-label="Port of Monit httpd">
+              <button type="submit" class="btn btn-sm">Save</button>
+            </form>
+            <p class="hint">Used for the actions and this check instead of the address Monit reports (e.g. the public IP instead of the private one).
+              Port: leave empty for the reported one. Empty address = automatic.</p>
+          </details>
+        <?php endif ?>
+      </dd>
+      <dt>httpd <span class="muted small">(reported)</span></dt><dd class="mono"><?= $host['httpd_port'] ? e(($host['httpd_address'] ?: '*') . ':' . $host['httpd_port'] . ((int) $host['httpd_ssl'] ? ' (SSL)' : '')) : '—' ?></dd>
+      <?php if ($host['remote_addr'] !== '' && $host['remote_addr'] !== $host['httpd_address']): ?>
+        <dt>Reports from</dt><dd class="mono"><?= e($host['remote_addr']) ?></dd>
+      <?php endif ?>
+      <dt>Control file</dt><dd class="mono small"><?= e($host['control_file'] ?: '—') ?></dd>
+      <dt>Monit ID</dt><dd class="mono small"><?= e($host['monit_id']) ?></dd>
+    </dl>
+  </section>
+  <div class="host-side">
   <section class="card" id="inventory">
     <h2>Inventory</h2>
     <?php if ($inventory): ?>
@@ -117,7 +156,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
     <?php if ($canEdit): ?>
       <form method="post" action="<?= e(url('/status/' . $host['id'] . '/notes')) ?>">
         <?= csrf_field() ?>
-        <textarea name="notes" rows="<?= max(4, min(20, substr_count((string) $host['notes'], "\n") + 2)) ?>" maxlength="10000"
+        <textarea name="notes" rows="<?= max(3, min(16, substr_count((string) $host['notes'], "\n") + 2)) ?>" maxlength="10000"
                   aria-label="Notes about this host" placeholder="Anything useful about this host: customer, contacts, contract, location, special procedures…"><?= e($host['notes'] ?? '') ?></textarea>
         <button type="submit" class="btn btn-sm">Save notes</button>
       </form>
@@ -131,46 +170,6 @@ $th = static fn (string $key, string $label, string $class = ''): string
     <?php endif ?>
   </section>
   </div>
-  <section class="card">
-    <h2>Monit</h2>
-    <dl class="kv">
-      <dt>Version</dt><dd><?= e($host['monit_version']) ?></dd>
-      <dt>Uptime</dt><dd><?= e(fmt_duration((int) $host['monit_uptime'])) ?></dd>
-      <dt>Poll interval</dt><dd><?= e($host['poll_interval']) ?>s</dd>
-      <dt>Last report</dt><dd><?= e(fmt_dt($host['last_seen'], 'Y-m-d H:i:s')) ?> <span class="muted">(<?= e(since($host['last_seen'])) ?> ago)</span></dd>
-      <dt>First seen</dt><dd><?= e(fmt_dt($host['first_seen'])) ?></dd>
-      <dt>Service monit</dt>
-      <dd>
-        <div class="monit-check" data-monit-check="<?= e(url('/status/' . $host['id'] . '/monit-check')) ?>">
-          <span class="dot dot-unknown"></span> <span class="monit-check-label muted">Checking…</span>
-        </div>
-        <?php if (($host['monit_address'] ?? '') !== ''): ?>
-          <span class="muted small">address set in Bmon<?= $host['addr_updated_by'] !== '' ? ' by ' . e($host['addr_updated_by']) : '' ?></span>
-        <?php endif ?>
-        <?php if ($canEdit && (int) $host['httpd_port'] > 0): ?>
-          <details class="inline-edit">
-            <summary>Edit address</summary>
-            <form method="post" action="<?= e(url('/status/' . $host['id'] . '/monit-address')) ?>" class="inline-form">
-              <?= csrf_field() ?>
-              <input type="text" name="monit_address" maxlength="255" value="<?= e($host['monit_address'] ?? '') ?>"
-                     placeholder="<?= e(\Bmon\Web\MonitClient::reportedAddress($host) ?: 'IP or host name') ?>" aria-label="Address of Monit httpd" spellcheck="false">
-              <input type="text" name="monit_port" maxlength="5" inputmode="numeric" class="port-input" value="<?= e($host['monit_port'] ?? '') ?>"
-                     placeholder="<?= e($host['httpd_port']) ?>" aria-label="Port of Monit httpd">
-              <button type="submit" class="btn btn-sm">Save</button>
-            </form>
-            <p class="hint">Used for the actions and this check instead of the address Monit reports (e.g. the public IP instead of the private one).
-              Port: leave empty for the reported one. Empty address = automatic.</p>
-          </details>
-        <?php endif ?>
-      </dd>
-      <dt>httpd <span class="muted small">(reported)</span></dt><dd class="mono"><?= $host['httpd_port'] ? e(($host['httpd_address'] ?: '*') . ':' . $host['httpd_port'] . ((int) $host['httpd_ssl'] ? ' (SSL)' : '')) : '—' ?></dd>
-      <?php if ($host['remote_addr'] !== '' && $host['remote_addr'] !== $host['httpd_address']): ?>
-        <dt>Reports from</dt><dd class="mono"><?= e($host['remote_addr']) ?></dd>
-      <?php endif ?>
-      <dt>Control file</dt><dd class="mono small"><?= e($host['control_file'] ?: '—') ?></dd>
-      <dt>Monit ID</dt><dd class="mono small"><?= e($host['monit_id']) ?></dd>
-    </dl>
-  </section>
 </div>
 
 <section class="panel">

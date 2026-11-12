@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.13.1 — 2026-11-12
+
+- Host page layout: Host, Monit and Inventory + Notes side by side on wide screens (three columns), Host and Monit with Inventory and Notes below on medium screens, one column on phones; tighter card padding, smaller empty Notes field, so the services table starts much higher
+- Wider page container (1440 px)
+- Phones: event and compact tables keep a readable message column and scroll horizontally instead of growing very tall
+
 ## 0.13.0 — 2026-11-12
 
 No migrations.
