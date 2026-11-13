@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.2 — 2026-11-14
+
+- Installer: the install commands make the install directory `chmod 700` right after creating it, so only root can enter it (it holds the private key, the httpd password and the collector credentials)
+
 ## 0.23.1 — 2026-11-13
 
 - Search box (filters as you type, by name and description) in *Add check* and in Agent → Custom Templates

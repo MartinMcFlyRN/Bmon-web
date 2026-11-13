@@ -293,7 +293,7 @@ the agents, to install on each node with all its checks ready.
   templates and Admin → Configuration (collector URL and credentials, Bmon-web
   address, interval), with the paths of the install directory. The package page
   shows the link, the install commands
-  (`mkdir -p <dir>; cd <dir> && wget … && unzip …;
+  (`mkdir -p <dir>; chmod 700 <dir>; cd <dir> && wget … && unzip …;
   bin/monit -c conf/monitrc -t; bin/monit -c conf/monitrc`, and an `@reboot`
   line added to root's crontab with `crontab -` to start Monit at boot), the files with
   their content and `monit -t`, the number of downloads, and warns when the

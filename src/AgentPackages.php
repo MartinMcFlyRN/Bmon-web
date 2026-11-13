@@ -267,6 +267,7 @@ final class AgentPackages
         $b = $pkg['base_dir'];
         return "# as root on the new server\n"
             . "mkdir -p $b\n"
+            . "chmod 700 $b\n"
             . "cd $b && wget -q -O bmon-pkg.zip '$url' && unzip -o bmon-pkg.zip && rm bmon-pkg.zip\n"
             . "chmod 600 $b/conf/monitrc $b/conf/monit.pem\n"
             . "$b/bin/monit -c $b/conf/monitrc -t\n"
