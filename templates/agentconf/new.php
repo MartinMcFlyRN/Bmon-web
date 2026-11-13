@@ -20,7 +20,12 @@ $base = $scope['base'];
 </div>
 
 <?php if ($tpl === null): ?>
-  <p class="muted">Choose a template. After adding it, the configuration can be edited freely.</p>
+  <p class="muted">Choose a template. After adding it, the configuration can be edited freely. Your own templates are in
+    <a href="<?= e(url('/agentconf/templates')) ?>">Agent → Custom Templates</a>.</p>
+  <div class="toolbar">
+    <input type="search" class="filter-input" data-filter="#tpl-gallery" placeholder="Search templates by name or description" aria-label="Search templates" autofocus>
+  </div>
+  <div id="tpl-gallery">
   <?php
     $groups = [];
     foreach (AgentTemplates::all() as $key => $t) {
@@ -28,11 +33,11 @@ $base = $scope['base'];
     }
   ?>
   <?php foreach (AgentTemplates::CATEGORIES as $cat => $catLabel): if (empty($groups[$cat])) continue; ?>
-    <section class="panel">
+    <section class="panel" data-filter-group>
       <h2><?= e($catLabel) ?></h2>
       <div class="tpl-grid">
         <?php foreach ($groups[$cat] as $key => $t): ?>
-          <a class="tpl-card" href="<?= e(url($base . '/new') . '?template=' . rawurlencode($key)) ?>">
+          <a class="tpl-card" data-filter-item href="<?= e(url($base . '/new') . '?template=' . rawurlencode($key)) ?>">
             <span class="tpl-title"><?= e($t['label']) ?></span>
             <span class="tpl-desc"><?= e($t['description']) ?></span>
           </a>
@@ -40,6 +45,8 @@ $base = $scope['base'];
       </div>
     </section>
   <?php endforeach ?>
+  <p class="muted" data-filter-empty hidden>No template matches.</p>
+  </div>
 
 <?php else: ?>
   <?php if ($fromReported !== ''): ?>

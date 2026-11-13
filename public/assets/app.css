@@ -84,7 +84,7 @@ h2 { font-size: 15px; font-weight: 600; margin: 0 0 12px; }
 .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 20px; align-items: start; }
 label { display: block; font-weight: 500; margin: 12px 0 4px; }
-input[type=text], input[type=email], input[type=password], select {
+input[type=text], input[type=email], input[type=password], input[type=search], input[type=number], select {
   width: 100%; padding: 8px 10px; font: inherit; color: var(--text);
   background: #fff; border: 1px solid var(--border); border-radius: 4px;
 }
@@ -452,3 +452,5 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .pkg-files { columns: 2; margin: 8px 0 12px; }
 .pkg-form input[type=file] { display: block; margin: 4px 0; }
 .pkg-form input[type=number] { width: 100%; }
+.filter-input { width: 100%; max-width: 420px; }
+[data-filter-item][hidden], [data-filter-group][hidden] { display: none !important; }

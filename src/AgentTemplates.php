@@ -37,7 +37,6 @@ final class AgentTemplates
         'file' => 'Files and directories',
         'program' => 'Programs and network',
         'global' => 'Monit settings',
-        'custom' => 'Custom',
     ];
 
     public const PROTOCOLS = [
@@ -135,7 +134,7 @@ final class AgentTemplates
         }
         return match ($type) {
             0 => 'filesystem', 1 => 'directory-age', 2 => 'file-checksum', 4 => 'host-website',
-            5 => 'system', 7 => 'program', 8 => 'network', default => 'custom',
+            5 => 'system', 7 => 'program', 8 => 'network', default => 'file-checksum',
         };
     }
 
@@ -545,15 +544,6 @@ final class AgentTemplates
                     . "    if status != 0 then alert\n",
             ],
 
-            // --- custom -------------------------------------------------------------
-            'custom' => [
-                'category' => 'custom',
-                'label' => 'Custom',
-                'description' => 'Start from an empty check and write it yourself (Monit syntax).',
-                'fields' => [self::nameField('custom')],
-                'body' => "check process {{name}} matching \"{{name}}\"\n"
-                    . "    if does not exist then alert\n",
-            ],
         ];
     }
 

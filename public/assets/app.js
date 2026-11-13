@@ -207,3 +207,30 @@ document.addEventListener('click', (ev) => {
   const rm = ev.target.closest('[data-remove-row]');
   if (rm) rm.closest('tr').remove();
 });
+
+// Live filter: <input data-filter="#container">; hides the [data-filter-item] whose text
+// (data-filter-text, else their content) does not contain every word typed, the
+// [data-filter-group] left empty, and shows [data-filter-empty] when nothing matches.
+document.querySelectorAll('input[data-filter]').forEach((input) => {
+  const box = document.querySelector(input.dataset.filter);
+  if (!box) return;
+  const items = [...box.querySelectorAll('[data-filter-item]')];
+  const text = (el) => (el.dataset.filterText || el.textContent).toLowerCase();
+  const apply = () => {
+    const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    let shown = 0;
+    items.forEach((el) => {
+      const t = text(el);
+      const ok = words.every((w) => t.includes(w));
+      el.hidden = !ok;
+      if (ok) shown++;
+    });
+    box.querySelectorAll('[data-filter-group]').forEach((g) => {
+      g.hidden = !g.querySelector('[data-filter-item]:not([hidden])');
+    });
+    const empty = box.querySelector('[data-filter-empty]');
+    if (empty) empty.hidden = shown > 0;
+  };
+  input.addEventListener('input', apply);
+  input.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { input.value = ''; apply(); } });
+});

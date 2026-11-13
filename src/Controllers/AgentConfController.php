@@ -566,7 +566,7 @@ class AgentConfController
         return [
             'kind' => 'host', 'sid' => $id, 'id' => $id, 'base' => "/agentconf/$id",
             'name' => $host['hostname'], 'monit_hostname' => $host['monit_hostname'], 'host' => $host,
-            'crumbs' => [['/agentconf', 'AgentConf'], ["/agentconf/$id", $host['hostname']]],
+            'crumbs' => [['/agentconf', 'Agent'], ["/agentconf/$id", $host['hostname']]],
             'back' => 'Back to the agent', 'what' => 'this agent',
         ];
     }

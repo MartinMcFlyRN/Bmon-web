@@ -27,7 +27,7 @@ final class GroupChecksController extends AgentConfController
         return [
             'kind' => 'group', 'sid' => CheckGroups::sid($id), 'id' => $id, 'base' => "/agentconf/groups/$id",
             'name' => $g['name'], 'monit_hostname' => '$HOST', 'host' => null, 'group' => $g,
-            'crumbs' => [['/agentconf', 'AgentConf'], ['/agentconf/groups', 'Group Checks'], ["/agentconf/groups/$id", $g['name']]],
+            'crumbs' => [['/agentconf', 'Agent'], ['/agentconf/groups', 'Group Checks'], ["/agentconf/groups/$id", $g['name']]],
             'back' => 'Back to the group', 'what' => 'this group',
         ];
     }
