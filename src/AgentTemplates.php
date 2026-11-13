@@ -221,11 +221,11 @@ final class AgentTemplates
                 'description' => 'Reports the distribution and its version (e.g. Debian 12, Ubuntu 24.04) to Bmon-web, shown on the host page and in Status. Uses an attached script that reads /etc/os-release; it never alerts.',
                 'fields' => [
                     self::nameField('os-info'),
-                    self::f('every', 'Run every (cycles)', '10', self::INT, 'Monit reads the result of a program at the following run, so the OS appears in Bmon after about two runs: with a 30 s cycle, 10 = every 5 minutes.', true, 'A whole number.'),
+                    self::f('every', 'Run every (minutes)', '5', '^([1-9]|[1-5][0-9])$', 'Monit reads the result of a program at the following run, so the OS appears in Bmon after about two runs.', true, 'Minutes, 1 to 59.'),
                 ],
                 'script' => ['name' => 'bmon-osinfo.sh', 'file' => 'bmon-osinfo.sh'],
                 'body' => "check program {{name}} with path \"" . AgentChecks::scriptPath('bmon-osinfo.sh') . "\" with timeout 10 seconds\n"
-                    . "    every {{every}} cycles\n"
+                    . "    every \"{{cron}}\"\n"
                     . "    if status != 0 then alert\n",
             ],
             'filesystem' => [
@@ -465,10 +465,10 @@ final class AgentTemplates
                     self::nameField('check-script'),
                     self::f('path', 'Script', AgentChecks::scriptPath('check_something.sh'), '^/[^"\\\\\r\n]{0,250}$', 'Absolute path of the executable, followed by its arguments if needed. After adding the check you can attach the script itself, installed in ' . AgentChecks::scriptDir() . '/.', true, 'An absolute path, without quotes or backslashes.'),
                     self::f('timeout', 'Timeout (seconds)', '30', self::INT, '', true, 'A whole number.'),
-                    self::f('every', 'Run every (cycles)', '', self::INT, 'Leave empty to run at every cycle.', false, 'A whole number.'),
+                    self::f('every', 'Run every (minutes)', '', '^([1-9]|[1-5][0-9])$', 'Leave empty to run at every cycle.', false, 'Minutes, 1 to 59, or empty.'),
                 ],
                 'body' => "check program {{name}} with path \"{{path}}\" with timeout {{timeout}} seconds\n"
-                    . "    ?every every {{every}} cycles\n"
+                    . "    ?every every \"{{cron}}\"\n"
                     . "    if status != 0 then alert\n",
             ],
             'network' => [
@@ -523,14 +523,14 @@ final class AgentTemplates
                     self::f('url', 'Bmon-web URL', rtrim((string) Config::get('app.url', ''), '/') ?: 'https://bmon.example.com',
                         '^https?://[A-Za-z0-9.:\\[\\]-]+(/[A-Za-z0-9._~/-]*)?$', 'Address of this server as the agent reaches it (no trailing slash).', true,
                         'An http(s) URL without spaces, quotes or query.'),
-                    self::f('every', 'Ask every (cycles)', '10', self::INT, 'With a 30 s cycle, 10 = every 5 minutes. "Update now" does not wait for it.', true, 'A whole number.'),
+                    self::f('every', 'Ask every (minutes)', '5', '^([1-9]|[1-5][0-9])$', '"Update now" does not wait for it.', true, 'Minutes, 1 to 59.'),
                     self::f('cacert', 'CA of Bmon-web (optional)', '', '^(/[A-Za-z0-9._/@+-]{1,200})?$',
                         'PEM file on the agent to verify the HTTPS certificate of Bmon-web with, if it is not issued by a public CA. Empty = system CAs.', false,
                         'An absolute path, or empty.'),
                 ],
                 'script' => ['name' => AgentUpdate::SCRIPT, 'file' => AgentUpdate::SCRIPT],
                 'body' => "check program {{name}} with path \"{{command}}\" with timeout 300 seconds\n"
-                    . "    every {{every}} cycles\n"
+                    . "    every \"{{cron}}\"\n"
                     . "    start program = \"{{command}} --now\" with timeout 300 seconds\n"
                     . "    if status != 0 then alert\n",
             ],
@@ -554,6 +554,12 @@ final class AgentTemplates
     {
         if (isset($values['protocol'])) {
             $values['protocol_clause'] = $values['protocol'] !== '' ? 'protocol ' . $values['protocol'] . ' ' : 'type tcp ';
+        }
+        // "every N cycles" is deprecated by newer Monit: cron style, in minutes, as an
+        // explicit list ("*/N" is not understood by Monit 5.33 and older)
+        if (($values['every'] ?? '') !== '') {
+            $n = max(1, (int) $values['every']);
+            $values['cron'] = ($n === 1 ? '*' : implode(',', range(0, 59, $n))) . ' * * * *';
         }
         if ($key === 'bmon-update' && isset($values['url'])) {
             $values['command'] = AgentChecks::scriptPath(AgentUpdate::SCRIPT) . ' --url ' . rtrim($values['url'], '/')

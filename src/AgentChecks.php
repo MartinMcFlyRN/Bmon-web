@@ -315,7 +315,7 @@ final class AgentChecks
             chmod($pem, 0600);
             foreach ($snippets as $name => $config) {
                 $config = preg_replace_callback(
-                    '/^(\s*check\s+program\s+(?:"[^"]*"|\S+)\s+with\s+path\s+)(?:"(\S+)([^"]*)"|(\S+))/mi',
+                    '/^(\s*check\s+program\s+(?:"[^"]*"|\S+)\s+with\s+path\s+)(?:"([^"\s]+)([^"\n]*)"|(\S+))/mi',
                     static fn ($m) => $m[1] . (isset($m[4]) && $m[4] !== '' ? $stub : '"' . $stub . $m[3] . '"'),
                     $config
                 );

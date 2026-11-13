@@ -376,7 +376,7 @@ makes the current enabled checks the version the agent downloads, and the
 2. Install the zip by hand once, as above, and restart Monit if `set httpd`
    moved into the Bmon files.
 3. From then on: edit the checks, **Publish**, and either wait for the next run
-   (every N cycles) or press **Update now** (Bmon-web sends "start" to that
+   (every N minutes) or press **Update now** (Bmon-web sends "start" to that
    check through Monit httpd, so it runs at the next Monit cycle).
 
 What `bmon-update.sh` does at each run:

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.16.1 — 2026-11-13
+
+- Templates "Bmon auto-update", "OS information" and "Custom script": the interval is now in minutes and written as `every "0,5,10,… * * * *"` instead of `every N cycles`, which newer Monit versions reject as deprecated (the explicit list, rather than `*/N`, also works with Monit 5.33 and older). Checks already created are copies: change their `every` line by hand
+- Validation: the stub of `check program` paths could swallow the quotes of the next line (e.g. `every "…"`), giving a false syntax error
+
 ## 0.16.0 — 2026-11-13
 
 **Run `bin/bmon-web migrate` after upgrading** (new tables `agent_releases`, `agent_update_state`).
