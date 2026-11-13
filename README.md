@@ -170,14 +170,16 @@ accept only those:
    cat $H.key $H.crt > $H-monit.pem      # Monit wants key + certificate in one file
    ```
 
-3. **On the host**: copy the pem as `/etc/monit/ssl/monit.pem`
-   (`chown root:root`, `chmod 600`) and enable SSL in `set httpd` — the AgentConf
-   template "Reporting to Bmon" does it when *HTTPS certificate* is filled in:
+3. **On the host**: copy the pem as `/etc/monit/monit.pem`, next to monitrc
+   (`chown root:root`, `chmod 600`; the directory is *Monit directory on the
+   agents* in Admin → Configuration), and enable SSL in `set httpd` — the
+   AgentConf template "Reporting to Bmon" does it when *HTTPS certificate* is
+   filled in:
 
    ```
    set httpd port 2812 and
        with ssl {
-           pemfile: /etc/monit/ssl/monit.pem
+           pemfile: /etc/monit/monit.pem
        }
        use address 0.0.0.0
        allow 203.0.113.5
@@ -263,7 +265,8 @@ the agents, to install on each node with all its checks ready.
 
 - **Agents**: the list shows the active agents (those sending reports; a button
   shows the offline ones too), with the services they report and the checks
-  prepared in Bmon.
+  prepared in Bmon. Search by name, address, OS or Monit version; click a
+  column title to sort by it (again to reverse).
 - **Agent page**: the checks prepared in Bmon (one file each), and the checks
   currently on the agent as Monit reports them, marked *managed* when a Bmon
   file defines them. For those not managed, **Create check** opens the closest
@@ -274,7 +277,10 @@ the agents, to install on each node with all its checks ready.
   Redis, Memcached, cron, any service by PID file or command line; HTTPS website
   with certificate expiry, HTTP page, TCP port, ping; file integrity, freshness,
   size and content, directory freshness; custom script, network interface;
-  "Reporting to Bmon" (`set mmonit` + `set httpd` for actions); custom. A
+  "Reporting to Bmon" (`set mmonit` + `set httpd` for actions; its collector URL
+  comes from *Collector URL*, *Collector user* and *Collector password* in Admin →
+  Configuration, the HTTPS certificate from *Monit directory on the agents*,
+  default `/etc/monit`, as `<directory>/monit.pem`); custom. A
   template asks for a few values (checked, so they cannot break the syntax) and
   produces the configuration. The check is a **copy**: from then on it is plain
   text, edited freely for that service only — templates are never linked to the

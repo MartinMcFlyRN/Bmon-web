@@ -21,19 +21,54 @@ use Bmon\Web\View;
  */
 final class AgentConfController
 {
+    /** Sortable columns of the agent list => default direction. */
+    private const SORTS = ['agent' => 'asc', 'address' => 'asc', 'monit' => 'desc', 'services' => 'desc',
+        'checks' => 'desc', 'seen' => 'desc'];
+
     public function index(): string
     {
         $all = ($_GET['all'] ?? '') === '1';
+        $q = trim(is_string($_GET['q'] ?? null) ? $_GET['q'] : '');
+        $where = [];
+        $params = [];
+        if (!$all) {
+            $where[] = 'h.offline_since IS NULL';
+        }
+        if ($q !== '') {
+            $like = '%' . addcslashes($q, '%_\\') . '%';
+            $where[] = '(h.hostname LIKE ? OR hm.display_name LIKE ? OR h.remote_addr LIKE ? OR h.os_name LIKE ? OR h.monit_version LIKE ?)';
+            array_push($params, $like, $like, $like, $like, $like);
+        }
         $agents = Db::all(
             'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.monit_version, h.os_name, h.os_release,
                     h.services_total, h.last_seen, h.offline_since
                FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin()
-            . ($all ? '' : ' WHERE h.offline_since IS NULL') . ' ORDER BY hostname'
+            . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY hostname',
+            $params
         );
+        $counts = AgentChecks::counts();
+
+        $sort = array_key_exists($_GET['sort'] ?? '', self::SORTS) ? $_GET['sort'] : 'agent';
+        $dir = in_array($_GET['dir'] ?? '', ['asc', 'desc'], true) ? $_GET['dir'] : self::SORTS[$sort];
+        $key = static fn (array $a): mixed => match ($sort) {
+            'agent' => mb_strtolower((string) $a['hostname']),
+            'address' => ($ip = @inet_pton((string) $a['remote_addr'])) !== false ? bin2hex($ip) : (string) $a['remote_addr'],
+            'monit' => (string) $a['monit_version'],
+            'services' => (int) $a['services_total'],
+            'checks' => (int) ($counts[(int) $a['id']]['enabled'] ?? -1),
+            'seen' => (string) $a['last_seen'],
+        };
+        usort($agents, static function (array $a, array $b) use ($key, $sort, $dir): int {
+            $c = $sort === 'monit' ? version_compare($key($a), $key($b)) : $key($a) <=> $key($b);
+            $c = $dir === 'asc' ? $c : -$c;
+            return $c ?: strnatcasecmp((string) $a['hostname'], (string) $b['hostname']);
+        });
+
         $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
         return View::render('agentconf/index', [
             'title' => 'AgentConf', 'nav' => 'agentconf',
-            'agents' => $agents, 'counts' => AgentChecks::counts(), 'all' => $all, 'offlineCount' => $offline,
+            'agents' => $agents, 'counts' => $counts, 'all' => $all, 'offlineCount' => $offline,
+            'q' => $q, 'sort' => $sort, 'dir' => $dir,
         ]);
     }
 

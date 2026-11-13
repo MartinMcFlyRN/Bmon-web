@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 — 2026-11-13
+
+No migrations.
+
+- Admin → Configuration → AgentConf: *Collector user* and *Collector password* (secret), put into the collector URL of the "Reporting to Bmon" template (replacing any user:password already in the URL), so new checks come with the right `set mmonit`
+- *Monit directory on the agents* (default `/etc/monit`): where monitrc and monit.pem are; the template's HTTPS certificate defaults to `<directory>/monit.pem` (was `/etc/monit/ssl/monit.pem`) and the zip README names `<directory>/monitrc`
+- AgentConf agent list: search (name, address, OS, Monit version) and sortable columns
+
 ## 0.14.0 — 2026-11-13
 
 No migrations.

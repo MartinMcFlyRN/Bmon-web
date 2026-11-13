@@ -1,17 +1,32 @@
-<?php /** @var array $agents @var array $counts @var bool $all @var int $offlineCount */ ?>
+<?php /** @var array $agents @var array $counts @var bool $all @var int $offlineCount @var string $q @var string $sort @var string $dir */
+$th = static fn (string $key, string $label, string $class = ''): string
+    => sort_th('/agentconf', $key, $label, $sort, $dir, $class);
+?>
 <div class="page-head">
   <h1>AgentConf</h1>
-  <a class="btn" href="<?= e(url('/agentconf') . ($all ? '' : '?all=1')) ?>">
+  <a class="btn" href="<?= e(url('/agentconf') . query_with(['all' => $all ? null : '1'])) ?>">
     <?= $all ? 'Show only active agents' : 'Show also offline agents (' . e($offlineCount) . ')' ?>
   </a>
 </div>
-<p class="muted">Prepare the Monit checks of each agent from templates, edit them, and download them as a zip to install in <code>/etc/monit/conf.d/</code>.</p>
+<p class="muted">Prepare the Monit checks of each agent from templates, edit them, and download them as a zip to install in <code><?= e(\Bmon\Web\AgentChecks::monitDir()) ?>/</code>.</p>
+
+<div class="toolbar">
+  <form method="get" action="<?= e(url('/agentconf')) ?>" class="search" role="search">
+    <?php foreach (['all', 'sort', 'dir'] as $keep): if (!empty($_GET[$keep]) && is_string($_GET[$keep])): ?>
+      <input type="hidden" name="<?= e($keep) ?>" value="<?= e($_GET[$keep]) ?>">
+    <?php endif; endforeach ?>
+    <input type="search" name="q" value="<?= e($q) ?>" placeholder="Search agent, address, OS, Monit version" aria-label="Search agents">
+    <button type="submit" class="btn">Search</button>
+    <?php if ($q !== ''): ?><a class="btn" href="<?= e(url('/agentconf') . query_with(['q' => null])) ?>">Clear</a><?php endif ?>
+  </form>
+</div>
 
 <?php if (!$agents): ?>
-  <div class="card muted">No <?= $all ? '' : 'active ' ?>agents.</div>
+  <div class="card muted"><?= $q !== '' ? 'No agents match “' . e($q) . '”.' : 'No ' . ($all ? '' : 'active ') . 'agents.' ?></div>
 <?php else: ?>
 <table class="table">
-  <thead><tr><th>Agent</th><th>Address</th><th>Monit</th><th class="num">Reported services</th><th class="num">Bmon checks</th><th>Last report</th></tr></thead>
+  <thead><tr><?= $th('agent', 'Agent') . $th('address', 'Address') . $th('monit', 'Monit') . $th('services', 'Reported services', 'num')
+    . $th('checks', 'Bmon checks', 'num') . $th('seen', 'Last report') ?></tr></thead>
   <tbody>
   <?php foreach ($agents as $a):
       $c = $counts[(int) $a['id']] ?? null; ?>

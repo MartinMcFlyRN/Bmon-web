@@ -43,7 +43,8 @@ return [
     // 'slack'   => ['webhook_url' => '', 'title' => 'Active alerts summary:', 'no_alerts' => 'No active alerts.',
     //               'proxy' => '', 'timeout' => 10],
     // 'agentconf' => ['monit_dir' => '/etc/monit/conf.d', 'script_dir' => '', 'link_ttl_hours' => 24,
-    //               'collector_url' => '', 'web_address' => ''],
+    //               'collector_url' => '', 'collector_user' => '', 'collector_password' => '',
+    //               'monitrc_dir' => '/etc/monit', 'web_address' => ''],
     // Note: PHP keeps only the last 'app' / 'monit' / 'agentconf' key of an array:
     // merge them with the ones above instead of repeating them.
 ];

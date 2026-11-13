@@ -131,6 +131,33 @@ final class AgentTemplates
 
     // -------------------------------------------------------------------------
 
+    /** Directory of monitrc and monit.pem on the agents. */
+    public static function monitrcDir(): string
+    {
+        return rtrim((string) Config::get('agentconf.monitrc_dir', '/etc/monit'), '/') ?: '/etc/monit';
+    }
+
+    /**
+     * Default "set mmonit" URL: agentconf.collector_url with agentconf.collector_user
+     * and collector_password put in (replacing any user:password already in the URL).
+     */
+    public static function collectorUrl(): string
+    {
+        $url = trim((string) Config::get('agentconf.collector_url', ''));
+        $user = trim((string) Config::get('agentconf.collector_user', ''));
+        $pass = (string) Config::get('agentconf.collector_password', '');
+        if ($url === '') {
+            $url = 'https://collector.example.com/collector';
+            if ($user === '') {
+                return 'https://monit:PASSWORD@collector.example.com/collector';
+            }
+        }
+        if ($user === '' || !preg_match('#^(https?://)(?:[^/@]*@)?(.*)$#i', $url, $m)) {
+            return $url;
+        }
+        return $m[1] . $user . ($pass !== '' ? ':' . $pass : '') . '@' . $m[2];
+    }
+
     private static function f(string $key, string $label, string $default, string $pattern, string $help = '', bool $required = true, ?string $error = null): array
     {
         return compact('key', 'label', 'default', 'pattern', 'help', 'required') + ['type' => 'text', 'error' => $error];
@@ -466,10 +493,10 @@ final class AgentTemplates
                 'description' => 'set mmonit (reports to bmon-collector, with credentials for actions) and set httpd (actions from Bmon-web). Remove any other "set httpd" or "set mmonit" from the main monitrc.',
                 'filename' => '00-bmon',
                 'fields' => [
-                    self::f('collector', 'Collector URL', (string) Config::get('agentconf.collector_url', 'https://monit:PASSWORD@collector.example.com/collector'),
-                        '^https?://[^"\\\\\s]+$', 'With the user and password of the collector.', true, 'An http(s) URL without spaces or quotes.'),
+                    self::f('collector', 'Collector URL', self::collectorUrl(),
+                        '^https?://[^"\\\\\s]+$', 'With the user and password of the collector (defaults from Admin → Configuration).', true, 'An http(s) URL without spaces or quotes.'),
                     $port('2812'),
-                    self::f('pemfile', 'HTTPS certificate (pemfile)', '/etc/monit/ssl/monit.pem', '^(/[A-Za-z0-9._/-]{1,200})?$',
+                    self::f('pemfile', 'HTTPS certificate (pemfile)', self::monitrcDir() . '/monit.pem', '^(/[A-Za-z0-9._/-]{1,200})?$',
                         'Private key + certificate issued by your CA (see README, "HTTPS to Monit"). Empty = plain HTTP.', false,
                         'An absolute path, or empty for plain HTTP.'),
                     self::f('listen', 'httpd listens on', '0.0.0.0', self::ADDRESS, 'Address reachable from the Bmon-web server.', true, 'An IP address or host name.'),

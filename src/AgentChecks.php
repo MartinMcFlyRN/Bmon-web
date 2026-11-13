@@ -455,6 +455,7 @@ final class AgentChecks
         $sdir = self::scriptDir();
         $sub = self::SCRIPTS_SUBDIR;
         $man = self::MANIFEST;
+        $rc = AgentTemplates::monitrcDir();
         $list = $files ? '  ' . implode("\n  ", $files) : '  (no enabled checks)';
         $slist = $scripts ? '  ' . implode("\n  ", array_map(static fn ($p) => $sdir . '/' . basename($p), $scripts)) : '  (none)';
         $when = fmt_dt(now_utc(), 'Y-m-d H:i T');
@@ -468,7 +469,7 @@ final class AgentChecks
         Scripts used by the checks (to $sdir/):
         $slist
 
-        Install on the host, as root (monitrc must include $dir/*,
+        Install on the host, as root ($rc/monitrc must include $dir/*,
         the default on Debian/Ubuntu):
 
           # 1. checks: remove those of a previous zip, so that deleted checks go away

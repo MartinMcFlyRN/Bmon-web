@@ -55,6 +55,9 @@ final class Config
                 'script_dir'    => '',      // where the attached scripts go on the agents; '' = <monit_dir>/bmon-scripts
                 'link_ttl_hours' => 24,     // lifetime of the download links (no sign-in) of the zips
                 'collector_url' => '',      // default of the "Reporting to Bmon" template (set mmonit)
+                'collector_user' => '',     // user and password of the collector, put into that URL
+                'collector_password' => '',
+                'monitrc_dir'   => '/etc/monit', // where monitrc and monit.pem are on the agents
                 'web_address'   => '',      // default "allow" address of Bmon-web in that template
             ],
             // bin/bmon-web report:slack
