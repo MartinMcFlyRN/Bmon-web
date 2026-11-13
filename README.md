@@ -279,8 +279,9 @@ the agents, to install on each node with all its checks ready.
 
   ```
   bin/monit                      the uploaded binary
-  conf/monitrc                   set daemon 60, log syslog, pid/state/id files,
-                                 event queue, include <dir>/conf.d/*.conf
+  conf/monitrc                   set daemon 60, log syslog, pid and state files,
+                                 id file <dir>/monit.id, event queue,
+                                 include <dir>/conf.d/*.conf
   conf/monit.pem                 the uploaded certificate
   conf.d/bmon-00-bmon.conf       Reporting to Bmon (set mmonit, set httpd with ssl)
   conf.d/bmon-bmon-update.conf   Bmon auto-update
@@ -292,8 +293,9 @@ the agents, to install on each node with all its checks ready.
   templates and Admin → Configuration (collector URL and credentials, Bmon-web
   address, interval), with the paths of the install directory. The package page
   shows the link, the install commands
-  (`mkdir -p <dir> /var/lib/monit; cd <dir> && wget … && unzip …;
-  bin/monit -c conf/monitrc -t; bin/monit -c conf/monitrc`), the files with
+  (`mkdir -p <dir>; cd <dir> && wget … && unzip …;
+  bin/monit -c conf/monitrc -t; bin/monit -c conf/monitrc`, and an `@reboot`
+  line in root's crontab to start Monit at boot), the files with
   their content and `monit -t`, the number of downloads, and warns when the
   Configuration (Monit include, script and monitrc directories, Monit binary)
   does not match the layout, since later zips and publications use it. Uploads

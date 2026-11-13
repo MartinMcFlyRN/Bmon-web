@@ -26,7 +26,7 @@ $base = $p['base_dir'] ?: '/usr/local/monit';
     <div class="copy-row"><textarea id="pkg-cmd" readonly rows="<?= substr_count($cmd, "\n") + 1 ?>" class="code" aria-label="Install commands"><?= e($cmd) ?></textarea>
       <button type="button" class="btn" data-copy="pkg-cmd">Copy</button></div>
     <p class="hint">Downloaded <?= (int) ($p['downloads'] ?? 0) ?> times<?= !empty($p['last_download_at']) ? ', last ' . e(fmt_dt($p['last_download_at'])) . ' from ' . e($p['last_download_ip']) : '' ?>.
-      To start Monit at boot, add a systemd unit or an init script running the last command.</p>
+      The last command starts Monit at boot (cron @reboot of root).</p>
     <form method="post" action="<?= e(url('/agentconf/installer/' . $id . '/relink')) ?>" data-confirm="Create a new link? The current one stops working at once.">
       <?= csrf_field() ?><button type="submit" class="btn btn-sm">New link</button>
     </form>

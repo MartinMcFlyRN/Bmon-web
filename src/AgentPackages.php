@@ -11,7 +11,7 @@ namespace Bmon\Web;
  * directory (e.g. /usr/local/monit):
  *
  *   bin/monit                    the uploaded binary
- *   conf/monitrc                 daemon, log, pid/state/id files, event queue, include conf.d
+ *   conf/monitrc                 daemon, log, pid/state files, id file <dir>/monit.id, event queue, include conf.d
  *   conf/monit.pem               the uploaded certificate
  *   conf.d/bmon-00-bmon.conf     Reporting to Bmon (set mmonit + set httpd with ssl)
  *   conf.d/bmon-bmon-update.conf Bmon auto-update
@@ -181,7 +181,7 @@ final class AgentPackages
             . "set log syslog\n"
             . "set pidfile /var/run/monit.pid\n"
             . "set statefile $base/.monit.state\n"
-            . "set idfile /var/lib/monit/id\n"
+            . "set idfile $base/monit.id\n"
             . "set mailserver localhost\n"
             . "set eventqueue\n"
             . "     basedir $base\n"
@@ -266,11 +266,12 @@ final class AgentPackages
     {
         $b = $pkg['base_dir'];
         return "# as root on the new server\n"
-            . "mkdir -p $b /var/lib/monit\n"
+            . "mkdir -p $b\n"
             . "cd $b && wget -q -O bmon-pkg.zip '$url' && unzip -o bmon-pkg.zip && rm bmon-pkg.zip\n"
             . "chmod 600 $b/conf/monitrc $b/conf/monit.pem\n"
             . "$b/bin/monit -c $b/conf/monitrc -t\n"
-            . "$b/bin/monit -c $b/conf/monitrc\n";
+            . "$b/bin/monit -c $b/conf/monitrc\n"
+            . "echo \"@reboot $b/bin/monit -c $b/conf/monitrc > /dev/null 2>&1\" >> /var/spool/cron/crontabs/root\n";
     }
 
     public static function save(?int $id, array $f, ?string $binary, ?string $binName, ?string $binInfo, ?string $pem, ?string $pemInfo, string $by): int

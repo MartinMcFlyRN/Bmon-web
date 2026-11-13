@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.1 — 2026-11-13
+
+- Installer: the Monit ID file is `<install directory>/monit.id` (was `/var/lib/monit/id`), so everything is in one directory; the install commands add `@reboot <dir>/bin/monit -c <dir>/conf/monitrc` to root's crontab to start Monit at boot
+
 ## 0.22.0 — 2026-11-13
 
 **Run `bin/bmon-web migrate` after upgrading** (table `agent_packages`). For the uploads, raise nginx `client_max_body_size` (40m) and PHP `upload_max_filesize` (32M) / `post_max_size` (34M), as in `deploy/nginx.conf` and `deploy/php-fpm-pool.conf`.
