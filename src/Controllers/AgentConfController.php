@@ -102,7 +102,7 @@ class AgentConfController
                 $added = AgentRequired::addMissing($host, (string) Auth::user()['username']);
                 if ($added) {
                     Audit::log('agentconf.required_add', "{$host['hostname']} (id $id): " . implode(', ', $added) . ' (automatically)');
-                    flash('success', 'Required checks added automatically: ' . implode(', ', $added) . '. Review them, then download or publish.');
+                    flash('success', 'Required checks added automatically: ' . implode(', ', $added) . '. Review them, then download or deploy.');
                 }
             } catch (AgentRequiredException $e) {
                 if ($e->added) {
@@ -437,37 +437,56 @@ class AgentConfController
         ], null);
     }
 
-    /** POST /agentconf/{id}/publish: the current checks become the version the agent downloads. */
-    public function publish(int $id): never
+    /**
+     * POST /agentconf/{id}/deploy ("Deploy configuration to host"): publishes the
+     * enabled checks (if they changed) and runs the auto-update check of the agent
+     * at once ("start" through Monit httpd). If the agent cannot be reached the
+     * version stays published and the agent takes it at its next run.
+     */
+    public function deploy(int $id): never
     {
         $host = $this->hostRow($id);
-        $r = AgentUpdate::publish($host, Auth::user()['username']);
-        if (!$r['ok']) {
+        $by = (string) Auth::user()['username'];
+        $r = AgentUpdate::publish($host, $by);
+        if (!$r['ok'] && empty($r['unchanged'])) {
             flash('error', $r['error']);
             redirect("/agentconf/$id");
         }
-        Audit::log('agentconf.publish', "{$host['hostname']} (id $id) version " . substr($r['release']['version'], 0, 12)
-            . " ({$r['release']['checks']} checks)");
-        $warn = AgentUpdate::warnings($id);
-        flash($warn ? 'error' : 'success', 'Published version ' . substr($r['release']['version'], 0, 12)
-            . ': the agent installs it at its next auto-update run.' . ($warn ? ' Warning: ' . implode(' ', $warn) : ''));
-        redirect("/agentconf/$id");
-    }
-
-    /** POST /agentconf/{id}/update-now: "start" of the auto-update check through Monit httpd. */
-    public function updateNow(int $id): never
-    {
-        $host = $this->hostRow($id);
-        $service = AgentUpdate::updateService($host);
-        if ($service === null) {
-            flash('error', 'This agent has no enabled "Bmon auto-update" check.');
+        $release = $r['release'] ?? AgentUpdate::latest($id);
+        if ($release === null) {
+            flash('error', 'Nothing to deploy.');
             redirect("/agentconf/$id");
         }
-        $r = MonitClient::action($host, $service, 'start');
-        Audit::log('agentconf.update_now', "{$host['hostname']} (id $id) service $service: " . ($r['ok'] ? 'sent' : 'failed: ' . $r['message']));
-        flash($r['ok'] ? 'success' : 'error', $r['ok']
-            ? "Update requested: Monit runs “{$service}” at its next cycle, the result appears here shortly after."
-            : 'Monit did not accept the request: ' . $r['message']);
+        $short = substr($release['version'], 0, 12);
+        if ($r['ok']) {
+            Audit::log('agentconf.publish', "{$host['hostname']} (id $id) version $short ({$release['checks']} checks)");
+        }
+        $warn = AgentUpdate::warnings($id);
+        $warnText = $warn ? ' Warning: ' . implode(' ', $warn) : '';
+        $what = $r['ok'] ? "Version $short published" : "Version $short (unchanged)";
+
+        $state = AgentUpdate::state($id);
+        if (!$r['ok'] && $state !== null && $state['installed_version'] === $release['version']) {
+            flash('success', "Nothing changed: the agent already runs version $short.");
+            redirect("/agentconf/$id");
+        }
+        $service = AgentUpdate::updateService($host);
+        $reason = match (true) {
+            $service === null => 'it has no enabled "Bmon auto-update" check',
+            $host['offline_since'] !== null => 'it is offline',
+            !MonitClient::available($host) => 'Bmon-web cannot reach its Monit httpd',
+            default => null,
+        };
+        if ($reason === null) {
+            $a = MonitClient::action($host, $service, 'start');
+            Audit::log('agentconf.deploy', "{$host['hostname']} (id $id) version $short, start $service: " . ($a['ok'] ? 'sent' : 'failed: ' . $a['message']));
+            if ($a['ok']) {
+                flash($warn ? 'error' : 'success', "$what and sent to the agent: Monit runs “{$service}” at its next cycle, the status below updates when it is installed." . $warnText);
+                redirect("/agentconf/$id");
+            }
+            $reason = 'its Monit did not accept the request (' . $a['message'] . ')';
+        }
+        flash('error', "$what, but the agent was not contacted now: $reason. It installs the version at its next auto-update run." . $warnText);
         redirect("/agentconf/$id");
     }
 

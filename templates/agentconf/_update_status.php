@@ -11,7 +11,7 @@ $short = static fn (string $v): string => $v === '' ? '—' : substr($v, 0, 12);
   <dd><?php if ($rel === null): ?><span class="muted">Nothing published yet.</span>
     <?php else: ?><span class="mono"><?= e($short($rel['version'])) ?></span> · <?= e($rel['checks']) ?> checks · <?= e(fmt_dt($rel['created_at'])) ?> · <?= e($rel['created_by']) ?>
     <?php endif ?>
-    <?php if ($update['changed'] && $enabledCount): ?> <span class="badge badge-warn">Changes not published</span><?php endif ?></dd>
+    <?php if ($update['changed'] && $enabledCount): ?> <span class="badge badge-warn">Changes not deployed</span><?php endif ?></dd>
   <dt>On the agent</dt>
   <dd><?php if ($st === null || $st['last_poll_at'] === null): ?><span class="muted">The agent has not asked for updates yet.</span>
     <?php else: ?>

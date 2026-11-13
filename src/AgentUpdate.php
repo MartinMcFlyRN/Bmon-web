@@ -68,16 +68,16 @@ final class AgentUpdate
         }
         $enabled = AgentChecks::enabledSet($id);
         if ($enabled === []) {
-            return ['ok' => false, 'error' => 'There are no enabled checks to publish: the agent would remove all its Bmon checks, including the auto-update itself.'];
+            return ['ok' => false, 'error' => 'There are no enabled checks to deploy: the agent would remove all its Bmon checks, including the auto-update itself.'];
         }
         $syntax = AgentChecks::syntaxCheck($enabled);
         if ($syntax['ok'] === false) {
-            return ['ok' => false, 'error' => 'monit -t rejects the configuration, fix it before publishing: ' . $syntax['output']];
+            return ['ok' => false, 'error' => 'monit -t rejects the configuration, fix it before deploying: ' . $syntax['output']];
         }
         $fingerprint = AgentChecks::fingerprint($host);
         $latest = self::latest($id);
         if ($latest !== null && hash_equals($latest['fingerprint'], $fingerprint)) {
-            return ['ok' => false, 'error' => 'Nothing changed since the last publication.'];
+            return ['ok' => false, 'unchanged' => true, 'error' => 'Nothing changed since the last deploy.'];
         }
         $zip = AgentChecks::zip($host);
         $version = hash('sha256', $zip);
@@ -115,7 +115,7 @@ final class AgentUpdate
         return $out;
     }
 
-    /** Service name of the enabled auto-update check (for "Update now"), or null. */
+    /** Service name of the enabled auto-update check (for "Deploy configuration to host"), or null. */
     public static function updateService(array $host): ?string
     {
         foreach (AgentChecks::forHost((int) $host['id']) as $c) {

@@ -97,22 +97,18 @@ use Bmon\Web\Monit;
       <?= \Bmon\Web\View::render('agentconf/_update_status', ['update' => $update, 'enabledCount' => $enabledCount], null) ?>
     </div>
     <?php foreach ($update['warnings'] as $w): ?><p class="hint text-warn"><?= e($w) ?></p><?php endforeach ?>
+    <?php $installed = (string) ($update['state']['installed_version'] ?? '');
+          $canDeploy = !$requiredMissing && $enabledCount && ($update['changed'] || ($rel !== null && $installed !== $rel['version'])); ?>
     <div class="dialog-actions">
-      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/publish')) ?>"
-            data-confirm="Publish the enabled checks? The agent replaces its whole Bmon configuration with them at its next auto-update run.">
+      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/deploy')) ?>"
+            data-confirm="Deploy the enabled checks to <?= e($host['hostname']) ?>? The agent replaces its whole Bmon configuration with them.">
         <?= csrf_field() ?>
-        <button type="submit" class="btn btn-primary"<?= $requiredMissing ? ' disabled title="Required checks missing"' : ($update['changed'] && $enabledCount ? '' : ' disabled title="Nothing changed since the last publication"') ?>>Publish</button>
-      </form>
-      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/update-now')) ?>">
-        <?= csrf_field() ?>
-        <button type="submit" class="btn"<?= $update['canTrigger'] && $rel !== null ? '' : ' disabled' ?>
-          title="<?= e($update['service'] === null ? 'No enabled Bmon auto-update check'
-            : (!$update['serviceReported'] ? 'Monit does not report “' . $update['service'] . '” yet: install the configuration once by hand'
-            : ($rel === null ? 'Publish first' : 'Runs “' . $update['service'] . '” now through Monit httpd'))) ?>">Update now</button>
+        <button type="submit" class="btn btn-primary"<?= $canDeploy ? '' : ' disabled title="' . e($requiredMissing ? 'Required checks missing' : 'The agent already runs the current configuration') . '"' ?>>Deploy configuration to host</button>
       </form>
     </div>
-    <p class="hint">The agent installs only what is published: edit the checks, then <strong>Publish</strong>. The
-      "Bmon auto-update" check downloads it (signed with the httpd password), replaces the whole content of
+    <p class="hint"><strong>Deploy configuration to host</strong> publishes the enabled checks and asks the agent to install them now
+      (if it cannot be reached, it takes them at its next auto-update run). The "Bmon auto-update" check downloads them
+      (signed with the httpd password), replaces the whole content of
       <span class="mono"><?= e(AgentChecks::monitDir()) ?></span> and <span class="mono"><?= e(AgentChecks::scriptDir()) ?></span>,
       runs <span class="mono">monit -t</span> (restoring the previous files if it fails) and reloads Monit.</p>
   </div>

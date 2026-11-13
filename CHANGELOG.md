@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.0 — 2026-11-13
+
+- Agent page, Auto-update: **Deploy configuration to host** replaces *Publish* and *Update now*. It publishes the enabled checks (when they changed) and runs the auto-update check of the agent at once through Monit httpd; if the agent is offline or its httpd cannot be reached, the version stays published and the agent takes it at its next periodic run. It also re-sends a version that is published but not installed (e.g. after a rollback), and is disabled when the agent already runs the current configuration. *Changes not published* is now *Changes not deployed*
+
 ## 0.22.2 — 2026-11-13
 
 - Installer: the `@reboot` line is added with `crontab -` (keeps the other entries, sets the right owner and mode, works on every distribution, not added twice when the commands are run again) instead of appending to /var/spool/cron/crontabs/root

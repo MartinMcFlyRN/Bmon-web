@@ -8,7 +8,7 @@ namespace Bmon\Web;
  * Checks every agent must have, enabled, before its zip can be downloaded or
  * published: Reporting to Bmon (set mmonit + set httpd), Bmon auto-update and
  * OS information. A new agent gets them automatically; if one is deleted or
- * disabled, download and publish are refused until it is back.
+ * disabled, download and deploy are refused until it is back.
  */
 final class AgentRequired
 {
@@ -40,7 +40,7 @@ final class AgentRequired
     {
         $missing = self::missing($hostId);
         return $missing ? 'These checks are required and missing or disabled: ' . self::labels($missing)
-            . '. Add them back (Agent → Add the required checks) before downloading or publishing.' : null;
+            . '. Add them back (Agent → Add the required checks) before downloading or deploying.' : null;
     }
 
     /**

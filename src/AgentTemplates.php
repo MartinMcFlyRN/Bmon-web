@@ -527,13 +527,13 @@ final class AgentTemplates
             'bmon-update' => [
                 'category' => 'global',
                 'label' => 'Bmon auto-update',
-                'description' => 'Installs the configuration published in AgentConf by itself: every few cycles (and at once with "Update now") it downloads the new version, signed with the httpd password, replaces the Bmon files, checks them with monit -t (restoring the previous ones on error) and reloads Monit. Install this once by hand with the zip.',
+                'description' => 'Installs the configuration deployed from Bmon-web by itself: every few minutes (and at once with "Deploy configuration to host") it downloads the new version, signed with the httpd password, replaces the Bmon files, checks them with monit -t (restoring the previous ones on error) and reloads Monit. Install this once by hand with the zip.',
                 'fields' => [
                     self::nameField('bmon-update'),
                     self::f('url', 'Bmon-web URL', rtrim((string) Config::get('app.url', ''), '/') ?: 'https://bmon.example.com',
                         '^https?://[A-Za-z0-9.:\\[\\]-]+(/[A-Za-z0-9._~/-]*)?$', 'Address of this server as the agent reaches it (no trailing slash).', true,
                         'An http(s) URL without spaces, quotes or query.'),
-                    self::f('every', 'Ask every (minutes)', '5', '^([1-9]|[1-5][0-9])$', '"Update now" does not wait for it.', true, 'Minutes, 1 to 59.'),
+                    self::f('every', 'Ask every (minutes)', '5', '^([1-9]|[1-5][0-9])$', '"Deploy configuration to host" does not wait for it.', true, 'Minutes, 1 to 59.'),
                     self::f('cacert', 'CA of Bmon-web (optional)', '', '^(/[A-Za-z0-9._/@+-]{1,200})?$',
                         'PEM file on the agent to verify the HTTPS certificate of Bmon-web with, if it is not issued by a public CA. Empty = system CAs.', false,
                         'An absolute path, or empty.'),

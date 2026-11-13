@@ -30,7 +30,7 @@ final class AgentUpdateController
 
             $release = AgentUpdate::latest($id);
             if ($release === null) {
-                throw new HttpException(404, 'Nothing published for this agent: Agent → Publish.');
+                throw new HttpException(404, 'Nothing deployed for this agent yet: Agent → Manage → the agent → Deploy configuration to host.');
             }
             header('X-Bmon-Version: ' . $release['version']);
             if (hash_equals($release['version'], $have)) {

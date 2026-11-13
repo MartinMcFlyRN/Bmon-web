@@ -439,18 +439,24 @@ the agents, to install on each node with all its checks ready.
 
 ### Auto-update
 
-Once installed by hand, an agent can update itself: AgentConf → **Publish**
-makes the current enabled checks the version the agent downloads, and the
-**Bmon auto-update** check (template in "Monit settings") installs it.
+Once installed by hand (or with a package of Agent → Installer), an agent can
+update itself: on its page, **Deploy configuration to host** makes the current
+enabled checks the version the agent downloads, and the **Bmon auto-update**
+check (template in "Monit settings") installs it.
 
 1. Add to the agent the checks **Reporting to Bmon** (its `set httpd` password
    is the key of the auto-update) and **Bmon auto-update** (Bmon-web URL as the
    agent reaches it, how often to ask).
 2. Install the zip by hand once, as above, and restart Monit if `set httpd`
    moved into the Bmon files.
-3. From then on: edit the checks, **Publish**, and either wait for the next run
-   (every N minutes) or press **Update now** (Bmon-web sends "start" to that
-   check through Monit httpd, so it runs at the next Monit cycle).
+3. From then on: edit the checks and press **Deploy configuration to host**. It
+   publishes the version and sends "start" to the auto-update check through
+   Monit httpd, so the agent installs it at its next Monit cycle. If the agent
+   cannot be reached (offline, httpd not reachable), the version stays
+   published and the agent takes it at its next periodic run (every N
+   minutes). The button also works when nothing changed but the agent is not
+   up to date (e.g. after a rollback), and is disabled when the agent already
+   runs the current configuration.
 
 What `bmon-update.sh` does at each run:
 
@@ -469,7 +475,7 @@ What `bmon-update.sh` does at each run:
 - backs up the include and script directories, **empties them**, installs the
   zip, runs `monit -t`: if it fails, restores the backup and reports
   *Rolled back* with the output (that version is not retried by the periodic
-  runs; Update now tries again);
+  runs; *Deploy configuration to host* tries again);
 - reports *Installed* and reloads Monit, or restarts it (detached, through
   systemd when Monit runs under it) when the `set httpd` settings changed —
   a reload would keep the old certificate and password.
@@ -478,11 +484,11 @@ The agent page shows the published version, the one on the agent (*Up to
 date*, *Update pending*), the last install with its output, and the reason of
 the last refused request, refreshed every 5 seconds; the agent list has an Auto-update column. State is
 kept on the agent in `/var/lib/bmon-update/`. Requirements on the agent: `sh`,
-`curl`, `unzip`, `openssl`, `od` (all standard). Publishing is refused when
-`monit -t` rejects the checks on the Bmon-web server, or when nothing changed;
-it warns when the published set has no auto-update check (the agent would stop
-updating itself) or no httpd password. Every publication, download, install
-and rollback is in the audit log.
+`curl`, `unzip`, `openssl`, `od` (all standard). A deploy is refused when
+`monit -t` rejects the checks on the Bmon-web server or required checks are
+missing; it warns when the set has no auto-update check (the agent would stop
+updating itself) or no httpd password. Every deploy, download, install and
+rollback is in the audit log.
 
 To enable the validation, install Monit on the Bmon-web server without running
 it (`apt install monit && systemctl disable --now monit`); PHP-FPM must allow

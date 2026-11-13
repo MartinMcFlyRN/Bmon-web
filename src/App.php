@@ -89,12 +89,11 @@ final class App
         $r->get('/agentconf/{id}/download', [AgentConfController::class, 'download'], 'admin');
         $r->post('/agentconf/{id}/link', [AgentConfController::class, 'createLink'], 'admin');
         $r->post('/agentconf/{id}/link/revoke', [AgentConfController::class, 'revokeLink'], 'admin');
-        $r->post('/agentconf/{id}/publish', [AgentConfController::class, 'publish'], 'admin');
+        $r->post('/agentconf/{id}/deploy', [AgentConfController::class, 'deploy'], 'admin');
         $r->get('/agentconf/{id}/update-status', [AgentConfController::class, 'updateStatus'], 'admin');
         $r->post('/agentconf/{id}/required', [AgentConfController::class, 'addRequired'], 'admin');
         $r->get('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroupForm'], 'admin');
         $r->post('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroup'], 'admin');
-        $r->post('/agentconf/{id}/update-now', [AgentConfController::class, 'updateNow'], 'admin');
         $r->get('/dl/{token}', [AgentConfController::class, 'publicDownload'], 'public');
         // bmon-update.sh on the agents (signed requests, no session)
         $r->get('/agent/v1/config', [AgentUpdateController::class, 'config'], 'public');
