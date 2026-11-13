@@ -295,6 +295,26 @@ final class AgentChecks
      */
     public static function syntaxCheck(array $snippets): array
     {
+        // newer Monit refuses "every N cycles" (deprecated): caught here even when the
+        // monit of this server is older or missing
+        $deprecated = [];
+        foreach ($snippets as $name => $config) {
+            foreach (preg_split('/\R/', (string) $config) as $i => $line) {
+                if (preg_match('/^\s*every\s+(\d+)\s+cycles?\b/i', $line, $m)) {
+                    $deprecated[] = self::fileName((string) $name) . ':' . ($i + 1) . ": 'every {$m[1]} cycles' is deprecated and refused by newer Monit: "
+                        . 'use minutes, e.g. every "0,5,10,15,20,25,30,35,40,45,50,55 * * * *" (every 5 minutes) or every "* * * * *" (every minute)';
+                }
+            }
+        }
+        $result = self::runSyntaxCheck($snippets);
+        if ($deprecated) {
+            $result = ['ok' => false, 'output' => trim(implode("\n", $deprecated) . "\n" . $result['output'])];
+        }
+        return $result;
+    }
+
+    private static function runSyntaxCheck(array $snippets): array
+    {
         $bin = self::monitBinary();
         if ($bin === null) {
             return ['ok' => null, 'output' => ''];

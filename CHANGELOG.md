@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.16.2 — 2026-11-13
+
+- Validation flags `every N cycles` (refused by newer Monit) in any check, with the file, the line and the cron-style replacement, even when the monit of the Bmon-web server is older or missing; publishing is refused until it is changed
+
 ## 0.16.1 — 2026-11-13
 
 - Templates "Bmon auto-update", "OS information" and "Custom script": the interval is now in minutes and written as `every "0,5,10,… * * * *"` instead of `every N cycles`, which newer Monit versions reject as deprecated (the explicit list, rather than `*/N`, also works with Monit 5.33 and older). Checks already created are copies: change their `every` line by hand
