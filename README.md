@@ -328,18 +328,20 @@ the agents, to install on each node with all its checks ready.
   scripts in `bmon-scripts/`, and a `README.txt` with the commands to install it:
 
   ```sh
-  # checks (deleted checks go away)
-  rm -f /etc/monit/conf.d/bmon-*.conf
+  # both directories belong to Bmon: emptied, so deleted checks and scripts go away
+  mkdir -p /etc/monit/conf.d SCRIPT_DIR
+  find /etc/monit/conf.d SCRIPT_DIR -mindepth 1 -maxdepth 1 -exec rm -rf {} +
   unzip -o FILE.zip -x README.txt 'bmon-scripts/*' -d /etc/monit/conf.d/
   chmod 600 /etc/monit/conf.d/bmon-*.conf
-  # scripts (only those a previous zip installed are removed)
-  mkdir -p SCRIPT_DIR
-  [ -f SCRIPT_DIR/.bmon-files ] && (cd SCRIPT_DIR && xargs -r rm -f < .bmon-files)
   unzip -o -j FILE.zip 'bmon-scripts/*' -d SCRIPT_DIR/
   monit -t && monit reload
   ```
 
   The README inside the zip has these commands with the real directories.
+  **The include directory and the script directory are used only by Bmon**:
+  anything else in them is deleted at each install (Admin → Configuration
+  refuses system directories and the monitrc one). Keep your own checks in
+  another directory included by monitrc.
 - **Download link for the servers**: the Download button opens a dialog with
   "Download zip now" (to your computer) and **Create link**: a URL that works
   without signing in, to download the zip directly on the agent, shown together
@@ -361,6 +363,53 @@ the agents, to install on each node with all its checks ready.
   If a check has the same name as a service defined in another file on the
   host, Monit refuses the configuration ("Service name conflict"): remove the
   old definition when you move a check to Bmon.
+
+### Auto-update
+
+Once installed by hand, an agent can update itself: AgentConf → **Publish**
+makes the current enabled checks the version the agent downloads, and the
+**Bmon auto-update** check (template in "Monit settings") installs it.
+
+1. Add to the agent the checks **Reporting to Bmon** (its `set httpd` password
+   is the key of the auto-update) and **Bmon auto-update** (Bmon-web URL as the
+   agent reaches it, how often to ask).
+2. Install the zip by hand once, as above, and restart Monit if `set httpd`
+   moved into the Bmon files.
+3. From then on: edit the checks, **Publish**, and either wait for the next run
+   (every N cycles) or press **Update now** (Bmon-web sends "start" to that
+   check through Monit httpd, so it runs at the next Monit cycle).
+
+What `bmon-update.sh` does at each run:
+
+- reads the Monit ID (from `set idfile`) and the first `allow user:password`
+  of the Bmon file with `set httpd` (else of monitrc): changing the password in
+  the "Reporting to Bmon" check changes the key too, once installed;
+- asks `GET /agent/v1/config`, signed with HMAC-SHA256 keyed with that password
+  (the password never travels and never appears on a command line). Bmon-web
+  accepts the signature if it matches the password Monit reports or the one of
+  the agent's AgentConf checks, the timestamp is within 5 minutes and not older
+  than the previous request, and — unless *Auto-update only from the address of
+  the reports* is off — the request comes from the address of the reports;
+- answers `204` when the published version is already installed; otherwise
+  receives the zip, checks its SHA-256 and the HMAC signature Bmon-web put on
+  it (a zip from anyone else is refused);
+- backs up the include and script directories, **empties them**, installs the
+  zip, runs `monit -t`: if it fails, restores the backup and reports
+  *Rolled back* with the output (that version is not retried by the periodic
+  runs; Update now tries again);
+- reports *Installed* and reloads Monit, or restarts it (detached, through
+  systemd when Monit runs under it) when the `set httpd` settings changed —
+  a reload would keep the old certificate and password.
+
+The agent page shows the published version, the one on the agent (*Up to
+date*, *Update pending*), the last install with its output, and the reason of
+the last refused request; the agent list has an Auto-update column. State is
+kept on the agent in `/var/lib/bmon-update/`. Requirements on the agent: `sh`,
+`curl`, `unzip`, `openssl`, `od` (all standard). Publishing is refused when
+`monit -t` rejects the checks on the Bmon-web server, or when nothing changed;
+it warns when the published set has no auto-update check (the agent would stop
+updating itself) or no httpd password. Every publication, download, install
+and rollback is in the audit log.
 
 To enable the validation, install Monit on the Bmon-web server without running
 it (`apt install monit && systemctl disable --now monit`); PHP-FPM must allow

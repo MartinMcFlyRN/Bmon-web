@@ -333,7 +333,7 @@ a.inv-chip:hover, .inv-chip a:hover { text-decoration: none; color: #1d4580; }
 code { font-family: var(--mono); font-size: 12px; background: #eef1f3; padding: 1px 5px; border-radius: 3px; }
 .head-actions { display: flex; gap: 8px; align-items: center; }
 .head-actions .btn { margin-top: 0; }
-.btn-disabled { opacity: .5; cursor: not-allowed; }
+.btn-disabled, .btn:disabled { opacity: .5; cursor: not-allowed; }
 .tpl-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
 .tpl-card { display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; background: var(--surface);
   border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); }
@@ -412,3 +412,12 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
   .table-compact td.nowrap { white-space: nowrap; }
   .cell-trunc { max-width: none; min-width: 240px; }
 }
+
+/* AgentConf auto-update */
+.badge-warn { background: #fdf3e1; color: #8a5a00; }
+.badge-fail { background: #fbe9e9; color: #a52a2a; }
+.text-fail { color: #a52a2a; }
+.text-warn { color: #8a5a00; }
+.update-card .kv { margin-bottom: 12px; }
+.update-card .dialog-actions { justify-content: flex-start; margin-top: 8px; }
+.update-output { max-height: 220px; overflow: auto; margin: 6px 0 0; font-size: 12px; white-space: pre-wrap; }

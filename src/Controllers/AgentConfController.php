@@ -6,12 +6,14 @@ namespace Bmon\Web\Controllers;
 
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
+use Bmon\Web\AgentUpdate;
 use Bmon\Web\Audit;
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
 use Bmon\Web\DownloadLinks;
 use Bmon\Web\HttpException;
 use Bmon\Web\Monit;
+use Bmon\Web\MonitClient;
 use Bmon\Web\ServiceGroups;
 use Bmon\Web\View;
 
@@ -23,7 +25,19 @@ final class AgentConfController
 {
     /** Sortable columns of the agent list => default direction. */
     private const SORTS = ['agent' => 'asc', 'address' => 'asc', 'monit' => 'desc', 'services' => 'desc',
-        'checks' => 'desc', 'seen' => 'desc'];
+        'checks' => 'desc', 'update' => 'desc', 'seen' => 'desc'];
+
+    /** Auto-update state of an agent in the list: [key, label, badge class, rank for sorting]. */
+    public static function updateBadge(?array $u): array
+    {
+        return match (true) {
+            $u === null => ['none', '—', '', 0],
+            $u['last_status'] === 'rolled_back' && $u['installed_version'] !== $u['version'] => ['rolled_back', 'Rolled back', 'badge-fail', 4],
+            $u['last_poll_at'] === null => ['never', 'Not asked yet', 'badge-warn', 3],
+            $u['installed_version'] === $u['version'] => ['ok', 'Up to date', 'badge-ok', 1],
+            default => ['pending', 'Pending', 'badge-warn', 2],
+        };
+    }
 
     public function index(): string
     {
@@ -47,6 +61,7 @@ final class AgentConfController
             $params
         );
         $counts = AgentChecks::counts();
+        $updates = AgentUpdate::overview();
 
         $sort = array_key_exists($_GET['sort'] ?? '', self::SORTS) ? $_GET['sort'] : 'agent';
         $dir = in_array($_GET['dir'] ?? '', ['asc', 'desc'], true) ? $_GET['dir'] : self::SORTS[$sort];
@@ -56,6 +71,7 @@ final class AgentConfController
             'monit' => (string) $a['monit_version'],
             'services' => (int) $a['services_total'],
             'checks' => (int) ($counts[(int) $a['id']]['enabled'] ?? -1),
+            'update' => self::updateBadge($updates[(int) $a['id']] ?? null)[3],
             'seen' => (string) $a['last_seen'],
         };
         usort($agents, static function (array $a, array $b) use ($key, $sort, $dir): int {
@@ -67,7 +83,7 @@ final class AgentConfController
         $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
         return View::render('agentconf/index', [
             'title' => 'AgentConf', 'nav' => 'agentconf',
-            'agents' => $agents, 'counts' => $counts, 'all' => $all, 'offlineCount' => $offline,
+            'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
             'q' => $q, 'sort' => $sort, 'dir' => $dir,
         ]);
     }
@@ -96,6 +112,7 @@ final class AgentConfController
             'reported' => $this->reported($id), 'syntax' => $syntax,
             'link' => DownloadLinks::active($id), 'newLink' => $newLink,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
+            'update' => $this->updateInfo($host),
         ]);
     }
 
@@ -306,6 +323,42 @@ final class AgentConfController
         redirect("/agentconf/$id");
     }
 
+    // --- auto-update ----------------------------------------------------------------
+
+    /** POST /agentconf/{id}/publish: the current checks become the version the agent downloads. */
+    public function publish(int $id): never
+    {
+        $host = $this->hostRow($id);
+        $r = AgentUpdate::publish($host, Auth::user()['username']);
+        if (!$r['ok']) {
+            flash('error', $r['error']);
+            redirect("/agentconf/$id");
+        }
+        Audit::log('agentconf.publish', "{$host['hostname']} (id $id) version " . substr($r['release']['version'], 0, 12)
+            . " ({$r['release']['checks']} checks)");
+        $warn = AgentUpdate::warnings($id);
+        flash($warn ? 'error' : 'success', 'Published version ' . substr($r['release']['version'], 0, 12)
+            . ': the agent installs it at its next auto-update run.' . ($warn ? ' Warning: ' . implode(' ', $warn) : ''));
+        redirect("/agentconf/$id");
+    }
+
+    /** POST /agentconf/{id}/update-now: "start" of the auto-update check through Monit httpd. */
+    public function updateNow(int $id): never
+    {
+        $host = $this->hostRow($id);
+        $service = AgentUpdate::updateService($host);
+        if ($service === null) {
+            flash('error', 'This agent has no enabled "Bmon auto-update" check.');
+            redirect("/agentconf/$id");
+        }
+        $r = MonitClient::action($host, $service, 'start');
+        Audit::log('agentconf.update_now', "{$host['hostname']} (id $id) service $service: " . ($r['ok'] ? 'sent' : 'failed: ' . $r['message']));
+        flash($r['ok'] ? 'success' : 'error', $r['ok']
+            ? "Update requested: Monit runs “{$service}” at its next cycle, the result appears here shortly after."
+            : 'Monit did not accept the request: ' . $r['message']);
+        redirect("/agentconf/$id");
+    }
+
     /** GET /dl/{token}: the zip, without signing in. Plain-text errors, for curl. */
     public function publicDownload(string $token): never
     {
@@ -340,6 +393,26 @@ final class AgentConfController
     }
 
     // -------------------------------------------------------------------------
+
+    /** Data of the Auto-update panel of the agent page. */
+    private function updateInfo(array $host): array
+    {
+        $id = (int) $host['id'];
+        $release = AgentUpdate::latest($id);
+        $state = AgentUpdate::state($id);
+        $service = AgentUpdate::updateService($host);
+        $reported = $service !== null && Db::value(
+            'SELECT 1 FROM ' . Db::collector('services') . ' WHERE host_id = ? AND name = ?', [$id, $service]) !== null;
+        return [
+            'release' => $release,
+            'state' => $state,
+            'changed' => $release === null || !hash_equals($release['fingerprint'], AgentChecks::fingerprint($host)),
+            'warnings' => AgentUpdate::warnings($id),
+            'service' => $service,
+            'serviceReported' => $reported,
+            'canTrigger' => $reported && $host['offline_since'] === null && MonitClient::available($host),
+        ];
+    }
 
     private function hostRow(int $id): array
     {

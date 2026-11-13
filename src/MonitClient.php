@@ -287,7 +287,7 @@ final class MonitClient
     }
 
     /** @return array{0:string,1:string} */
-    private static function credentials(array $host): array
+    public static function credentials(array $host): array
     {
         $user = (string) ($host['httpd_username'] ?? '');
         $stored = (string) ($host['httpd_password'] ?? '');

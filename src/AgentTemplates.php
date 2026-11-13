@@ -514,6 +514,27 @@ final class AgentTemplates
                     . "    allow {{user}}:\"{{password}}\"\n",
             ],
 
+            'bmon-update' => [
+                'category' => 'global',
+                'label' => 'Bmon auto-update',
+                'description' => 'Installs the configuration published in AgentConf by itself: every few cycles (and at once with "Update now") it downloads the new version, signed with the httpd password, replaces the Bmon files, checks them with monit -t (restoring the previous ones on error) and reloads Monit. Install this once by hand with the zip.',
+                'fields' => [
+                    self::nameField('bmon-update'),
+                    self::f('url', 'Bmon-web URL', rtrim((string) Config::get('app.url', ''), '/') ?: 'https://bmon.example.com',
+                        '^https?://[A-Za-z0-9.:\\[\\]-]+(/[A-Za-z0-9._~/-]*)?$', 'Address of this server as the agent reaches it (no trailing slash).', true,
+                        'An http(s) URL without spaces, quotes or query.'),
+                    self::f('every', 'Ask every (cycles)', '10', self::INT, 'With a 30 s cycle, 10 = every 5 minutes. "Update now" does not wait for it.', true, 'A whole number.'),
+                    self::f('cacert', 'CA of Bmon-web (optional)', '', '^(/[A-Za-z0-9._/@+-]{1,200})?$',
+                        'PEM file on the agent to verify the HTTPS certificate of Bmon-web with, if it is not issued by a public CA. Empty = system CAs.', false,
+                        'An absolute path, or empty.'),
+                ],
+                'script' => ['name' => AgentUpdate::SCRIPT, 'file' => AgentUpdate::SCRIPT],
+                'body' => "check program {{name}} with path \"{{command}}\" with timeout 300 seconds\n"
+                    . "    every {{every}} cycles\n"
+                    . "    start program = \"{{command}} --now\" with timeout 300 seconds\n"
+                    . "    if status != 0 then alert\n",
+            ],
+
             // --- custom -------------------------------------------------------------
             'custom' => [
                 'category' => 'custom',
@@ -533,6 +554,11 @@ final class AgentTemplates
     {
         if (isset($values['protocol'])) {
             $values['protocol_clause'] = $values['protocol'] !== '' ? 'protocol ' . $values['protocol'] . ' ' : 'type tcp ';
+        }
+        if ($key === 'bmon-update' && isset($values['url'])) {
+            $values['command'] = AgentChecks::scriptPath(AgentUpdate::SCRIPT) . ' --url ' . rtrim($values['url'], '/')
+                . ' --conf-dir ' . AgentChecks::monitDir() . ' --monitrc ' . self::monitrcDir() . '/monitrc'
+                . (($values['cacert'] ?? '') !== '' ? ' --cacert ' . $values['cacert'] : '');
         }
         if (array_key_exists('pemfile', $values)) {
             $values['ssl_clause'] = $values['pemfile'] !== '' ? "    with ssl {\n        pemfile: " . $values['pemfile'] . "\n    }\n" : '';

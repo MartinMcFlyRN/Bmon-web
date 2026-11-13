@@ -73,6 +73,8 @@ final class Settings
                 'help' => 'Where the checks of the zip are installed.'],
             'agentconf.script_dir' => ['section' => 'agentconf', 'type' => 'path', 'label' => 'Script directory on the agents',
                 'help' => 'Where the attached scripts are installed. Empty = <include directory>/bmon-scripts. Never the include directory itself.'],
+            'agentconf.update_check_ip' => ['section' => 'agentconf', 'type' => 'bool', 'label' => 'Auto-update only from the address of the reports',
+                'help' => 'The requests of the "Bmon auto-update" check must come from the address its Monit reports come from (they are signed with the httpd password anyway). Turn off for agents behind changing NAT.'],
             'agentconf.link_ttl_hours' => $int('agentconf', 'Lifetime of the download links', 1, 720, '', 'hours'),
             'agentconf.monitrc_dir' => ['section' => 'agentconf', 'type' => 'path', 'label' => 'Monit directory on the agents', 'required' => true,
                 'help' => 'Where monitrc and monit.pem (key + certificate for HTTPS) are. The "Reporting to Bmon" template uses <directory>/monit.pem.'],
@@ -221,6 +223,16 @@ final class Settings
         }
         // cross-field rule
         $monitDir = $parsed['agentconf.monit_dir'] ?? Config::get('agentconf.monit_dir');
+        $rcDir = $parsed['agentconf.monitrc_dir'] ?? Config::get('agentconf.monitrc_dir');
+        // the auto-update empties the include and script directories: never a system one, never the monitrc one
+        $system = ['/', '/etc', '/usr', '/usr/local', '/usr/bin', '/usr/sbin', '/usr/local/bin', '/usr/local/sbin', '/bin', '/sbin',
+            '/var', '/var/lib', '/opt', '/home', '/root', '/tmp', '/boot', '/lib', '/srv'];
+        foreach (['agentconf.monit_dir', 'agentconf.script_dir'] as $k) {
+            $d = (string) ($parsed[$k] ?? Config::get($k));
+            if (!isset($errors[$k]) && $d !== '' && (in_array($d, $system, true) || $d === $rcDir)) {
+                $errors[$k] = 'The auto-update empties this directory: it must be used only by Bmon (not a system directory, not the monitrc one).';
+            }
+        }
         if (!isset($errors['agentconf.script_dir']) && ($parsed['agentconf.script_dir'] ?? '') !== '' && $parsed['agentconf.script_dir'] === $monitDir) {
             $errors['agentconf.script_dir'] = 'It cannot be the include directory itself: Monit would read the scripts as configuration.';
         }

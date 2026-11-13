@@ -1,4 +1,4 @@
-<?php /** @var array $agents @var array $counts @var bool $all @var int $offlineCount @var string $q @var string $sort @var string $dir */
+<?php /** @var array $agents @var array $counts @var bool $all @var int $offlineCount @var string $q @var string $sort @var string $dir @var array $updates */
 $th = static fn (string $key, string $label, string $class = ''): string
     => sort_th('/agentconf', $key, $label, $sort, $dir, $class);
 ?>
@@ -26,7 +26,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
 <?php else: ?>
 <table class="table">
   <thead><tr><?= $th('agent', 'Agent') . $th('address', 'Address') . $th('monit', 'Monit') . $th('services', 'Reported services', 'num')
-    . $th('checks', 'Bmon checks', 'num') . $th('seen', 'Last report') ?></tr></thead>
+    . $th('checks', 'Bmon checks', 'num') . $th('update', 'Auto-update') . $th('seen', 'Last report') ?></tr></thead>
   <tbody>
   <?php foreach ($agents as $a):
       $c = $counts[(int) $a['id']] ?? null; ?>
@@ -43,6 +43,8 @@ $th = static fn (string $key, string $label, string $class = ''): string
         <?php if ($c === null): ?><span class="muted">—</span>
         <?php else: ?><?= e($c['enabled']) ?><?php if ((int) $c['n'] !== (int) $c['enabled']): ?> <span class="muted small">(+<?= (int) $c['n'] - (int) $c['enabled'] ?> disabled)</span><?php endif ?><?php endif ?>
       </td>
+      <td><?php [, $ul, $uc] = \Bmon\Web\Controllers\AgentConfController::updateBadge($updates[(int) $a['id']] ?? null); ?>
+        <?= $uc !== '' ? '<span class="badge ' . e($uc) . '">' . e($ul) . '</span>' : '<span class="muted">—</span>' ?></td>
       <td class="nowrap muted"><?= e(since($a['last_seen'])) ?> ago</td>
     </tr>
   <?php endforeach ?>

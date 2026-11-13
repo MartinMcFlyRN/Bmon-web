@@ -6,6 +6,7 @@ namespace Bmon\Web;
 
 use Bmon\Web\Controllers\AdminController;
 use Bmon\Web\Controllers\AgentConfController;
+use Bmon\Web\Controllers\AgentUpdateController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
 use Bmon\Web\Controllers\InventoryController;
@@ -58,7 +59,12 @@ final class App
         $r->get('/agentconf/{id}/download', [AgentConfController::class, 'download'], 'admin');
         $r->post('/agentconf/{id}/link', [AgentConfController::class, 'createLink'], 'admin');
         $r->post('/agentconf/{id}/link/revoke', [AgentConfController::class, 'revokeLink'], 'admin');
+        $r->post('/agentconf/{id}/publish', [AgentConfController::class, 'publish'], 'admin');
+        $r->post('/agentconf/{id}/update-now', [AgentConfController::class, 'updateNow'], 'admin');
         $r->get('/dl/{token}', [AgentConfController::class, 'publicDownload'], 'public');
+        // bmon-update.sh on the agents (signed requests, no session)
+        $r->get('/agent/v1/config', [AgentUpdateController::class, 'config'], 'public');
+        $r->post('/agent/v1/result', [AgentUpdateController::class, 'result'], 'public');
 
         $r->get('/admin/users', [AdminController::class, 'users'], 'admin');
         $r->get('/admin/users/new', [AdminController::class, 'newUser'], 'admin');
@@ -92,7 +98,7 @@ final class App
             $method = $method === 'HEAD' ? 'GET' : $method;
             [$handler, $access, $params] = self::routes()->match($method, self::path());
 
-            // 'public': no session, no sign-in, GET only (download links for the agents)
+            // 'public': no session, no sign-in, no CSRF (download links, signed agent requests)
             if ($access === 'public') {
                 [$class, $action] = $handler;
                 echo (new $class())->$action(...$params);

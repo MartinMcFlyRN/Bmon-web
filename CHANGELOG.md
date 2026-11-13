@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.16.0 — 2026-11-13
+
+**Run `bin/bmon-web migrate` after upgrading** (new tables `agent_releases`, `agent_update_state`).
+
+- AgentConf auto-update: **Publish** freezes the enabled checks of an agent as the version it installs; the new template **Bmon auto-update** (Monit settings) adds `bmon-update.sh`, which downloads the published version, installs it, checks it with `monit -t` (restoring the previous files on error) and reloads Monit, or restarts it when `set httpd` changed
+- Requests are signed with HMAC-SHA256 keyed with the Monit httpd password read from the installed Bmon configuration (accepted if it matches the reported password or the one in the AgentConf checks), with a 5-minute timestamp window, replay guard and, by default, the address of the reports (*Auto-update only from the address of the reports* in Admin → Configuration); the zip is signed back and its SHA-256 checked
+- **Update now**: runs the auto-update check at once through Monit httpd ("start")
+- Agent page: published version, version on the agent, last install with its output, last refused request; agent list: Auto-update column (sortable)
+- The include and script directories are now used only by Bmon: the manual install commands and the auto-update empty them; Admin → Configuration refuses system directories and the monitrc one for them
+- Publishing is refused when `monit -t` fails or nothing changed, and warns when the auto-update check or the httpd password is missing
+
 ## 0.15.0 — 2026-11-13
 
 No migrations.

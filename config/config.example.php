@@ -44,7 +44,7 @@ return [
     //               'proxy' => '', 'timeout' => 10],
     // 'agentconf' => ['monit_dir' => '/etc/monit/conf.d', 'script_dir' => '', 'link_ttl_hours' => 24,
     //               'collector_url' => '', 'collector_user' => '', 'collector_password' => '',
-    //               'monitrc_dir' => '/etc/monit', 'web_address' => ''],
+    //               'monitrc_dir' => '/etc/monit', 'web_address' => '', 'update_check_ip' => true],
     // Note: PHP keeps only the last 'app' / 'monit' / 'agentconf' key of an array:
     // merge them with the ones above instead of repeating them.
 ];

@@ -2,7 +2,7 @@
 /**
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
- * @var array|null $link @var array|null $newLink @var array $groupsByCheck
+ * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -75,6 +75,66 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
   </table>
   <p class="hint">Each check is a copy made from a template when it was created: editing a check changes only that check.</p>
   <?php endif ?>
+</section>
+
+<?php
+$rel = $update['release'];
+$st = $update['state'];
+$installed = (string) ($st['installed_version'] ?? '');
+$short = static fn (string $v): string => $v === '' ? '—' : substr($v, 0, 12);
+?>
+<section class="panel" id="auto-update">
+  <h2>Auto-update</h2>
+  <div class="card update-card">
+    <dl class="kv">
+      <dt>Published</dt>
+      <dd><?php if ($rel === null): ?><span class="muted">Nothing published yet.</span>
+        <?php else: ?><span class="mono"><?= e($short($rel['version'])) ?></span> · <?= e($rel['checks']) ?> checks · <?= e(fmt_dt($rel['created_at'])) ?> · <?= e($rel['created_by']) ?>
+        <?php endif ?>
+        <?php if ($update['changed'] && $enabledCount): ?> <span class="badge badge-warn">Changes not published</span><?php endif ?></dd>
+      <dt>On the agent</dt>
+      <dd><?php if ($st === null || $st['last_poll_at'] === null): ?><span class="muted">The agent has not asked for updates yet.</span>
+        <?php else: ?>
+          <span class="mono"><?= e($short($installed)) ?></span>
+          <?php if ($rel !== null && $installed === $rel['version']): ?><span class="badge badge-ok">Up to date</span>
+          <?php elseif ($rel !== null): ?><span class="badge badge-warn">Update pending</span><?php endif ?>
+          <span class="muted small">· last asked <?= e(since($st['last_poll_at'])) ?> ago from <?= e($st['last_poll_ip']) ?></span>
+        <?php endif ?></dd>
+      <?php if ($st !== null && $st['last_result_at'] !== null): ?>
+        <dt>Last install</dt>
+        <dd><?= match ($st['last_status']) {
+              'installed' => '<span class="badge badge-ok">Installed</span>',
+              'rolled_back' => '<span class="badge badge-fail">Rolled back</span>',
+              default => '<span class="badge badge-fail">Failed</span>',
+            } ?> <span class="mono small"><?= e($short($st['installed_version'] ?? '')) ?></span>
+          <span class="muted small">· <?= e(fmt_dt($st['last_result_at'], 'Y-m-d H:i:s')) ?></span>
+          <?php if (trim((string) $st['last_message']) !== ''): ?><pre class="update-output"><?= e($st['last_message']) ?></pre><?php endif ?></dd>
+      <?php endif ?>
+      <?php if ($st !== null && $st['last_auth_error'] !== ''): ?>
+        <dt>Refused</dt>
+        <dd class="text-fail"><?= e($st['last_auth_error']) ?> <span class="muted small">· <?= e(fmt_dt($st['last_auth_error_at'], 'Y-m-d H:i:s')) ?></span></dd>
+      <?php endif ?>
+    </dl>
+    <?php foreach ($update['warnings'] as $w): ?><p class="hint text-warn"><?= e($w) ?></p><?php endforeach ?>
+    <div class="dialog-actions">
+      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/publish')) ?>"
+            data-confirm="Publish the enabled checks? The agent replaces its whole Bmon configuration with them at its next auto-update run.">
+        <?= csrf_field() ?>
+        <button type="submit" class="btn btn-primary"<?= $update['changed'] && $enabledCount ? '' : ' disabled title="Nothing changed since the last publication"' ?>>Publish</button>
+      </form>
+      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/update-now')) ?>">
+        <?= csrf_field() ?>
+        <button type="submit" class="btn"<?= $update['canTrigger'] && $rel !== null ? '' : ' disabled' ?>
+          title="<?= e($update['service'] === null ? 'No enabled Bmon auto-update check'
+            : (!$update['serviceReported'] ? 'Monit does not report “' . $update['service'] . '” yet: install the configuration once by hand'
+            : ($rel === null ? 'Publish first' : 'Runs “' . $update['service'] . '” now through Monit httpd'))) ?>">Update now</button>
+      </form>
+    </div>
+    <p class="hint">The agent installs only what is published: edit the checks, then <strong>Publish</strong>. The
+      "Bmon auto-update" check downloads it (signed with the httpd password), replaces the whole content of
+      <span class="mono"><?= e(AgentChecks::monitDir()) ?></span> and <span class="mono"><?= e(AgentChecks::scriptDir()) ?></span>,
+      runs <span class="mono">monit -t</span> (restoring the previous files if it fails) and reloads Monit.</p>
+  </div>
 </section>
 
 <section class="panel">
