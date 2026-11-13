@@ -226,6 +226,24 @@ final class CustomTemplates
         return $id;
     }
 
+    /** Copies a template as "<label> (copy)" (or "(copy 2)", …); returns the new id. */
+    public static function clone(int $id, string $by): int
+    {
+        $r = self::find($id) ?? throw new \RuntimeException('Template not found.');
+        $base = mb_substr($r['label'], 0, 66) . ' (copy';
+        $label = $base . ')';
+        for ($n = 2; Db::value('SELECT 1 FROM custom_templates WHERE label = ?', [$label]) !== null; $n++) {
+            $label = "$base $n)";
+        }
+        self::$cache = null;
+        $now = now_utc();
+        return Db::insert(
+            'INSERT INTO custom_templates (label, description, filename, fields, body, script_name, script, created_at, updated_at, updated_by)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+            [$label, $r['description'], $r['filename'], $r['fields'], $r['body'], $r['script_name'], $r['script'], $now, $now, $by]
+        );
+    }
+
     public static function delete(int $id): void
     {
         self::$cache = null;

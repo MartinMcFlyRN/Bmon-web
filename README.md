@@ -310,7 +310,8 @@ the agents, to install on each node with all its checks ready.
   `$HOST` is the agent name, as in Monit. An optional script is attached to the
   checks made from it. The page shows the result with the default values,
   checked with `monit -t`. Custom templates appear in *Add check* (agents and
-  groups) under “Custom templates”; checks made from them are copies.
+  groups) under “Custom templates”; checks made from them are copies. The list
+  has icons to edit, clone (“… (copy)”) and delete each template.
 - **Group Checks**: a group is a set of checks to add to an agent in one go
   (e.g. “Web server” = nginx, php-fpm, certificate). Its checks are added and
   edited like the checks of an agent (templates, custom templates, scripts,

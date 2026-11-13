@@ -454,3 +454,13 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .pkg-form input[type=number] { width: 100%; }
 .filter-input { width: 100%; max-width: 420px; }
 [data-filter-item][hidden], [data-filter-group][hidden] { display: none !important; }
+
+/* Icon buttons in table rows */
+.row-actions { width: 1%; }
+.row-actions form { display: inline; margin: 0; }
+.icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px; padding: 0;
+  border: 1px solid transparent; border-radius: 4px; background: none; color: var(--muted, #6b7280); cursor: pointer; vertical-align: middle; }
+.icon-btn:hover, .icon-btn:focus-visible { border-color: var(--border); background: #fff; color: var(--accent); }
+.icon-btn.icon-danger:hover, .icon-btn.icon-danger:focus-visible { color: var(--fail); }
+.icon { display: block; }
+.visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

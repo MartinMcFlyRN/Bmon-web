@@ -73,6 +73,16 @@ final class CustomTemplatesController
         redirect("/agentconf/templates/$id");
     }
 
+    public function clone(int $id): never
+    {
+        $r = CustomTemplates::find($id) ?? throw new HttpException(404, 'Template not found.');
+        $new = CustomTemplates::clone($id, (string) Auth::user()['username']);
+        $copy = CustomTemplates::find($new);
+        Audit::log('agentconf.template_clone', "{$r['label']} (id $id) → {$copy['label']} (id $new)");
+        flash('success', "“{$r['label']}” cloned as “{$copy['label']}”: rename it and change what you need.");
+        redirect("/agentconf/templates/$new");
+    }
+
     public function delete(int $id): never
     {
         $r = CustomTemplates::find($id) ?? throw new HttpException(404, 'Template not found.');

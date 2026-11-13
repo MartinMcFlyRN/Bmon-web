@@ -61,6 +61,7 @@ final class App
         $r->get('/agentconf/templates/{id}', [CustomTemplatesController::class, 'edit'], 'admin');
         $r->post('/agentconf/templates/{id}', [CustomTemplatesController::class, 'update'], 'admin');
         $r->post('/agentconf/templates/{id}/delete', [CustomTemplatesController::class, 'delete'], 'admin');
+        $r->post('/agentconf/templates/{id}/clone', [CustomTemplatesController::class, 'clone'], 'admin');
         $r->get('/agentconf/installer', [InstallerController::class, 'index'], 'admin');
         $r->get('/agentconf/installer/new', [InstallerController::class, 'newForm'], 'admin');
         $r->post('/agentconf/installer/new', [InstallerController::class, 'create'], 'admin');

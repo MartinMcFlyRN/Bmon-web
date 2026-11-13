@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.23.3 — 2026-11-14
+
+- Agent → Custom Templates: an actions column with three icons — edit, clone (a copy named “… (copy)”, opened for editing) and delete (asks for confirmation)
+
 ## 0.23.2 — 2026-11-14
 
 - Installer: the install commands make the install directory `chmod 700` right after creating it, so only root can enter it (it holds the private key, the httpd password and the collector credentials)
