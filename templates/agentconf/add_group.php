@@ -12,9 +12,9 @@ $base = '/agentconf/' . $host['id'];
   </div>
   <a class="btn" href="<?= e(url($base)) ?>">Back to the agent</a>
 </div>
-<p class="muted">Choose a group and the checks to copy into <?= e($host['hostname']) ?>. They become checks of this agent like the others:
-  later changes to the group do not touch them, and they can be edited here. Groups are managed in
-  <a href="<?= e(url('/agentconf/groups')) ?>">AgentConf → Group Checks</a>.</p>
+<p class="muted">Adding a group copies all its checks into <?= e($host['hostname']) ?> (enabled or disabled as in the group). They become
+  checks of this agent like the others: later changes to the group do not touch them. If even one of them is already on the agent
+  (same name or same script), nothing is added. Groups are managed in <a href="<?= e(url('/agentconf/groups')) ?>">AgentConf → Group Checks</a>.</p>
 
 <?php if (!$groups): ?>
   <div class="card muted">No groups yet. <a href="<?= e(url('/agentconf/groups/new')) ?>">Create one</a> with the checks you add often.</div>
@@ -30,21 +30,23 @@ $base = '/agentconf/' . $host['id'];
       <p class="muted">This group has no checks.</p>
     <?php else: ?>
       <table class="table table-compact">
-        <thead><tr><th></th><th>File</th><th>Created from</th><th>Script</th><th></th></tr></thead>
+        <thead><tr><th>File</th><th>Created from</th><th>Script</th><th>Status</th><th></th></tr></thead>
         <tbody>
-        <?php foreach ($g['items'] as $c): $tpl = AgentTemplates::get($c['template']); $free = $c['clash'] === ''; ?>
-          <tr class="<?= $free ? '' : 'row-off' ?>">
-            <td><input type="checkbox" name="checks[]" value="<?= e($c['id']) ?>" aria-label="Add <?= e($c['name']) ?>"
-                  <?= $free && (int) $c['enabled'] ? ' checked' : '' ?><?= $free ? '' : ' disabled' ?>></td>
+        <?php foreach ($g['items'] as $c): $tpl = AgentTemplates::get($c['template']); $clash = $g['clashes'][$c['name']] ?? ''; ?>
+          <tr>
             <td class="mono"><?= e(AgentChecks::fileName($c['name'])) ?></td>
             <td class="muted"><?= e($tpl['label'] ?? $c['template']) ?></td>
             <td class="mono small"><?= $c['script_name'] !== '' ? e($c['script_name']) : '<span class="muted">—</span>' ?></td>
-            <td class="small"><?= $free ? ((int) $c['enabled'] ? '' : '<span class="muted">disabled in the group</span>') : '<span class="text-warn">' . e($c['clash']) . '</span>' ?></td>
+            <td><?= (int) $c['enabled'] ? '<span class="badge badge-ok">Enabled</span>' : '<span class="badge badge-off">Disabled</span>' ?></td>
+            <td class="small"><?= $clash !== '' ? '<span class="text-fail">' . e($clash) . '</span>' : '' ?></td>
           </tr>
         <?php endforeach ?>
         </tbody>
       </table>
-      <button type="submit" class="btn btn-primary">Add the selected checks</button>
+      <?php if ($g['clashes']): ?>
+        <p class="hint text-fail"><?= count($g['clashes']) ?> of these checks are already on the agent: the group cannot be added until they are deleted or renamed there.</p>
+      <?php endif ?>
+      <button type="submit" class="btn btn-primary">Add the group (<?= count($g['items']) ?> check<?= count($g['items']) === 1 ? '' : 's' ?>)</button>
     <?php endif ?>
   </form>
 <?php endforeach ?>

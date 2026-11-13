@@ -73,35 +73,59 @@ final class CheckGroups
     }
 
     /**
-     * Copies checks of a group into an agent, as independent checks with the same
-     * name, script and service groups. A check whose name (or script file) the
-     * agent already has is skipped.
-     * @param list<int> $checkIds checks of the group to copy
-     * @return array{added:list<string>,skipped:array<string,string>}
+     * Checks of a group that clash with the agent: same name, or same script
+     * file name, as one of its checks. name => reason.
      */
-    public static function copyToHost(int $groupId, int $hostId, array $checkIds, string $by): array
+    public static function clashes(int $groupId, int $hostId): array
     {
-        $added = [];
-        $skipped = [];
-        foreach (AgentChecks::forHost(self::sid($groupId)) as $c) {
-            if (!in_array((int) $c['id'], $checkIds, true)) {
-                continue;
-            }
-            $err = AgentChecks::validate($hostId, $c['name'], $c['config'])
-                + AgentChecks::validateScript($hostId, $c['script_name'], (string) $c['script'], null);
-            if ($err) {
-                $skipped[$c['name']] = isset($err['name']) ? 'the agent already has a check with this name'
-                    : (isset($err['script_name']) ? "the agent already has the script {$c['script_name']}" : implode(' ', $err));
-                continue;
-            }
-            $id = AgentChecks::create($hostId, $c['name'], $c['template'], $c['config'], true, $by);
+        $own = array_column(AgentChecks::forHost($hostId), null, 'name');
+        $scripts = [];
+        foreach ($own as $c) {
             if ($c['script_name'] !== '') {
-                AgentChecks::setScript($id, $c['script_name'], (string) $c['script']);
+                $scripts[$c['script_name']] = $c['name'];
             }
-            ServiceGroups::setForCheck($id, ServiceGroups::idsForCheck((int) $c['id']));
-            $added[] = $c['name'];
         }
-        return ['added' => $added, 'skipped' => $skipped];
+        $out = [];
+        foreach (AgentChecks::forHost(self::sid($groupId)) as $c) {
+            if (isset($own[$c['name']])) {
+                $out[$c['name']] = 'the agent already has a check with this name';
+            } elseif ($c['script_name'] !== '' && isset($scripts[$c['script_name']])) {
+                $out[$c['name']] = "check {$scripts[$c['script_name']]} of the agent already has the script {$c['script_name']}";
+            }
+        }
+        return $out;
+    }
+
+    /**
+     * Copies all the checks of a group into an agent (same name, enabled state,
+     * script and service groups), as independent checks. All or nothing: if one
+     * clashes with the agent, nothing is copied.
+     * @return array{added:list<string>,clashes:array<string,string>}
+     */
+    public static function copyToHost(int $groupId, int $hostId, string $by): array
+    {
+        $clashes = self::clashes($groupId, $hostId);
+        if ($clashes) {
+            return ['added' => [], 'clashes' => $clashes];
+        }
+        $added = [];
+        $pdo = Db::pdo();
+        $pdo->beginTransaction();
+        try {
+            foreach (AgentChecks::forHost(self::sid($groupId)) as $c) {
+                $id = AgentChecks::create($hostId, $c['name'], $c['template'], $c['config'], (bool) (int) $c['enabled'], $by);
+                if ($c['script_name'] !== '') {
+                    AgentChecks::setScript($id, $c['script_name'], (string) $c['script']);
+                }
+                ServiceGroups::setForCheck($id, ServiceGroups::idsForCheck((int) $c['id']));
+                $added[] = $c['name'];
+            }
+            $pdo->commit();
+        } catch (\Throwable $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+        return ['added' => $added, 'clashes' => []];
     }
 
     /** A free internal slug for a new group. */

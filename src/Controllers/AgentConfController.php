@@ -145,16 +145,10 @@ class AgentConfController
     public function addGroupForm(int $id): string
     {
         $host = $this->hostRow($id);
-        $own = array_column(AgentChecks::forHost($id), null, 'name');
-        $ownScripts = array_flip(array_filter(array_column($own, 'script_name')));
         $groups = CheckGroups::all();
         foreach ($groups as &$g) {
             $g['items'] = AgentChecks::forHost(CheckGroups::sid((int) $g['id']));
-            foreach ($g['items'] as &$c) {
-                $c['clash'] = isset($own[$c['name']]) ? 'already on this agent'
-                    : ($c['script_name'] !== '' && isset($ownScripts[$c['script_name']]) ? "the agent already has the script {$c['script_name']}" : '');
-            }
-            unset($c);
+            $g['clashes'] = CheckGroups::clashes((int) $g['id'], $id);
         }
         unset($g);
         return View::render('agentconf/add_group', [
@@ -162,24 +156,24 @@ class AgentConfController
         ]);
     }
 
-    /** POST /agentconf/{id}/add-group: copies the chosen checks of a group into the agent. */
+    /** POST /agentconf/{id}/add-group: copies all the checks of a group into the agent (all or nothing). */
     public function addGroup(int $id): never
     {
         $host = $this->hostRow($id);
         $g = CheckGroups::find((int) ($_POST['group_id'] ?? 0)) ?? throw new HttpException(404, 'Group not found.');
-        $ids = array_map('intval', array_filter((array) ($_POST['checks'] ?? []), 'is_scalar'));
-        if (!$ids) {
-            flash('error', 'Choose at least one check of the group.');
+        $r = CheckGroups::copyToHost((int) $g['id'], $id, (string) Auth::user()['username']);
+        if ($r['clashes']) {
+            flash('error', 'Nothing added from “' . $g['name'] . '”: ' . count($r['clashes']) . ' of its checks are already on this agent — '
+                . implode('; ', array_map(static fn ($n, $why) => "$n ($why)", array_keys($r['clashes']), $r['clashes']))
+                . '. Delete or rename them on the agent, then add the group again.');
             redirect("/agentconf/$id/add-group");
         }
-        $r = CheckGroups::copyToHost((int) $g['id'], $id, $ids, (string) Auth::user()['username']);
-        if ($r['added']) {
-            Audit::log('agentconf.group_copy', "{$host['hostname']} (id $id): from group {$g['name']}: " . implode(', ', $r['added']));
-            flash('success', 'Added from “' . $g['name'] . '”: ' . implode(', ', $r['added']) . '. They are independent copies: edit them here.');
+        if (!$r['added']) {
+            flash('error', 'The group “' . $g['name'] . '” has no checks.');
+            redirect("/agentconf/$id/add-group");
         }
-        foreach ($r['skipped'] as $name => $why) {
-            flash('error', "Not added: $name — $why.");
-        }
+        Audit::log('agentconf.group_copy', "{$host['hostname']} (id $id): from group {$g['name']}: " . implode(', ', $r['added']));
+        flash('success', 'Added from “' . $g['name'] . '”: ' . implode(', ', $r['added']) . '. They are independent copies: edit them here.');
         redirect("/agentconf/$id");
     }
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.21.1 — 2026-11-13
+
+- *Add group checks* adds the whole group (all its checks, enabled or disabled as in the group) with one button, all or nothing: if any of its checks is already on the agent (same name or script), nothing is added and the clashes are listed. The button is always available, so a group can be added again after its checks were deleted from the agent
+
 ## 0.21.0 — 2026-11-13
 
 **Run `bin/bmon-web migrate` after upgrading**: it turns the group assignments made with 0.20.0 into copies (so the agents keep their checks) and drops `check_group_hosts`.

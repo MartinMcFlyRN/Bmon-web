@@ -283,10 +283,13 @@ the agents, to install on each node with all its checks ready.
   (e.g. “Web server” = nginx, php-fpm, certificate). Its checks are added and
   edited like the checks of an agent (templates, custom templates, scripts,
   service groups). On the agent page, **Add group checks** (next to *Add check*)
-  lists the groups with their checks: tick the ones to add and they are copied
-  into the agent with the same names, scripts and service groups. The copies are
-  independent — changing or deleting the group later does not change the
-  agents. A check whose name or script the agent already has is skipped.
+  lists the groups with their checks: *Add the group* copies all of them into
+  the agent with the same names, enabled state, scripts and service groups. It
+  is all or nothing: if even one of them (same name or same script) is already
+  on the agent, nothing is added and the clashing checks are listed. A group can
+  be added again any time, e.g. after deleting its checks from the agent. The
+  copies are independent — changing or deleting the group later does not change
+  the agents.
 - **Required checks**: every agent must have, enabled, **Reporting to Bmon**,
   **Bmon auto-update** and **OS information**. The first time the page of an
   agent without checks is opened they are added automatically (Reporting to
