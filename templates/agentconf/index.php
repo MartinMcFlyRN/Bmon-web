@@ -1,4 +1,4 @@
-<?php /** @var array $agents @var array $counts @var bool $all @var int $offlineCount @var string $q @var string $sort @var string $dir @var array $updates */
+<?php /** @var array $agents @var array $counts @var bool $all @var int $offlineCount @var string $q @var string $sort @var string $dir @var array $updates @var array $fromGroups */
 $th = static fn (string $key, string $label, string $class = ''): string
     => sort_th('/agentconf', $key, $label, $sort, $dir, $class);
 ?>
@@ -44,6 +44,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
       <td class="num">
         <?php if ($c === null): ?><span class="muted">—</span>
         <?php else: ?><?= e($c['enabled']) ?><?php if ((int) $c['n'] !== (int) $c['enabled']): ?> <span class="muted small">(+<?= (int) $c['n'] - (int) $c['enabled'] ?> disabled)</span><?php endif ?><?php endif ?>
+        <?php if (!empty($fromGroups[(int) $a['id']])): ?><div class="muted small">+<?= e($fromGroups[(int) $a['id']]) ?> from groups</div><?php endif ?>
       </td>
       <td><?php [, $ul, $uc] = \Bmon\Web\Controllers\AgentConfController::updateBadge($updates[(int) $a['id']] ?? null); ?>
         <?= $uc !== '' ? '<span class="badge ' . e($uc) . '">' . e($ul) . '</span>' : '<span class="muted">—</span>' ?></td>

@@ -30,6 +30,7 @@ final class AgentTemplates
     private const URLPATH = '^/[^"\\\\\s]*$';
 
     public const CATEGORIES = [
+        'mine' => 'Custom templates',   // AgentConf → Custom Templates
         'system' => 'System',
         'service' => 'Services (processes)',
         'remote' => 'Remote checks',
@@ -49,7 +50,7 @@ final class AgentTemplates
     public static function all(): array
     {
         static $all = null;
-        return $all ??= self::build();
+        return ($all ??= self::build()) + CustomTemplates::asTemplates();
     }
 
     public static function get(string $key): ?array
@@ -62,6 +63,9 @@ final class AgentTemplates
     {
         if (empty($tpl['script'])) {
             return null;
+        }
+        if (isset($tpl['script']['content'])) {   // custom template: kept in the database
+            return ['name' => $tpl['script']['name'], 'content' => (string) $tpl['script']['content']];
         }
         $content = (string) file_get_contents(BMON_ROOT . '/resources/agentconf/' . basename($tpl['script']['file']));
         return ['name' => $tpl['script']['name'], 'content' => $content];

@@ -28,11 +28,17 @@ $tab = static fn (string $id): string => $nav === $id ? ' class="active" aria-cu
     <a href="<?= e(url('/inventory')) ?>"<?= $tab('inventory') ?>>Inventory</a>
     <span class="tab-soon" title="Coming soon">Reports</span>
     <?php if ($isAdmin): ?>
-      <a href="<?= e(url('/agentconf')) ?>"<?= $tab('agentconf') ?>>AgentConf</a>
-    <?php endif ?>
-    <?php if ($isAdmin): ?>
       <?php $uri = (string) ($_SERVER['REQUEST_URI'] ?? '');
-            $sub = static fn (string $p): string => str_starts_with($uri, url($p)) ? ' class="active" aria-current="page"' : ''; ?>
+            $sub = static fn (string $p): string => str_starts_with($uri, url($p)) ? ' class="active" aria-current="page"' : '';
+            $acSection = str_starts_with($uri, url('/agentconf/groups')) ? 'groups' : (str_starts_with($uri, url('/agentconf/templates')) ? 'templates' : 'manage'); ?>
+      <div class="tab-menu<?= $nav === 'agentconf' ? ' active' : '' ?>" data-menu>
+        <button type="button" class="tab-menu-btn" aria-haspopup="true" aria-expanded="false">AgentConf <span class="caret" aria-hidden="true">▾</span></button>
+        <div class="tab-menu-list" role="menu">
+          <a role="menuitem" href="<?= e(url('/agentconf')) ?>"<?= $nav === 'agentconf' && $acSection === 'manage' ? ' class="active" aria-current="page"' : '' ?>>Manage</a>
+          <a role="menuitem" href="<?= e(url('/agentconf/groups')) ?>"<?= $sub('/agentconf/groups') ?>>Group Checks</a>
+          <a role="menuitem" href="<?= e(url('/agentconf/templates')) ?>"<?= $sub('/agentconf/templates') ?>>Custom Templates</a>
+        </div>
+      </div>
       <div class="tab-menu<?= $nav === 'admin' ? ' active' : '' ?>" data-menu>
         <button type="button" class="tab-menu-btn" aria-haspopup="true" aria-expanded="false">Admin <span class="caret" aria-hidden="true">▾</span></button>
         <div class="tab-menu-list" role="menu">

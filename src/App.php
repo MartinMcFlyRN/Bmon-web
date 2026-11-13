@@ -7,6 +7,8 @@ namespace Bmon\Web;
 use Bmon\Web\Controllers\AdminController;
 use Bmon\Web\Controllers\AgentConfController;
 use Bmon\Web\Controllers\AgentUpdateController;
+use Bmon\Web\Controllers\CustomTemplatesController;
+use Bmon\Web\Controllers\GroupChecksController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
 use Bmon\Web\Controllers\InventoryController;
@@ -51,6 +53,26 @@ final class App
         $r->post('/profile/password', [ProfileController::class, 'changePassword']);
 
         $r->get('/agentconf', [AgentConfController::class, 'index'], 'admin');
+        // custom templates and group checks (before /agentconf/{id}: the ids are numeric anyway)
+        $r->get('/agentconf/templates', [CustomTemplatesController::class, 'index'], 'admin');
+        $r->get('/agentconf/templates/new', [CustomTemplatesController::class, 'newForm'], 'admin');
+        $r->post('/agentconf/templates/new', [CustomTemplatesController::class, 'create'], 'admin');
+        $r->get('/agentconf/templates/{id}', [CustomTemplatesController::class, 'edit'], 'admin');
+        $r->post('/agentconf/templates/{id}', [CustomTemplatesController::class, 'update'], 'admin');
+        $r->post('/agentconf/templates/{id}/delete', [CustomTemplatesController::class, 'delete'], 'admin');
+        $r->get('/agentconf/groups', [GroupChecksController::class, 'index'], 'admin');
+        $r->get('/agentconf/groups/new', [GroupChecksController::class, 'newGroup'], 'admin');
+        $r->post('/agentconf/groups/new', [GroupChecksController::class, 'createGroup'], 'admin');
+        $r->get('/agentconf/groups/{id}', [GroupChecksController::class, 'show'], 'admin');
+        $r->post('/agentconf/groups/{id}', [GroupChecksController::class, 'updateGroup'], 'admin');
+        $r->post('/agentconf/groups/{id}/delete', [GroupChecksController::class, 'deleteGroup'], 'admin');
+        $r->post('/agentconf/groups/{id}/hosts', [GroupChecksController::class, 'assignHost'], 'admin');
+        $r->post('/agentconf/groups/{id}/hosts/{hostId}/remove', [GroupChecksController::class, 'unassignHost'], 'admin');
+        $r->get('/agentconf/groups/{id}/new', [GroupChecksController::class, 'newCheck'], 'admin');
+        $r->post('/agentconf/groups/{id}/new', [GroupChecksController::class, 'create'], 'admin');
+        $r->get('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'edit'], 'admin');
+        $r->post('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'update'], 'admin');
+        $r->post('/agentconf/groups/{id}/checks/{checkId}/delete', [GroupChecksController::class, 'delete'], 'admin');
         $r->get('/agentconf/{id}', [AgentConfController::class, 'host'], 'admin');
         $r->get('/agentconf/{id}/new', [AgentConfController::class, 'newCheck'], 'admin');
         $r->post('/agentconf/{id}/new', [AgentConfController::class, 'create'], 'admin');
@@ -63,6 +85,8 @@ final class App
         $r->post('/agentconf/{id}/publish', [AgentConfController::class, 'publish'], 'admin');
         $r->get('/agentconf/{id}/update-status', [AgentConfController::class, 'updateStatus'], 'admin');
         $r->post('/agentconf/{id}/required', [AgentConfController::class, 'addRequired'], 'admin');
+        $r->post('/agentconf/{id}/check-groups', [AgentConfController::class, 'assignGroup'], 'admin');
+        $r->post('/agentconf/{id}/check-groups/{groupId}/remove', [AgentConfController::class, 'unassignGroup'], 'admin');
         $r->post('/agentconf/{id}/update-now', [AgentConfController::class, 'updateNow'], 'admin');
         $r->get('/dl/{token}', [AgentConfController::class, 'publicDownload'], 'public');
         // bmon-update.sh on the agents (signed requests, no session)

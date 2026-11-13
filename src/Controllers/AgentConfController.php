@@ -9,6 +9,7 @@ use Bmon\Web\AgentRequired;
 use Bmon\Web\AgentRequiredException;
 use Bmon\Web\AgentTemplates;
 use Bmon\Web\AgentUpdate;
+use Bmon\Web\CheckGroups;
 use Bmon\Web\Audit;
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
@@ -23,7 +24,7 @@ use Bmon\Web\View;
  * AgentConf (administrators): Monit checks prepared for each agent, created from
  * templates, editable, validated with `monit -t` and downloaded as a zip.
  */
-final class AgentConfController
+class AgentConfController
 {
     /** Sortable columns of the agent list => default direction. */
     private const SORTS = ['agent' => 'asc', 'address' => 'asc', 'monit' => 'desc', 'services' => 'desc',
@@ -64,6 +65,7 @@ final class AgentConfController
             $params
         );
         $counts = AgentChecks::counts();
+        $fromGroups = CheckGroups::enabledByHost();
         $updates = AgentUpdate::overview();
 
         $sort = array_key_exists($_GET['sort'] ?? '', self::SORTS) ? $_GET['sort'] : 'agent';
@@ -73,7 +75,7 @@ final class AgentConfController
             'address' => ($ip = @inet_pton((string) $a['remote_addr'])) !== false ? bin2hex($ip) : (string) $a['remote_addr'],
             'monit' => (string) $a['monit_version'],
             'services' => (int) $a['services_total'],
-            'checks' => (int) ($counts[(int) $a['id']]['enabled'] ?? -1),
+            'checks' => (int) ($counts[(int) $a['id']]['enabled'] ?? -1) + ($fromGroups[(int) $a['id']] ?? 0),
             'update' => self::updateBadge($updates[(int) $a['id']] ?? null)[3],
             'seen' => (string) $a['last_seen'],
         };
@@ -86,7 +88,7 @@ final class AgentConfController
         $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
         return View::render('agentconf/index', [
             'title' => 'AgentConf', 'nav' => 'agentconf',
-            'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
+            'agents' => $agents, 'counts' => $counts, 'fromGroups' => $fromGroups, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
             'q' => $q, 'sort' => $sort, 'dir' => $dir,
         ]);
     }
@@ -112,14 +114,20 @@ final class AgentConfController
             }
             $checks = AgentChecks::forHost($id);
         }
+        $effective = AgentChecks::effective($id);
         $managed = [];
-        foreach ($checks as &$c) {
+        foreach ($effective as &$c) {
             $c['services'] = AgentChecks::definedServices($c['config'], $host['monit_hostname']);
+            $c['url'] = isset($c['group_id']) ? "/agentconf/groups/{$c['group_id']}/checks/{$c['id']}" : "/agentconf/$id/checks/{$c['id']}";
             foreach ($c['services'] as $svc) {
                 $managed[$svc] = $c;
             }
         }
         unset($c);
+        $checks = array_values(array_filter($effective, static fn ($c) => !isset($c['group_id'])));
+        $groupChecks = array_values(array_filter($effective, static fn ($c) => isset($c['group_id'])));
+        $assigned = CheckGroups::forHost($id);
+        $assignedIds = array_map('intval', array_column($assigned, 'id'));
 
         $enabled = AgentChecks::enabledSet($id);
         $syntax = $enabled ? AgentChecks::syntaxCheck($enabled) : ['ok' => null, 'output' => ''];
@@ -127,14 +135,48 @@ final class AgentConfController
         return View::render('agentconf/host', [
             'title' => 'AgentConf · ' . $host['hostname'], 'nav' => 'agentconf',
             'host' => $host, 'checks' => $checks, 'managed' => $managed,
-            'missingScripts' => AgentChecks::missingScripts($checks),
-            'groupsByCheck' => ServiceGroups::namesByCheck($id),
+            'missingScripts' => AgentChecks::missingScripts($effective),
+            'groupsByCheck' => AgentChecks::serviceGroupsOf($id),
+            'groupChecks' => $groupChecks, 'checkGroups' => $assigned,
+            'otherCheckGroups' => array_values(array_filter(CheckGroups::all(), static fn ($g) => !in_array((int) $g['id'], $assignedIds, true))),
+            'enabledCount' => count(array_filter($effective, static fn ($c) => (int) $c['enabled'])),
+            'conflicts' => AgentChecks::conflicts($id),
             'reported' => $this->reported($id), 'syntax' => $syntax,
             'link' => DownloadLinks::active($id), 'newLink' => $newLink,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
             'update' => $this->updateInfo($host),
             'requiredMissing' => AgentRequired::missing($id),
         ]);
+    }
+
+    /** POST /agentconf/{id}/check-groups: assigns a Group Checks group to the agent. */
+    public function assignGroup(int $id): never
+    {
+        $host = $this->hostRow($id);
+        $g = CheckGroups::find((int) ($_POST['group_id'] ?? 0));
+        if ($g === null) {
+            flash('error', 'Choose a group.');
+            redirect("/agentconf/$id");
+        }
+        if (CheckGroups::assign((int) $g['id'], $id, (string) Auth::user()['username'])) {
+            Audit::log('agentconf.group_assign', "{$host['hostname']} (id $id): group {$g['name']}");
+        }
+        $conf = AgentChecks::conflicts($id);
+        flash($conf ? 'error' : 'success', "Group “{$g['name']}” assigned: its checks are now part of this agent's zip and publications."
+            . ($conf ? ' But: ' . implode('; ', $conf) . '.' : ''));
+        redirect("/agentconf/$id");
+    }
+
+    /** POST /agentconf/{id}/check-groups/{groupId}/remove */
+    public function unassignGroup(int $id, int $groupId): never
+    {
+        $host = $this->hostRow($id);
+        $g = CheckGroups::find($groupId) ?? throw new HttpException(404, 'Group not found.');
+        if (CheckGroups::unassign($groupId, $id)) {
+            Audit::log('agentconf.group_unassign', "{$host['hostname']} (id $id): group {$g['name']}");
+        }
+        flash('success', "Group “{$g['name']}” removed from this agent: its checks go away with the next zip or publication.");
+        redirect("/agentconf/$id");
     }
 
     /** POST /agentconf/{id}/required: adds (or enables) the missing required checks. */
@@ -161,7 +203,7 @@ final class AgentConfController
     /** Template gallery, or the form of the chosen template (?template=key). */
     public function newCheck(int $id, array $errors = [], ?array $values = null, ?array $syntax = null): string
     {
-        $host = $this->hostRow($id);
+        $sc = $this->scope($id);
         $key = is_string($_REQUEST['template'] ?? null) ? $_REQUEST['template'] : '';
         $tpl = AgentTemplates::get($key);
 
@@ -177,11 +219,11 @@ final class AgentConfController
             }
         }
         return View::render('agentconf/new', [
-            'title' => 'New check · ' . $host['hostname'], 'nav' => 'agentconf',
-            'host' => $host, 'templateKey' => $tpl !== null ? $key : '', 'tpl' => $tpl,
+            'title' => 'New check · ' . $sc['name'], 'nav' => 'agentconf',
+            'scope' => $sc, 'templateKey' => $tpl !== null ? $key : '', 'tpl' => $tpl,
             'values' => $values ?? [], 'errors' => $errors, 'syntax' => $syntax,
             'fromReported' => is_string($_GET['name'] ?? null) ? $_GET['name'] : '',
-            'existing' => array_column(AgentChecks::forHost($id), 'name'),
+            'existing' => array_column(AgentChecks::forHost($sc['sid']), 'name'),
             'allGroups' => ServiceGroups::all(),
             'selectedGroups' => array_map('intval', (array) ($_POST['groups'] ?? [])),
         ]);
@@ -189,7 +231,8 @@ final class AgentConfController
 
     public function create(int $id): string
     {
-        $host = $this->hostRow($id);
+        $sc = $this->scope($id);
+        $sid = $sc['sid'];
         $key = is_string($_POST['template'] ?? null) ? $_POST['template'] : '';
         $tpl = AgentTemplates::get($key) ?? throw new HttpException(400, 'Unknown template.');
 
@@ -198,17 +241,20 @@ final class AgentConfController
         $config = AgentTemplates::render($tpl, AgentTemplates::derive($key, $values));
         $tplScript = AgentTemplates::script($tpl);
         if (!$errors) {
-            $errors = AgentChecks::validate($id, $name, $config)
-                + ($tplScript ? AgentChecks::validateScript($id, $tplScript['name'], $tplScript['content'], null) : []);
+            $errors = AgentChecks::validate($sid, $name, $config)
+                + ($tplScript ? AgentChecks::validateScript($sid, $tplScript['name'], $tplScript['content'], null) : []);
+            if (isset($errors['name']) && str_contains($errors['name'], 'already')) {
+                $errors['name'] = ucfirst($sc['what']) . ' already has a check with this name.';
+            }
             if (isset($errors['script_name'])) {
-                $errors['name'] = 'This agent already has the script ' . $tplScript['name'] . ' (another "' . $tpl['label'] . '" check?).';
+                $errors['name'] = ucfirst($sc['what']) . ' already has the script ' . $tplScript['name'] . ' (another "' . $tpl['label'] . '" check?).';
                 unset($errors['script_name']);
             }
         }
         $syntax = null;
         $groupIds = array_map('intval', array_filter((array) ($_POST['groups'] ?? []), 'is_scalar'));
         if (!$errors) {
-            $syntax = AgentChecks::checkWith($id, null, $name, $config, true, ServiceGroups::namesFor($groupIds));
+            $syntax = AgentChecks::checkWith($sid, null, $name, $config, true, ServiceGroups::namesFor($groupIds));
             if ($syntax['ok'] === false && !isset($_POST['force'])) {
                 $errors['_syntax'] = 'monit -t rejected the configuration.';
             }
@@ -219,37 +265,38 @@ final class AgentConfController
             return $this->newCheck($id, $errors, $values, $syntax);
         }
 
-        $checkId = AgentChecks::create($id, $name, $key, $config, true, (string) Auth::user()['username']);
+        $checkId = AgentChecks::create($sid, $name, $key, $config, true, (string) Auth::user()['username']);
         ServiceGroups::setForCheck($checkId, $groupIds);
         if ($tplScript) {
             AgentChecks::setScript($checkId, $tplScript['name'], $tplScript['content']);
         }
         $gNames = ServiceGroups::namesFor($groupIds);
-        Audit::log('agentconf.create', "{$host['hostname']} (id $id): $name (template $key)" . ($gNames ? ', groups ' . implode(', ', $gNames) : ''));
+        Audit::log('agentconf.create', $this->auditWho($sc) . ": $name (template $key)" . ($gNames ? ', groups ' . implode(', ', $gNames) : ''));
         flash('success', "Check “{$name}” added. You can now edit its configuration." . $this->syntaxNote($syntax));
-        redirect("/agentconf/$id/checks/$checkId");
+        redirect($sc['base'] . "/checks/$checkId");
     }
 
     public function edit(int $id, int $checkId, array $errors = [], ?array $form = null, ?array $syntax = null, ?array $scriptSyntax = null): string
     {
-        $host = $this->hostRow($id);
-        $check = $this->check($id, $checkId);
+        $sc = $this->scope($id);
+        $check = $this->check($sc, $checkId);
         return View::render('agentconf/edit', [
-            'title' => $check['name'] . ' · ' . $host['hostname'], 'nav' => 'agentconf',
-            'host' => $host, 'check' => $check, 'form' => $form ?? $check, 'errors' => $errors,
+            'title' => $check['name'] . ' · ' . $sc['name'], 'nav' => 'agentconf',
+            'scope' => $sc, 'check' => $check, 'form' => $form ?? $check, 'errors' => $errors,
             'syntax' => $syntax, 'scriptSyntax' => $scriptSyntax, 'tplInfo' => AgentTemplates::get($check['template']),
             'scriptDir' => AgentChecks::scriptDir(), 'monitDir' => AgentChecks::monitDir(),
             'allGroups' => ServiceGroups::all(),
             'selectedGroups' => $form !== null && isset($form['groups']) ? $form['groups'] : ServiceGroups::idsForCheck($checkId),
-            'services' => AgentChecks::definedServices($form['config'] ?? $check['config'], $host['monit_hostname']),
+            'services' => AgentChecks::definedServices($form['config'] ?? $check['config'], $sc['monit_hostname']),
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
     }
 
     public function update(int $id, int $checkId): string
     {
-        $host = $this->hostRow($id);
-        $check = $this->check($id, $checkId);
+        $sc = $this->scope($id);
+        $sid = $sc['sid'];
+        $check = $this->check($sc, $checkId);
         $str = static fn (string $k): string => is_string($_POST[$k] ?? null) ? $_POST[$k] : '';
         $form = [
             'name' => trim($str('name')),
@@ -262,12 +309,12 @@ final class AgentConfController
         if (trim($form['script']) === '' && isset($_POST['remove_script'])) {
             $form['script_name'] = '';
         }
-        $errors = AgentChecks::validate($id, $form['name'], $form['config'], $checkId)
-            + AgentChecks::validateScript($id, $form['script_name'], $form['script'], $checkId);
+        $errors = AgentChecks::validate($sid, $form['name'], $form['config'], $checkId)
+            + AgentChecks::validateScript($sid, $form['script_name'], $form['script'], $checkId);
         $syntax = null;
         $scriptSyntax = null;
         if (!$errors) {
-            $syntax = AgentChecks::checkWith($id, $checkId, $form['name'], $form['config'], (bool) $form['enabled'],
+            $syntax = AgentChecks::checkWith($sid, $checkId, $form['name'], $form['config'], (bool) $form['enabled'],
                 ServiceGroups::namesFor($form['groups']));
             if ($syntax['ok'] === false && !isset($_POST['force'])) {
                 $errors['_syntax'] = 'monit -t rejected the configuration.';
@@ -297,26 +344,27 @@ final class AgentConfController
             default => '',
         };
         $groupNote = $oldGroups !== $newGroups ? ', groups: ' . ($newGroups ? implode(', ', $newGroups) : 'none') : '';
-        Audit::log('agentconf.update', "{$host['hostname']} (id $id): $what" . ($form['enabled'] ? '' : ' (disabled)') . $scriptNote . $groupNote);
+        Audit::log('agentconf.update', $this->auditWho($sc) . ": $what" . ($form['enabled'] ? '' : ' (disabled)') . $scriptNote . $groupNote);
         $warn = $form['script_name'] !== '' && !str_starts_with(ltrim($form['script']), '#!')
             ? ' Note: the script has no "#!" line; add "#!/bin/sh" so that Monit can run it.' : '';
-        $missing = AgentChecks::missingScripts(AgentChecks::forHost($id))[$form['name']] ?? [];
-        if ($missing) {
+        $missing = AgentChecks::missingScripts(AgentChecks::forHost($sid))[$form['name']] ?? [];
+        if ($missing && $sc['kind'] === 'host') {
             $warn .= ' Warning: the configuration uses ' . implode(', ', $missing)
                 . ', but no check of this agent attaches it: Monit on the agent will refuse the configuration.';
         }
         flash('success', "Check “{$form['name']}” saved." . $this->syntaxNote($syntax) . $warn);
-        redirect("/agentconf/$id");
+        redirect($sc['base']);
     }
 
     public function delete(int $id, int $checkId): never
     {
-        $host = $this->hostRow($id);
-        $check = $this->check($id, $checkId);
+        $sc = $this->scope($id);
+        $check = $this->check($sc, $checkId);
         AgentChecks::delete($checkId);
-        Audit::log('agentconf.delete', "{$host['hostname']} (id $id): {$check['name']}");
-        flash('success', "Check “{$check['name']}” deleted. It goes away from the host when you install the next zip.");
-        redirect("/agentconf/$id");
+        Audit::log('agentconf.delete', $this->auditWho($sc) . ": {$check['name']}");
+        flash('success', "Check “{$check['name']}” deleted. It goes away from the " . ($sc['kind'] === 'host' ? 'host' : 'agents of the group')
+            . ' with the next zip or publication.');
+        redirect($sc['base']);
     }
 
     public function download(int $id): never
@@ -486,14 +534,29 @@ final class AgentConfController
         ];
     }
 
-    private function hostRow(int $id): array
+    protected function hostRow(int $id): array
     {
         return Db::host($id) ?? throw new HttpException(404, 'Agent not found.');
     }
 
-    private function check(int $id, int $checkId): array
+    /**
+     * Owner of the checks handled by newCheck/create/edit/update/delete: an agent
+     * here, a check group in GroupChecksController. sid = host_id of agent_checks.
+     */
+    protected function scope(int $id): array
     {
-        return AgentChecks::find($id, $checkId) ?? throw new HttpException(404, 'Check not found.');
+        $host = $this->hostRow($id);
+        return [
+            'kind' => 'host', 'sid' => $id, 'id' => $id, 'base' => "/agentconf/$id",
+            'name' => $host['hostname'], 'monit_hostname' => $host['monit_hostname'], 'host' => $host,
+            'crumbs' => [['/agentconf', 'AgentConf'], ["/agentconf/$id", $host['hostname']]],
+            'back' => 'Back to the agent', 'what' => 'this agent',
+        ];
+    }
+
+    private function check(array $scope, int $checkId): array
+    {
+        return AgentChecks::find($scope['sid'], $checkId) ?? throw new HttpException(404, 'Check not found.');
     }
 
     /** Services Monit reports for the host (its current configuration, whoever wrote it). */
@@ -504,6 +567,11 @@ final class AgentConfController
               WHERE host_id = ? ORDER BY FIELD(type, ' . implode(',', Monit::TYPE_ORDER) . '), name',
             [$id]
         );
+    }
+
+    protected function auditWho(array $sc): string
+    {
+        return $sc['kind'] === 'host' ? "{$sc['name']} (id {$sc['id']})" : "group {$sc['name']} (id {$sc['id']})";
     }
 
     private function syntaxNote(?array $syntax): string

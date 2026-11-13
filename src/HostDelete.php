@@ -17,7 +17,7 @@ namespace Bmon\Web;
 final class HostDelete
 {
     /** Bmon-web tables with a host_id (agent_check_groups follows agent_checks by cascade). */
-    private const WEB_TABLES = ['agent_checks', 'agent_releases', 'agent_update_state', 'download_links', 'host_inventory', 'host_meta'];
+    private const WEB_TABLES = ['agent_checks', 'agent_releases', 'agent_update_state', 'check_group_hosts', 'download_links', 'host_inventory', 'host_meta'];
 
     /** Whether Bmon-web may delete rows of bmon_collector.hosts. */
     public static function allowed(): bool

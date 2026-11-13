@@ -1,6 +1,6 @@
 <?php
 /**
- * @var array $host @var array $check @var array $form @var array $errors @var array|null $syntax
+ * @var array $scope @var array $check @var array $form @var array $errors @var array|null $syntax
  * @var array|null $tplInfo @var array $services @var bool $monitAvailable
  * @var array|null $scriptSyntax @var string $scriptDir @var string $monitDir
  * @var array $allGroups @var array $selectedGroups
@@ -8,17 +8,17 @@
 use Bmon\Web\AgentChecks;
 
 $err = static fn (string $f): string => !empty($errors[$f]) ? ' aria-invalid="true" aria-describedby="' . e($f) . '-error"' : '';
-$base = '/agentconf/' . $host['id'];
+$base = $scope['base'];
 ?>
 <?php if (($cfgProblem = \Bmon\Web\AgentChecks::configProblem()) !== null): ?>
   <div class="alert alert-error"><?= e($cfgProblem) ?></div>
 <?php endif ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url($base)) ?>"><?= e($host['hostname']) ?></a> /</p>
+    <p class="crumbs"><?php foreach ($scope['crumbs'] as [$cu, $cl]): ?><a href="<?= e(url($cu)) ?>"><?= e($cl) ?></a> / <?php endforeach ?></p>
     <h1 class="mono"><?= e(AgentChecks::fileName($check['name'])) ?></h1>
   </div>
-  <a class="btn" href="<?= e(url($base)) ?>">Back to the agent</a>
+  <a class="btn" href="<?= e(url($base)) ?>"><?= e($scope['back']) ?></a>
 </div>
 
 <?php if (!empty($errors['_script'])): ?>
@@ -26,7 +26,7 @@ $base = '/agentconf/' . $host['id'];
     <pre class="monit-out"><?= e($scriptSyntax['output'] ?? '') ?></pre></div>
 <?php endif ?>
 <?php if (!empty($errors['_syntax'])): ?>
-  <div class="alert alert-error">monit -t rejected the configuration<?= (int) $form['enabled'] ? ' (together with the other enabled checks of this agent)' : '' ?>:
+  <div class="alert alert-error">monit -t rejected the configuration<?= (int) $form['enabled'] ? ' (together with the other enabled checks of ' . e($scope['what']) . ')' : '' ?>:
     <pre class="monit-out"><?= e($syntax['output'] ?? '') ?></pre></div>
 <?php endif ?>
 
@@ -77,7 +77,7 @@ $base = '/agentconf/' . $host['id'];
 <div class="danger-zone">
   <p class="muted small">Created <?= e(fmt_dt($check['created_at'])) ?> · updated <?= e(fmt_dt($check['updated_at'])) ?><?= $check['updated_by'] !== '' ? ' by ' . e($check['updated_by']) : '' ?></p>
   <form method="post" action="<?= e(url($base . '/checks/' . $check['id'] . '/delete')) ?>"
-        data-confirm="Delete <?= e(AgentChecks::fileName($check['name'])) ?>? It disappears from the host when you install the next zip.">
+        data-confirm="Delete <?= e(AgentChecks::fileName($check['name'])) ?>? It disappears from <?= $scope['kind'] === 'host' ? 'the host' : 'the agents of the group' ?> with the next zip or publication.">
     <?= csrf_field() ?>
     <button type="submit" class="btn btn-danger">Delete check</button>
   </form>

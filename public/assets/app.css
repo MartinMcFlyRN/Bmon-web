@@ -426,3 +426,21 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .offline-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 #delete-host input[type=text] { width: 100%; margin: 4px 0 12px; }
 .required-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+
+/* Custom templates form */
+.fields-table input, .fields-table select { width: 100%; min-width: 0; }
+.fields-table td { vertical-align: top; }
+.fields-table td:nth-child(1) { width: 13%; } .fields-table td:nth-child(2) { width: 16%; }
+.fields-table td:nth-child(3) { width: 16%; } .fields-table td:nth-child(4) { width: 18%; }
+.fields-table td:nth-child(5) { width: 11%; } .fields-table td:last-child { width: 1%; }
+.table-wrap { overflow-x: auto; }
+
+/* Group Checks on the agent page */
+.group-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+.chip-cgroup { display: inline-flex; align-items: center; gap: 4px; background: #e8f1fb; color: #1d4f86; }
+.chip-cgroup a { color: inherit; font-weight: 600; text-decoration: none; }
+.chip-cgroup form { display: inline; margin: 0; }
+.chip-x { border: 0; background: none; color: inherit; cursor: pointer; font-size: 14px; line-height: 1; padding: 0 2px; }
+.inline-form { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
+.inline-form select { max-width: 320px; }
+.tpl-form h2 { margin-top: 22px; }

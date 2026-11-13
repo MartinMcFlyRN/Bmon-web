@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.20.0 — 2026-11-13
+
+**Run `bin/bmon-web migrate` after upgrading** (tables `check_groups`, `check_group_hosts`, `custom_templates`; `agent_checks.host_id` becomes signed).
+
+- AgentConf menu is a dropdown: **Manage** (the previous AgentConf page), **Group Checks**, **Custom Templates**
+- **Custom Templates**: templates with fields (key, label, type, default, required, help), a configuration with `{{key}}` / `?key` lines and an optional script; preview with the default values checked by `monit -t`; they appear in *Add check* under “Custom templates”
+- **Group Checks**: sets of checks assigned to several agents; checks added and edited like those of an agent (templates, custom templates, scripts, service groups); included in the zip and publications of their agents as `bmon-<prefix>.<check>.conf`, validated together with the agent's checks, and flagged as *Changes not published* on the agents when the group changes; assign them from the group or from the agent page; clashing script names refuse download and Publish
+- The agent list counts the checks coming from groups; deleting a host removes its group assignments
+
 ## 0.19.1 — 2026-11-13
 
 - AgentConf agent page: the Auto-update status (published version, version on the agent, last install and its output, refused requests) refreshes by itself every 5 seconds while the page is visible, so after Publish / Update now you see when the agent has finished without reloading

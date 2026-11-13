@@ -1,17 +1,17 @@
 <?php
 /**
- * @var array $host @var string $templateKey @var array|null $tpl @var array $values @var array $errors
+ * @var array $scope @var string $templateKey @var array|null $tpl @var array $values @var array $errors
  * @var array|null $syntax @var string $fromReported @var array $existing
  * @var array $allGroups @var array $selectedGroups
  */
 use Bmon\Web\AgentTemplates;
 
 $err = static fn (string $f): string => !empty($errors[$f]) ? ' aria-invalid="true" aria-describedby="' . e($f) . '-error"' : '';
-$base = '/agentconf/' . $host['id'];
+$base = $scope['base'];
 ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url($base)) ?>"><?= e($host['hostname']) ?></a> /</p>
+    <p class="crumbs"><?php foreach ($scope['crumbs'] as [$cu, $cl]): ?><a href="<?= e(url($cu)) ?>"><?= e($cl) ?></a> / <?php endforeach ?></p>
     <h1><?= $tpl === null ? 'Add a check' : 'New check: ' . e($tpl['label']) ?></h1>
   </div>
   <?php if ($tpl !== null): ?>
@@ -47,7 +47,7 @@ $base = '/agentconf/' . $host['id'];
       After installing the zip, remove that old definition from the host, otherwise Monit refuses the configuration (service name conflict).</div>
   <?php endif ?>
   <?php if (!empty($errors['_syntax'])): ?>
-    <div class="alert alert-error">monit -t rejected the configuration (together with the other enabled checks of this agent):
+    <div class="alert alert-error">monit -t rejected the configuration (together with the other enabled checks of <?= e($scope['what']) ?>):
       <pre class="monit-out"><?= e($syntax['output'] ?? '') ?></pre></div>
   <?php endif ?>
 
@@ -89,7 +89,7 @@ $base = '/agentconf/' . $host['id'];
         <span class="mono">?field</span> are kept only when that optional field is filled.
         After adding the check you can edit the resulting configuration.</p>
       <?php if ($existing): ?>
-        <p class="hint">Checks already prepared for this agent: <?= e(implode(', ', $existing)) ?></p>
+        <p class="hint">Checks already prepared for <?= e($scope['what']) ?>: <?= e(implode(', ', $existing)) ?></p>
       <?php endif ?>
     </aside>
   </div>

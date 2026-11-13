@@ -267,6 +267,28 @@ stops before that with "…and N more alerts" (a few hundred lines).
 The **AgentConf** menu (administrators only) prepares Monit configurations for
 the agents, to install on each node with all its checks ready.
 
+- **Menu**: AgentConf is a dropdown with **Manage** (the agents and their
+  checks), **Group Checks** and **Custom Templates**.
+- **Custom Templates**: your own templates, with fields like the built-in ones.
+  Each field has a key, a label, a type (text, whole number, number, name,
+  path, host/IP, URL, password/token — the type decides the accepted values,
+  never quotes, spaces or new lines), a default, required/optional and a help
+  text. The configuration uses `{{key}}` (and `{{name}}`, the check name);
+  a line starting with `?key ` is kept only when that optional field is filled;
+  `$HOST` is the agent name, as in Monit. An optional script is attached to the
+  checks made from it. The page shows the result with the default values,
+  checked with `monit -t`. Custom templates appear in *Add check* (agents and
+  groups) under “Custom templates”; checks made from them are copies.
+- **Group Checks**: a group is a set of checks shared by several agents (e.g.
+  “Web server”). Its checks are added and edited like the checks of an agent
+  (templates, custom templates, scripts, service groups), and it is assigned to
+  agents from the group page or from the agent page. The enabled checks of its
+  groups are part of an agent's zip and publications, as
+  `bmon-<group prefix>.<check>.conf`, and are checked with `monit -t` together
+  with the agent's own; a change to a group shows *Changes not published* on its
+  agents. Two checks attaching a script with the same name refuse the download
+  and Publish until one is renamed or disabled; duplicate service names are
+  reported by `monit -t`.
 - **Required checks**: every agent must have, enabled, **Reporting to Bmon**,
   **Bmon auto-update** and **OS information**. The first time the page of an
   agent without checks is opened they are added automatically (Reporting to

@@ -21,7 +21,7 @@ final class AgentRequired
     public static function missing(int $hostId): array
     {
         $have = [];
-        foreach (AgentChecks::forHost($hostId) as $c) {
+        foreach (AgentChecks::effective($hostId) as $c) {
             if ((int) $c['enabled']) {
                 $have[$c['template']] = true;
             }
@@ -39,8 +39,13 @@ final class AgentRequired
     public static function refusal(int $hostId): ?string
     {
         $missing = self::missing($hostId);
-        return $missing ? 'These checks are required and missing or disabled: ' . self::labels($missing)
-            . '. Add them back (AgentConf → Add the required checks) before downloading or publishing.' : null;
+        if ($missing) {
+            return 'These checks are required and missing or disabled: ' . self::labels($missing)
+                . '. Add them back (AgentConf → Add the required checks) before downloading or publishing.';
+        }
+        $conflicts = AgentChecks::conflicts($hostId);
+        return $conflicts ? 'The checks of this agent and of its Group Checks clash: ' . implode('; ', $conflicts)
+            . '. Rename or disable one before downloading or publishing.' : null;
     }
 
     /**

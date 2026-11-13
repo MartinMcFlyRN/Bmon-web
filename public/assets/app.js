@@ -188,3 +188,22 @@ document.addEventListener('keydown', (ev) => {
   setInterval(refresh, 5000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 })();
+
+// Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,
+// [data-add-row] adds one, [data-remove-row] removes its row.
+document.addEventListener('click', (ev) => {
+  const add = ev.target.closest('[data-add-row]');
+  if (add) {
+    const form = add.closest('form');
+    const tpl = form && form.querySelector('template[data-row-template]');
+    const body = form && form.querySelector('[data-rows]');
+    if (tpl && body) {
+      body.appendChild(tpl.content.cloneNode(true));
+      const first = body.lastElementChild && body.lastElementChild.querySelector('input');
+      if (first) first.focus();
+    }
+    return;
+  }
+  const rm = ev.target.closest('[data-remove-row]');
+  if (rm) rm.closest('tr').remove();
+});
