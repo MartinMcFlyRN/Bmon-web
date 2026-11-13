@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.17.0 — 2026-11-13
+
+- Admin → Configuration → AgentConf: *Monit binary on the agents* (default `monit`, from the PATH). The install commands of the zip README and of the download links use it with the full monitrc path (`/usr/local/bin/monit -c /etc/monit/monitrc -t && … reload`, plus the restart commands for when `set httpd` changes), and the "Bmon auto-update" template passes it to `bmon-update.sh` (new `--monit` option) for `monit -t`, reload and restart. Existing auto-update checks are copies: add `--monit /path/to/monit` to both their commands, or create them again
+
 ## 0.16.2 — 2026-11-13
 
 - Validation flags `every N cycles` (refused by newer Monit) in any check, with the file, the line and the cron-style replacement, even when the monit of the Bmon-web server is older or missing; publishing is refused until it is changed

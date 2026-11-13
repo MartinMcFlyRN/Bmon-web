@@ -482,8 +482,16 @@ final class AgentChecks
     }
 
     /** Commands that install a downloaded zip on the agent (as root). */
+    /** Monit command on the agents, with the configured binary and monitrc. */
+    public static function agentMonit(): string
+    {
+        $bin = trim((string) Config::get('agentconf.agent_monit', 'monit')) ?: 'monit';
+        return $bin . ' -c ' . AgentTemplates::monitrcDir() . '/monitrc';
+    }
+
     public static function installSteps(string $zip): string
     {
+        $monit = self::agentMonit();
         $dir = self::monitDir();
         $sdir = self::scriptDir();
         $sub = self::SCRIPTS_SUBDIR;
@@ -493,7 +501,7 @@ final class AgentChecks
             . "unzip -q -o $zip -x README.txt '$sub/*' -d $dir/\n"
             . "chmod 600 $dir/bmon-*.conf\n"
             . "unzip -q -o -j $zip '$sub/*' -d $sdir/\n"
-            . "monit -t && monit reload\n";
+            . "$monit -t && $monit reload\n";
     }
 
     private static function readme(array $host, array $files, array $scripts): string
@@ -503,6 +511,7 @@ final class AgentChecks
         $sub = self::SCRIPTS_SUBDIR;
         $man = self::MANIFEST;
         $rc = AgentTemplates::monitrcDir();
+        $monit = self::agentMonit();
         $list = $files ? '  ' . implode("\n  ", $files) : '  (no enabled checks)';
         $slist = $scripts ? '  ' . implode("\n  ", array_map(static fn ($p) => $sdir . '/' . basename($p), $scripts)) : '  (none)';
         $when = fmt_dt(now_utc(), 'Y-m-d H:i T');
@@ -530,13 +539,18 @@ final class AgentChecks
           unzip -o -j this-file.zip '$sub/*' -d $sdir/
 
           # 3. check and apply
-          monit -t && monit reload
+          $monit -t && $monit reload
+
+          # if "set httpd" changed (certificate, password, port), Monit must
+          # restart instead: under systemd "systemctl restart monit", otherwise
+          #   $monit quit; sleep 3; $monit
 
         The scripts are installed with mode 0755. They must not be placed directly
         in $dir/: Monit would read them as configuration. Do not copy
         README.txt into $dir/ either.
 
-        "monit -t" checks the syntax before reloading: if it reports an error,
+        "monit -t" (with the binary and monitrc set in Bmon-web → Admin →
+        Configuration) checks the syntax before reloading: if it reports an error,
         nothing changes until you fix it (in Bmon-web) and reload again.
 
         TXT;

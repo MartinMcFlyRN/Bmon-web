@@ -58,6 +58,7 @@ final class Config
                 'collector_user' => '',     // user and password of the collector, put into that URL
                 'collector_password' => '',
                 'monitrc_dir'   => '/etc/monit', // where monitrc and monit.pem are on the agents
+                'agent_monit'   => 'monit',      // Monit binary on the agents (full path if not in the PATH)
                 'update_check_ip' => true,  // auto-update: requests must come from the address of the reports
                 'web_address'   => '',      // default "allow" address of Bmon-web in that template
             ],

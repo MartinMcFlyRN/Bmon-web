@@ -334,8 +334,14 @@ the agents, to install on each node with all its checks ready.
   unzip -o FILE.zip -x README.txt 'bmon-scripts/*' -d /etc/monit/conf.d/
   chmod 600 /etc/monit/conf.d/bmon-*.conf
   unzip -o -j FILE.zip 'bmon-scripts/*' -d SCRIPT_DIR/
-  monit -t && monit reload
+  MONIT -c MONITRC -t && MONIT -c MONITRC reload
   ```
+
+  `MONIT` is *Monit binary on the agents* in Admin → Configuration (default
+  `monit`, from the PATH; set the full path, e.g. `/usr/local/bin/monit`, when
+  it is not in the PATH) and `MONITRC` is `<Monit directory on the agents>/monitrc`.
+  The "Bmon auto-update" check gets the same binary (`--monit`), for `monit -t`,
+  reload and restart.
 
   The README inside the zip has these commands with the real directories.
   **The include directory and the script directory are used only by Bmon**:

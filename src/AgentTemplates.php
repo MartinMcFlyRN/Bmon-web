@@ -564,6 +564,7 @@ final class AgentTemplates
         if ($key === 'bmon-update' && isset($values['url'])) {
             $values['command'] = AgentChecks::scriptPath(AgentUpdate::SCRIPT) . ' --url ' . rtrim($values['url'], '/')
                 . ' --conf-dir ' . AgentChecks::monitDir() . ' --monitrc ' . self::monitrcDir() . '/monitrc'
+                . (($bin = trim((string) Config::get('agentconf.agent_monit', 'monit'))) !== '' && $bin !== 'monit' ? ' --monit ' . $bin : '')
                 . (($values['cacert'] ?? '') !== '' ? ' --cacert ' . $values['cacert'] : '');
         }
         if (array_key_exists('pemfile', $values)) {

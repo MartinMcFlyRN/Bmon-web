@@ -4,7 +4,8 @@
 # every N cycles, and at once with "start" (AgentConf → Update now).
 #
 #   bmon-update.sh --url https://bmon.example.com --conf-dir /etc/monit/conf.d \
-#                  --monitrc /etc/monit/monitrc [--script-dir DIR] [--cacert FILE] [--now]
+#                  --monitrc /etc/monit/monitrc [--monit /path/to/monit] [--script-dir DIR]
+#                  [--cacert FILE] [--now]
 #
 # 1. asks Bmon-web whether a new version is published, signing the request with
 #    HMAC-SHA256 keyed with the Monit httpd password ("allow user:password" of
@@ -26,7 +27,7 @@ PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 umask 077
 
-URL='' CONF='' RC='' SDIR='' CACERT='' MODE='poll'
+URL='' CONF='' RC='' SDIR='' CACERT='' MONIT='' MODE='poll'
 while [ $# -gt 0 ]; do
     case $1 in
         --url) URL=${2%/}; shift ;;
@@ -34,6 +35,7 @@ while [ $# -gt 0 ]; do
         --monitrc) RC=$2; shift ;;
         --script-dir) SDIR=${2%/}; shift ;;
         --cacert) CACERT=$2; shift ;;
+        --monit) MONIT=$2; shift ;;
         --now) MODE='now' ;;
         *) echo "bmon-update: unknown option $1"; exit 2 ;;
     esac
@@ -52,7 +54,7 @@ TMP=$(mktemp -d "${TMPDIR:-/tmp}/bmon-update.XXXXXX") || fail "cannot create a t
 if [ -z "$BMON_UPDATE_COPY" ] || [ ! -f "$BMON_UPDATE_COPY/self.sh" ]; then
     cp "$0" "$TMP/self.sh" || fail "cannot copy myself"
     BMON_UPDATE_COPY=$TMP exec sh "$TMP/self.sh" --url "$URL" --conf-dir "$CONF" --monitrc "$RC" \
-        --script-dir "$SDIR" ${CACERT:+--cacert "$CACERT"} $( [ "$MODE" = now ] && echo --now )
+        --script-dir "$SDIR" ${CACERT:+--cacert "$CACERT"} ${MONIT:+--monit "$MONIT"} $( [ "$MODE" = now ] && echo --now )
 fi
 rmdir "$TMP" 2>/dev/null; TMP=$BMON_UPDATE_COPY
 unset BMON_UPDATE_COPY   # not inherited by Monit when this script restarts it
@@ -85,7 +87,11 @@ for d in "$CONF" "$SDIR"; do
 done
 
 # --- monit, Monit ID, httpd credentials --------------------------------------------
-MONIT=$(command -v monit 2>/dev/null)
+if [ -n "$MONIT" ]; then
+    [ -x "$MONIT" ] || fail "--monit $MONIT is not an executable"
+else
+    MONIT=$(command -v monit 2>/dev/null)
+fi
 for m in /usr/local/bin/monit /usr/bin/monit /usr/local/monit/bin/monit /opt/monit/bin/monit; do
     [ -n "$MONIT" ] && break
     [ -x "$m" ] && MONIT=$m
