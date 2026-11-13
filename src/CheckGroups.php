@@ -5,11 +5,10 @@ declare(strict_types=1);
 namespace Bmon\Web;
 
 /**
- * AgentConf → Group Checks: named sets of checks assigned to agents. Their checks
- * are rows of agent_checks with host_id = -<group id>; an agent gets the enabled
- * ones of its groups in its zip and publications, as files
- * bmon-<group slug>.<check name>.conf. Editing a group changes every agent of it
- * at the next zip / Publish.
+ * AgentConf → Group Checks: named sets of checks (rows of agent_checks with
+ * host_id = -<group id>, edited like the checks of an agent). "Add group checks"
+ * on an agent copies them into it in one go: the copies are independent, so
+ * changing the group later does not change the agents.
  */
 final class CheckGroups
 {
@@ -26,8 +25,7 @@ final class CheckGroups
         return Db::all(
             'SELECT g.*,
                     (SELECT COUNT(*) FROM agent_checks c WHERE c.host_id = -g.id) AS checks,
-                    (SELECT COALESCE(SUM(c.enabled), 0) FROM agent_checks c WHERE c.host_id = -g.id) AS enabled,
-                    (SELECT COUNT(*) FROM check_group_hosts h WHERE h.group_id = g.id) AS hosts
+                    (SELECT COALESCE(SUM(c.enabled), 0) FROM agent_checks c WHERE c.host_id = -g.id) AS enabled
                FROM check_groups g ORDER BY g.name'
         );
     }
@@ -37,23 +35,7 @@ final class CheckGroups
         return Db::one('SELECT * FROM check_groups WHERE id = ?', [$id]);
     }
 
-    /** Groups assigned to an agent, by name. */
-    public static function forHost(int $hostId): array
-    {
-        if ($hostId <= 0) {
-            return [];
-        }
-        return Db::all(
-            'SELECT g.* FROM check_groups g JOIN check_group_hosts h ON h.group_id = g.id WHERE h.host_id = ? ORDER BY g.slug',
-            [$hostId]
-        );
-    }
 
-    /** Host ids of a group. */
-    public static function hostIds(int $groupId): array
-    {
-        return array_map('intval', array_column(Db::all('SELECT host_id FROM check_group_hosts WHERE group_id = ?', [$groupId]), 'host_id'));
-    }
 
     /** @return array<string,string> field => error */
     public static function validate(string $name, string $slug, string $description, ?int $id): array
@@ -63,11 +45,6 @@ final class CheckGroups
             $e['name'] = 'Give the group a name (max 64 characters).';
         } elseif (($o = Db::one('SELECT id FROM check_groups WHERE name = ?', [$name])) && (int) $o['id'] !== $id) {
             $e['name'] = 'Another group has this name.';
-        }
-        if (!preg_match(self::SLUG_PATTERN, $slug)) {
-            $e['slug'] = 'Lowercase letters, digits and dashes (max 32), e.g. web.';
-        } elseif (($o = Db::one('SELECT id FROM check_groups WHERE slug = ?', [$slug])) && (int) $o['id'] !== $id) {
-            $e['slug'] = 'Another group uses this prefix.';
         }
         if (mb_strlen($description) > 255) {
             $e['description'] = 'Max 255 characters.';
@@ -95,6 +72,49 @@ final class CheckGroups
             [$name, $slug, $description, now_utc(), $by, $id]);
     }
 
+    /**
+     * Copies checks of a group into an agent, as independent checks with the same
+     * name, script and service groups. A check whose name (or script file) the
+     * agent already has is skipped.
+     * @param list<int> $checkIds checks of the group to copy
+     * @return array{added:list<string>,skipped:array<string,string>}
+     */
+    public static function copyToHost(int $groupId, int $hostId, array $checkIds, string $by): array
+    {
+        $added = [];
+        $skipped = [];
+        foreach (AgentChecks::forHost(self::sid($groupId)) as $c) {
+            if (!in_array((int) $c['id'], $checkIds, true)) {
+                continue;
+            }
+            $err = AgentChecks::validate($hostId, $c['name'], $c['config'])
+                + AgentChecks::validateScript($hostId, $c['script_name'], (string) $c['script'], null);
+            if ($err) {
+                $skipped[$c['name']] = isset($err['name']) ? 'the agent already has a check with this name'
+                    : (isset($err['script_name']) ? "the agent already has the script {$c['script_name']}" : implode(' ', $err));
+                continue;
+            }
+            $id = AgentChecks::create($hostId, $c['name'], $c['template'], $c['config'], true, $by);
+            if ($c['script_name'] !== '') {
+                AgentChecks::setScript($id, $c['script_name'], (string) $c['script']);
+            }
+            ServiceGroups::setForCheck($id, ServiceGroups::idsForCheck((int) $c['id']));
+            $added[] = $c['name'];
+        }
+        return ['added' => $added, 'skipped' => $skipped];
+    }
+
+    /** A free internal slug for a new group. */
+    public static function freeSlug(string $name, ?int $id = null): string
+    {
+        $base = self::slugify($name);
+        $slug = $base;
+        for ($i = 2; ($o = Db::one('SELECT id FROM check_groups WHERE slug = ?', [$slug])) && (int) $o['id'] !== $id; $i++) {
+            $slug = substr($base, 0, 28) . '-' . $i;
+        }
+        return $slug;
+    }
+
     /** Deletes the group, its checks (and their service groups) and its assignments. */
     public static function delete(int $id): void
     {
@@ -102,7 +122,7 @@ final class CheckGroups
         $pdo->beginTransaction();
         try {
             Db::exec('DELETE FROM agent_checks WHERE host_id = ?', [self::sid($id)]);
-            Db::exec('DELETE FROM check_groups WHERE id = ?', [$id]);   // check_group_hosts by cascade
+            Db::exec('DELETE FROM check_groups WHERE id = ?', [$id]);
             $pdo->commit();
         } catch (\Throwable $e) {
             $pdo->rollBack();
@@ -110,26 +130,6 @@ final class CheckGroups
         }
     }
 
-    public static function assign(int $groupId, int $hostId, string $by): bool
-    {
-        return Db::exec('INSERT IGNORE INTO check_group_hosts (group_id, host_id, created_at, created_by) VALUES (?, ?, ?, ?)',
-            [$groupId, $hostId, now_utc(), $by]) === 1;
-    }
 
-    public static function unassign(int $groupId, int $hostId): bool
-    {
-        return Db::exec('DELETE FROM check_group_hosts WHERE group_id = ? AND host_id = ?', [$groupId, $hostId]) === 1;
-    }
 
-    /** Group id => number of enabled checks, for the agent list. */
-    public static function enabledByHost(): array
-    {
-        $out = [];
-        foreach (Db::all(
-            'SELECT h.host_id, COUNT(c.id) AS n FROM check_group_hosts h
-               JOIN agent_checks c ON c.host_id = -h.group_id AND c.enabled = 1 GROUP BY h.host_id') as $r) {
-            $out[(int) $r['host_id']] = (int) $r['n'];
-        }
-        return $out;
-    }
 }

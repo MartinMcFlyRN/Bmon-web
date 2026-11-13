@@ -66,8 +66,6 @@ final class App
         $r->get('/agentconf/groups/{id}', [GroupChecksController::class, 'show'], 'admin');
         $r->post('/agentconf/groups/{id}', [GroupChecksController::class, 'updateGroup'], 'admin');
         $r->post('/agentconf/groups/{id}/delete', [GroupChecksController::class, 'deleteGroup'], 'admin');
-        $r->post('/agentconf/groups/{id}/hosts', [GroupChecksController::class, 'assignHost'], 'admin');
-        $r->post('/agentconf/groups/{id}/hosts/{hostId}/remove', [GroupChecksController::class, 'unassignHost'], 'admin');
         $r->get('/agentconf/groups/{id}/new', [GroupChecksController::class, 'newCheck'], 'admin');
         $r->post('/agentconf/groups/{id}/new', [GroupChecksController::class, 'create'], 'admin');
         $r->get('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'edit'], 'admin');
@@ -85,8 +83,8 @@ final class App
         $r->post('/agentconf/{id}/publish', [AgentConfController::class, 'publish'], 'admin');
         $r->get('/agentconf/{id}/update-status', [AgentConfController::class, 'updateStatus'], 'admin');
         $r->post('/agentconf/{id}/required', [AgentConfController::class, 'addRequired'], 'admin');
-        $r->post('/agentconf/{id}/check-groups', [AgentConfController::class, 'assignGroup'], 'admin');
-        $r->post('/agentconf/{id}/check-groups/{groupId}/remove', [AgentConfController::class, 'unassignGroup'], 'admin');
+        $r->get('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroupForm'], 'admin');
+        $r->post('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroup'], 'admin');
         $r->post('/agentconf/{id}/update-now', [AgentConfController::class, 'updateNow'], 'admin');
         $r->get('/dl/{token}', [AgentConfController::class, 'publicDownload'], 'public');
         // bmon-update.sh on the agents (signed requests, no session)

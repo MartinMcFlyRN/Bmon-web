@@ -444,3 +444,4 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .inline-form { display: flex; gap: 8px; align-items: center; margin-top: 10px; }
 .inline-form select { max-width: 320px; }
 .tpl-form h2 { margin-top: 22px; }
+.add-group { margin-bottom: 16px; } .add-group h2 a { font-weight: 400; margin-left: 8px; }

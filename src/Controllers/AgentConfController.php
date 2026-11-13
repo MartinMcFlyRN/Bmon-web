@@ -65,7 +65,6 @@ class AgentConfController
             $params
         );
         $counts = AgentChecks::counts();
-        $fromGroups = CheckGroups::enabledByHost();
         $updates = AgentUpdate::overview();
 
         $sort = array_key_exists($_GET['sort'] ?? '', self::SORTS) ? $_GET['sort'] : 'agent';
@@ -75,7 +74,7 @@ class AgentConfController
             'address' => ($ip = @inet_pton((string) $a['remote_addr'])) !== false ? bin2hex($ip) : (string) $a['remote_addr'],
             'monit' => (string) $a['monit_version'],
             'services' => (int) $a['services_total'],
-            'checks' => (int) ($counts[(int) $a['id']]['enabled'] ?? -1) + ($fromGroups[(int) $a['id']] ?? 0),
+            'checks' => (int) ($counts[(int) $a['id']]['enabled'] ?? -1),
             'update' => self::updateBadge($updates[(int) $a['id']] ?? null)[3],
             'seen' => (string) $a['last_seen'],
         };
@@ -88,7 +87,7 @@ class AgentConfController
         $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
         return View::render('agentconf/index', [
             'title' => 'AgentConf', 'nav' => 'agentconf',
-            'agents' => $agents, 'counts' => $counts, 'fromGroups' => $fromGroups, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
+            'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
             'q' => $q, 'sort' => $sort, 'dir' => $dir,
         ]);
     }
@@ -114,20 +113,15 @@ class AgentConfController
             }
             $checks = AgentChecks::forHost($id);
         }
-        $effective = AgentChecks::effective($id);
         $managed = [];
-        foreach ($effective as &$c) {
+        foreach ($checks as &$c) {
             $c['services'] = AgentChecks::definedServices($c['config'], $host['monit_hostname']);
-            $c['url'] = isset($c['group_id']) ? "/agentconf/groups/{$c['group_id']}/checks/{$c['id']}" : "/agentconf/$id/checks/{$c['id']}";
+            $c['url'] = "/agentconf/$id/checks/{$c['id']}";
             foreach ($c['services'] as $svc) {
                 $managed[$svc] = $c;
             }
         }
         unset($c);
-        $checks = array_values(array_filter($effective, static fn ($c) => !isset($c['group_id'])));
-        $groupChecks = array_values(array_filter($effective, static fn ($c) => isset($c['group_id'])));
-        $assigned = CheckGroups::forHost($id);
-        $assignedIds = array_map('intval', array_column($assigned, 'id'));
 
         $enabled = AgentChecks::enabledSet($id);
         $syntax = $enabled ? AgentChecks::syntaxCheck($enabled) : ['ok' => null, 'output' => ''];
@@ -135,12 +129,10 @@ class AgentConfController
         return View::render('agentconf/host', [
             'title' => 'AgentConf · ' . $host['hostname'], 'nav' => 'agentconf',
             'host' => $host, 'checks' => $checks, 'managed' => $managed,
-            'missingScripts' => AgentChecks::missingScripts($effective),
-            'groupsByCheck' => AgentChecks::serviceGroupsOf($id),
-            'groupChecks' => $groupChecks, 'checkGroups' => $assigned,
-            'otherCheckGroups' => array_values(array_filter(CheckGroups::all(), static fn ($g) => !in_array((int) $g['id'], $assignedIds, true))),
-            'enabledCount' => count(array_filter($effective, static fn ($c) => (int) $c['enabled'])),
-            'conflicts' => AgentChecks::conflicts($id),
+            'missingScripts' => AgentChecks::missingScripts($checks),
+            'groupsByCheck' => ServiceGroups::namesByCheck($id),
+            'enabledCount' => count(array_filter($checks, static fn ($c) => (int) $c['enabled'])),
+            'hasGroups' => CheckGroups::all() !== [],
             'reported' => $this->reported($id), 'syntax' => $syntax,
             'link' => DownloadLinks::active($id), 'newLink' => $newLink,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
@@ -149,33 +141,45 @@ class AgentConfController
         ]);
     }
 
-    /** POST /agentconf/{id}/check-groups: assigns a Group Checks group to the agent. */
-    public function assignGroup(int $id): never
+    /** GET /agentconf/{id}/add-group: the groups, with their checks, to copy into the agent. */
+    public function addGroupForm(int $id): string
     {
         $host = $this->hostRow($id);
-        $g = CheckGroups::find((int) ($_POST['group_id'] ?? 0));
-        if ($g === null) {
-            flash('error', 'Choose a group.');
-            redirect("/agentconf/$id");
+        $own = array_column(AgentChecks::forHost($id), null, 'name');
+        $ownScripts = array_flip(array_filter(array_column($own, 'script_name')));
+        $groups = CheckGroups::all();
+        foreach ($groups as &$g) {
+            $g['items'] = AgentChecks::forHost(CheckGroups::sid((int) $g['id']));
+            foreach ($g['items'] as &$c) {
+                $c['clash'] = isset($own[$c['name']]) ? 'already on this agent'
+                    : ($c['script_name'] !== '' && isset($ownScripts[$c['script_name']]) ? "the agent already has the script {$c['script_name']}" : '');
+            }
+            unset($c);
         }
-        if (CheckGroups::assign((int) $g['id'], $id, (string) Auth::user()['username'])) {
-            Audit::log('agentconf.group_assign', "{$host['hostname']} (id $id): group {$g['name']}");
-        }
-        $conf = AgentChecks::conflicts($id);
-        flash($conf ? 'error' : 'success', "Group “{$g['name']}” assigned: its checks are now part of this agent's zip and publications."
-            . ($conf ? ' But: ' . implode('; ', $conf) . '.' : ''));
-        redirect("/agentconf/$id");
+        unset($g);
+        return View::render('agentconf/add_group', [
+            'title' => 'Add group checks · ' . $host['hostname'], 'nav' => 'agentconf', 'host' => $host, 'groups' => $groups,
+        ]);
     }
 
-    /** POST /agentconf/{id}/check-groups/{groupId}/remove */
-    public function unassignGroup(int $id, int $groupId): never
+    /** POST /agentconf/{id}/add-group: copies the chosen checks of a group into the agent. */
+    public function addGroup(int $id): never
     {
         $host = $this->hostRow($id);
-        $g = CheckGroups::find($groupId) ?? throw new HttpException(404, 'Group not found.');
-        if (CheckGroups::unassign($groupId, $id)) {
-            Audit::log('agentconf.group_unassign', "{$host['hostname']} (id $id): group {$g['name']}");
+        $g = CheckGroups::find((int) ($_POST['group_id'] ?? 0)) ?? throw new HttpException(404, 'Group not found.');
+        $ids = array_map('intval', array_filter((array) ($_POST['checks'] ?? []), 'is_scalar'));
+        if (!$ids) {
+            flash('error', 'Choose at least one check of the group.');
+            redirect("/agentconf/$id/add-group");
         }
-        flash('success', "Group “{$g['name']}” removed from this agent: its checks go away with the next zip or publication.");
+        $r = CheckGroups::copyToHost((int) $g['id'], $id, $ids, (string) Auth::user()['username']);
+        if ($r['added']) {
+            Audit::log('agentconf.group_copy', "{$host['hostname']} (id $id): from group {$g['name']}: " . implode(', ', $r['added']));
+            flash('success', 'Added from “' . $g['name'] . '”: ' . implode(', ', $r['added']) . '. They are independent copies: edit them here.');
+        }
+        foreach ($r['skipped'] as $name => $why) {
+            flash('error', "Not added: $name — $why.");
+        }
         redirect("/agentconf/$id");
     }
 

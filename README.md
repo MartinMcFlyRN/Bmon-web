@@ -279,16 +279,14 @@ the agents, to install on each node with all its checks ready.
   checks made from it. The page shows the result with the default values,
   checked with `monit -t`. Custom templates appear in *Add check* (agents and
   groups) under “Custom templates”; checks made from them are copies.
-- **Group Checks**: a group is a set of checks shared by several agents (e.g.
-  “Web server”). Its checks are added and edited like the checks of an agent
-  (templates, custom templates, scripts, service groups), and it is assigned to
-  agents from the group page or from the agent page. The enabled checks of its
-  groups are part of an agent's zip and publications, as
-  `bmon-<group prefix>.<check>.conf`, and are checked with `monit -t` together
-  with the agent's own; a change to a group shows *Changes not published* on its
-  agents. Two checks attaching a script with the same name refuse the download
-  and Publish until one is renamed or disabled; duplicate service names are
-  reported by `monit -t`.
+- **Group Checks**: a group is a set of checks to add to an agent in one go
+  (e.g. “Web server” = nginx, php-fpm, certificate). Its checks are added and
+  edited like the checks of an agent (templates, custom templates, scripts,
+  service groups). On the agent page, **Add group checks** (next to *Add check*)
+  lists the groups with their checks: tick the ones to add and they are copied
+  into the agent with the same names, scripts and service groups. The copies are
+  independent — changing or deleting the group later does not change the
+  agents. A check whose name or script the agent already has is skipped.
 - **Required checks**: every agent must have, enabled, **Reporting to Bmon**,
   **Bmon auto-update** and **OS information**. The first time the page of an
   agent without checks is opened they are added automatically (Reporting to

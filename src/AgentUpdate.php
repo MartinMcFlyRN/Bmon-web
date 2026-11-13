@@ -100,7 +100,7 @@ final class AgentUpdate
      */
     public static function warnings(int $hostId): array
     {
-        $checks = array_filter(AgentChecks::effective($hostId), static fn ($c) => (int) $c['enabled']);
+        $checks = array_filter(AgentChecks::forHost($hostId), static fn ($c) => (int) $c['enabled']);
         $out = [];
         if (!array_filter($checks, static fn ($c) => $c['script_name'] === self::SCRIPT)) {
             $out[] = 'No enabled "Bmon auto-update" check: once installed, this configuration will not update itself any more.';
@@ -118,7 +118,7 @@ final class AgentUpdate
     /** Service name of the enabled auto-update check (for "Update now"), or null. */
     public static function updateService(array $host): ?string
     {
-        foreach (AgentChecks::effective((int) $host['id']) as $c) {
+        foreach (AgentChecks::forHost((int) $host['id']) as $c) {
             if ((int) $c['enabled'] && $c['script_name'] === self::SCRIPT) {
                 $names = AgentChecks::definedServices($c['config'], (string) ($host['monit_hostname'] ?? $host['hostname']));
                 return $names[0] ?? null;
@@ -214,7 +214,7 @@ final class AgentUpdate
         } catch (\RuntimeException) {
             // no stored credentials: the checks may still have them
         }
-        foreach (AgentChecks::effective((int) $host['id']) as $c) {
+        foreach (AgentChecks::forHost((int) $host['id']) as $c) {
             foreach (self::httpdCredentials($c['config']) as [$u, $p]) {
                 if ($u === $user && $p !== '') {
                     $keys[] = $p;

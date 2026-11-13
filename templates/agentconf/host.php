@@ -3,7 +3,7 @@
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
  * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update @var array $requiredMissing
- * @var array $groupChecks @var array $checkGroups @var array $otherCheckGroups @var int $enabledCount @var array $conflicts
+ * @var int $enabledCount @var bool $hasGroups
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -24,6 +24,7 @@ use Bmon\Web\Monit;
   </div>
   <div class="head-actions">
     <a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/new')) ?>">Add check</a>
+    <a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/add-group')) ?>"<?= $hasGroups ? '' : ' title="No Group Checks defined yet"' ?>>Add group checks</a>
     <?php if ($enabledCount && !$requiredMissing): ?>
       <a class="btn btn-primary" href="#download-dialog" data-open-dialog="download-dialog">Download zip (<?= $enabledCount ?>)</a>
     <?php else: ?>
@@ -32,10 +33,6 @@ use Bmon\Web\Monit;
   </div>
 </div>
 
-<?php if ($conflicts): ?>
-  <div class="alert alert-error">The checks of this agent and of its Group Checks clash: <?= e(implode('; ', $conflicts)) ?>.
-    Rename or disable one: until then the zip cannot be downloaded or published.</div>
-<?php endif ?>
 <?php if ($requiredMissing): ?>
   <div class="alert alert-error required-bar">
     <span>Required checks missing or disabled: <?= e(\Bmon\Web\AgentRequired::labels($requiredMissing)) ?>.
@@ -89,56 +86,6 @@ use Bmon\Web\Monit;
     </tbody>
   </table>
   <p class="hint">Each check is a copy made from a template when it was created: editing a check changes only that check.</p>
-  <?php endif ?>
-</section>
-
-<section class="panel" id="group-checks">
-  <h2>From Group Checks <span class="muted">(<?= count($checkGroups) ?> group<?= count($checkGroups) === 1 ? '' : 's' ?>)</span></h2>
-  <?php if ($checkGroups): ?>
-    <div class="group-chips">
-      <?php foreach ($checkGroups as $g): ?>
-        <span class="chip chip-cgroup"><a href="<?= e(url('/agentconf/groups/' . $g['id'])) ?>"><?= e($g['name']) ?></a>
-          <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/check-groups/' . $g['id'] . '/remove')) ?>"
-                data-confirm="Remove the group “<?= e($g['name']) ?>” from this agent? Its checks go away from the agent with the next zip or publication.">
-            <?= csrf_field() ?><button type="submit" class="chip-x" aria-label="Remove <?= e($g['name']) ?>">×</button>
-          </form></span>
-      <?php endforeach ?>
-    </div>
-    <?php if ($groupChecks): ?>
-    <table class="table table-compact">
-      <thead><tr><th>File</th><th>Group</th><th>Defines</th><th>Script</th><th>Status</th></tr></thead>
-      <tbody>
-      <?php foreach ($groupChecks as $c): ?>
-        <tr class="<?= (int) $c['enabled'] ? '' : 'row-off' ?>">
-          <td class="nowrap"><a class="mono" href="<?= e(url($c['url'])) ?>"><?= e(AgentChecks::fileName($c['name'])) ?></a></td>
-          <td><a href="<?= e(url('/agentconf/groups/' . $c['group_id'])) ?>"><?= e($c['group_name']) ?></a></td>
-          <td><?php foreach ($c['services'] as $s): ?><span class="chip"><?= e($s) ?></span> <?php endforeach ?>
-            <?php if (!$c['services']): ?><span class="muted small">Monit settings</span><?php endif ?></td>
-          <td><?= $c['script_name'] !== '' ? '<span class="mono small">' . e(AgentChecks::SCRIPTS_SUBDIR . '/' . $c['script_name']) . '</span>' : '<span class="muted">—</span>' ?></td>
-          <td><?= (int) $c['enabled'] ? '<span class="badge badge-ok">Enabled</span>' : '<span class="badge badge-off">Disabled</span>' ?></td>
-        </tr>
-      <?php endforeach ?>
-      </tbody>
-    </table>
-    <?php else: ?>
-      <p class="muted">The assigned groups have no checks yet.</p>
-    <?php endif ?>
-    <p class="hint">These checks are edited in their group and are shared by every agent of the group; they are installed
-      as <span class="mono">bmon-&lt;group prefix&gt;.&lt;check&gt;.conf</span>.</p>
-  <?php else: ?>
-    <p class="muted">No groups assigned. A group adds the same set of checks to several agents
-      (<a href="<?= e(url('/agentconf/groups')) ?>">AgentConf → Group Checks</a>).</p>
-  <?php endif ?>
-  <?php if ($otherCheckGroups): ?>
-    <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/check-groups')) ?>" class="inline-form">
-      <?= csrf_field() ?>
-      <select name="group_id" aria-label="Group to assign">
-        <?php foreach ($otherCheckGroups as $g): ?>
-          <option value="<?= e($g['id']) ?>"><?= e($g['name']) ?> (<?= e($g['enabled']) ?> checks)</option>
-        <?php endforeach ?>
-      </select>
-      <button type="submit" class="btn">Assign group</button>
-    </form>
   <?php endif ?>
 </section>
 

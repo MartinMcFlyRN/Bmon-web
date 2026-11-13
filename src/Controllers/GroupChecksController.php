@@ -14,9 +14,10 @@ use Bmon\Web\ServiceGroups;
 use Bmon\Web\View;
 
 /**
- * AgentConf → Group Checks. The checks of a group are handled by the same code
- * as the checks of an agent (newCheck, create, edit, update, delete of
- * AgentConfController), with the group as scope.
+ * AgentConf → Group Checks: sets of checks to copy into agents in one go
+ * ("Add group checks" on the agent page). The checks of a group are handled by
+ * the same code as the checks of an agent (newCheck, create, edit, update,
+ * delete of AgentConfController), with the group as scope.
  */
 final class GroupChecksController extends AgentConfController
 {
@@ -45,24 +46,22 @@ final class GroupChecksController extends AgentConfController
     {
         return View::render('agentconf/groups/new', [
             'title' => 'New group · Group Checks', 'nav' => 'agentconf',
-            'form' => $form ?? ['name' => '', 'slug' => '', 'description' => ''], 'errors' => $errors,
+            'form' => $form ?? ['name' => '', 'description' => ''], 'errors' => $errors,
         ]);
     }
 
     public function createGroup(): string
     {
         $f = $this->groupForm();
-        if ($f['slug'] === '' && $f['name'] !== '') {
-            $f['slug'] = CheckGroups::slugify($f['name']);
-        }
+        $f['slug'] = CheckGroups::freeSlug($f['name']);
         $errors = CheckGroups::validate($f['name'], $f['slug'], $f['description'], null);
         if ($errors) {
             http_response_code(422);
             return $this->newGroup($errors, $f);
         }
         $id = CheckGroups::create($f['name'], $f['slug'], $f['description'], (string) Auth::user()['username']);
-        Audit::log('agentconf.cgroup_create', "{$f['name']} (id $id, prefix {$f['slug']})");
-        flash('success', "Group “{$f['name']}” created. Add its checks, then assign it to the agents.");
+        Audit::log('agentconf.cgroup_create', "{$f['name']} (id $id)");
+        flash('success', "Group “{$f['name']}” created. Add its checks; then, on an agent, “Add group checks” copies them into it.");
         redirect("/agentconf/groups/$id");
     }
 
@@ -76,19 +75,11 @@ final class GroupChecksController extends AgentConfController
         }
         unset($c);
         $enabled = AgentChecks::enabledSet($sc['sid']);
-        $hostIds = CheckGroups::hostIds($id);
-        $hosts = $hostIds ? Db::all(
-            'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.offline_since FROM ' . Db::collector('hosts') . ' h '
-            . Db::hostMetaJoin() . ' WHERE h.id IN (' . implode(',', $hostIds) . ') ORDER BY hostname') : [];
-        $others = Db::all(
-            'SELECT h.id, ' . Db::hostName() . ' AS hostname FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin()
-            . ($hostIds ? ' WHERE h.id NOT IN (' . implode(',', $hostIds) . ')' : '') . ' ORDER BY hostname');
         return View::render('agentconf/groups/show', [
             'title' => $g['name'] . ' · Group Checks', 'nav' => 'agentconf',
             'scope' => $sc, 'group' => $g, 'form' => $form ?? $g, 'errors' => $errors,
             'checks' => $checks, 'groupsByCheck' => ServiceGroups::namesByCheck($sc['sid']),
             'syntax' => $enabled ? AgentChecks::syntaxCheck($enabled) : ['ok' => null, 'output' => ''],
-            'hosts' => $hosts, 'otherHosts' => $others,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
         ]);
     }
@@ -97,59 +88,30 @@ final class GroupChecksController extends AgentConfController
     {
         $g = $this->group($id);
         $f = $this->groupForm();
+        $f['slug'] = $g['slug'];
         $errors = CheckGroups::validate($f['name'], $f['slug'], $f['description'], $id);
         if ($errors) {
             http_response_code(422);
             return $this->show($id, $errors, $f);
         }
         CheckGroups::update($id, $f['name'], $f['slug'], $f['description'], (string) Auth::user()['username']);
-        Audit::log('agentconf.cgroup_update', "{$f['name']} (id $id)" . ($g['name'] !== $f['name'] ? " (was {$g['name']})" : '')
-            . ($g['slug'] !== $f['slug'] ? ", prefix {$g['slug']} → {$f['slug']}" : ''));
-        flash('success', 'Group saved.' . ($g['slug'] !== $f['slug'] ? ' The files of its checks are renamed on the agents with the next zip or publication.' : ''));
+        Audit::log('agentconf.cgroup_update', "{$f['name']} (id $id)" . ($g['name'] !== $f['name'] ? " (was {$g['name']})" : ''));
+        flash('success', 'Group saved.');
         redirect("/agentconf/groups/$id");
     }
 
     public function deleteGroup(int $id): never
     {
         $g = $this->group($id);
-        $n = count(CheckGroups::hostIds($id));
         CheckGroups::delete($id);
-        Audit::log('agentconf.cgroup_delete', "{$g['name']} (id $id), was assigned to $n agents");
-        flash('success', "Group “{$g['name']}” deleted with its checks. They go away from its $n agent" . ($n === 1 ? '' : 's') . ' with the next zip or publication.');
+        Audit::log('agentconf.cgroup_delete', "{$g['name']} (id $id)");
+        flash('success', "Group “{$g['name']}” deleted. The checks already copied into agents stay.");
         redirect('/agentconf/groups');
-    }
-
-    public function assignHost(int $id): never
-    {
-        $g = $this->group($id);
-        $hostId = (int) ($_POST['host_id'] ?? 0);
-        $host = Db::host($hostId);
-        if ($host === null) {
-            flash('error', 'Choose an agent.');
-            redirect("/agentconf/groups/$id");
-        }
-        if (CheckGroups::assign($id, $hostId, (string) Auth::user()['username'])) {
-            Audit::log('agentconf.group_assign', "{$host['hostname']} (id $hostId): group {$g['name']}");
-        }
-        $conf = AgentChecks::conflicts($hostId);
-        flash($conf ? 'error' : 'success', "“{$host['hostname']}” now gets the checks of this group." . ($conf ? ' But: ' . implode('; ', $conf) . '.' : ''));
-        redirect("/agentconf/groups/$id");
-    }
-
-    public function unassignHost(int $id, int $hostId): never
-    {
-        $g = $this->group($id);
-        $host = Db::host($hostId);
-        if (CheckGroups::unassign($id, $hostId)) {
-            Audit::log('agentconf.group_unassign', ($host['hostname'] ?? "host $hostId") . " (id $hostId): group {$g['name']}");
-        }
-        flash('success', 'Agent removed from the group: its checks go away from it with the next zip or publication.');
-        redirect("/agentconf/groups/$id");
     }
 
     private function groupForm(): array
     {
         $s = static fn (string $k): string => trim(preg_replace('/\s+/', ' ', is_string($_POST[$k] ?? null) ? $_POST[$k] : ''));
-        return ['name' => $s('name'), 'slug' => strtolower($s('slug')), 'description' => $s('description')];
+        return ['name' => $s('name'), 'description' => $s('description')];
     }
 }

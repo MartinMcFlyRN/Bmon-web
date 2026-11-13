@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.21.0 — 2026-11-13
+
+**Run `bin/bmon-web migrate` after upgrading**: it turns the group assignments made with 0.20.0 into copies (so the agents keep their checks) and drops `check_group_hosts`.
+
+- Group Checks are no longer linked to the agents: on the agent page, **Add group checks** (next to *Add check*) copies the chosen checks of a group into the agent at once, as independent checks (same names, scripts and service groups; checks whose name or script the agent already has are skipped). Changing or deleting a group no longer affects the agents
+- Group pages: no agents section and no file prefix any more
+
 ## 0.20.0 — 2026-11-13
 
 **Run `bin/bmon-web migrate` after upgrading** (tables `check_groups`, `check_group_hosts`, `custom_templates`; `agent_checks.host_id` becomes signed).
