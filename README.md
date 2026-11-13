@@ -421,7 +421,7 @@ What `bmon-update.sh` does at each run:
 
 The agent page shows the published version, the one on the agent (*Up to
 date*, *Update pending*), the last install with its output, and the reason of
-the last refused request; the agent list has an Auto-update column. State is
+the last refused request, refreshed every 5 seconds; the agent list has an Auto-update column. State is
 kept on the agent in `/var/lib/bmon-update/`. Requirements on the agent: `sh`,
 `curl`, `unzip`, `openssl`, `od` (all standard). Publishing is refused when
 `monit -t` rejects the checks on the Bmon-web server, or when nothing changed;

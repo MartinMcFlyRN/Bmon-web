@@ -159,3 +159,32 @@ document.addEventListener('keydown', (ev) => {
     if (m.contains(document.activeElement)) document.activeElement.blur();
   });
 });
+
+// AgentConf → agent page: Auto-update status, refreshed every 5 s while the page
+// is visible (<div data-update-status="url">, an HTML fragment of the server).
+(() => {
+  const box = document.querySelector('[data-update-status]');
+  if (!box) return;
+  const age = document.querySelector('[data-update-age]');
+  let busy = false;
+  const refresh = () => {
+    if (busy || document.hidden) return;
+    busy = true;
+    fetch(box.dataset.updateStatus, { credentials: 'same-origin', headers: { Accept: 'text/html' }, cache: 'no-store', redirect: 'manual' })
+      .then((r) => (r.ok ? r.text() : Promise.reject(new Error('HTTP ' + r.status))))
+      .then((html) => {
+        if (html.trim() !== box.innerHTML.trim()) {
+          const pre = box.querySelector('pre');
+          const scroll = pre ? pre.scrollTop : 0;
+          box.innerHTML = html;
+          const pre2 = box.querySelector('pre');
+          if (pre2) pre2.scrollTop = scroll;
+        }
+        if (age) { age.textContent = '· refreshed every 5 s, last at ' + new Date().toLocaleTimeString(); age.classList.remove('text-fail'); }
+      })
+      .catch(() => { if (age) { age.textContent = '· could not refresh (retrying)'; age.classList.add('text-fail'); } })
+      .finally(() => { busy = false; });
+  };
+  setInterval(refresh, 5000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
+})();

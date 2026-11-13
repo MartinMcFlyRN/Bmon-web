@@ -380,6 +380,17 @@ final class AgentConfController
 
     // --- auto-update ----------------------------------------------------------------
 
+    /** GET /agentconf/{id}/update-status: the status part of the Auto-update panel (HTML fragment). */
+    public function updateStatus(int $id): string
+    {
+        $host = $this->hostRow($id);
+        header('Cache-Control: no-store');
+        return View::render('agentconf/_update_status', [
+            'update' => $this->updateInfo($host),
+            'enabledCount' => count(AgentChecks::enabledSet($id)),
+        ], null);
+    }
+
     /** POST /agentconf/{id}/publish: the current checks become the version the agent downloads. */
     public function publish(int $id): never
     {

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.19.1 — 2026-11-13
+
+- AgentConf agent page: the Auto-update status (published version, version on the agent, last install and its output, refused requests) refreshes by itself every 5 seconds while the page is visible, so after Publish / Update now you see when the agent has finished without reloading
+
 ## 0.19.0 — 2026-11-13
 
 No migrations.
