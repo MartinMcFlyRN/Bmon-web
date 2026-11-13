@@ -310,10 +310,19 @@ final class AgentChecks
             $stub = "$dir/program-stub";
             file_put_contents($stub, "#!/bin/sh\nexit 0\n");
             chmod($stub, 0755);
+            $pem = "$dir/ssl-stub.pem";   // monit -t only checks that it exists and is not world-readable
+            touch($pem);
+            chmod($pem, 0600);
             foreach ($snippets as $name => $config) {
                 $config = preg_replace_callback(
                     '/^(\s*check\s+program\s+(?:"[^"]*"|\S+)\s+with\s+path\s+)(?:"(\S+)([^"]*)"|(\S+))/mi',
                     static fn ($m) => $m[1] . (isset($m[4]) && $m[4] !== '' ? $stub : '"' . $stub . $m[3] . '"'),
+                    $config
+                );
+                // likewise for the certificate files of "set httpd … with ssl { pemfile: … }"
+                $config = preg_replace(
+                    '/\b(pemfile|pemchain|pemkey|clientpemfile)(\s*:?\s*)(?:"[^"]*"|[^\s,}]+)/i',
+                    '$1$2"' . $pem . '"',
                     $config
                 );
                 file_put_contents("$dir/conf.d/" . self::fileName($name), $config);

@@ -58,6 +58,12 @@ foreach ($fields as $key => $f) {
                 <option<?= $tz === $value ? ' selected' : '' ?>><?= e($tz) ?></option>
               <?php endforeach ?>
             </select>
+          <?php elseif ($f['type'] === 'pem'): ?>
+            <textarea id="c-<?= e($id) ?>" name="<?= e($name) ?>" rows="<?= $value === '' ? 3 : 8 ?>" class="code" spellcheck="false"
+                      placeholder="-----BEGIN CERTIFICATE-----&#10;…&#10;-----END CERTIFICATE-----"<?= $invalid ?>><?= e($value) ?></textarea>
+            <?php foreach (\Bmon\Web\MonitClient::caSummary((string) \Bmon\Web\Config::get($key)) as $line): ?>
+              <p class="hint mono"><?= e($line) ?></p>
+            <?php endforeach ?>
           <?php elseif ($f['type'] === 'cidrs'): ?>
             <textarea id="c-<?= e($id) ?>" name="<?= e($name) ?>" rows="3" class="code" spellcheck="false"<?= $invalid ?>><?= e($value) ?></textarea>
           <?php elseif ($f['type'] === 'secret'): ?>

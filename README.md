@@ -144,6 +144,64 @@ is unreachable, refuses the credentials or does not allow this server (the
 reason is in the tooltip). The check runs in the background after the page has
 loaded, with a 4-second timeout, so an unreachable host does not slow the page.
 
+### HTTPS to Monit with your own CA
+
+By default Monit httpd speaks plain HTTP, so the httpd password and the actions
+travel in clear. To use HTTPS with certificates you issue, and have Bmon-web
+accept only those:
+
+1. **Create the CA** once, on a safe machine (keep `ca.key` offline):
+
+   ```sh
+   openssl req -x509 -newkey rsa:4096 -sha256 -days 3650 -nodes \
+     -keyout ca.key -out ca.crt -subj "/O=Example/CN=Bmon Monit CA" \
+     -addext "basicConstraints=critical,CA:TRUE" -addext "keyUsage=critical,keyCertSign,cRLSign"
+   ```
+
+2. **Issue a certificate for each host.** The subjectAltName must contain the
+   address Bmon-web connects to: the reported httpd address, or the one set with
+   **Edit address** (e.g. the public IP), as `IP:` or `DNS:`.
+
+   ```bash
+   H=web1; ADDR="IP:203.0.113.10,DNS:web1.example.com"
+   openssl req -newkey rsa:2048 -nodes -keyout $H.key -out $H.csr -subj "/CN=$H"
+   openssl x509 -req -in $H.csr -CA ca.crt -CAkey ca.key -CAcreateserial -days 825 -sha256 -out $H.crt \
+     -extfile <(printf "subjectAltName=$ADDR\nextendedKeyUsage=serverAuth\nbasicConstraints=CA:FALSE\n")
+   cat $H.key $H.crt > $H-monit.pem      # Monit wants key + certificate in one file
+   ```
+
+3. **On the host**: copy the pem as `/etc/monit/ssl/monit.pem`
+   (`chown root:root`, `chmod 600`) and enable SSL in `set httpd` — the AgentConf
+   template "Reporting to Bmon" does it when *HTTPS certificate* is filled in:
+
+   ```
+   set httpd port 2812 and
+       with ssl {
+           pemfile: /etc/monit/ssl/monit.pem
+       }
+       use address 0.0.0.0
+       allow 203.0.113.5
+       allow admin:"…"
+   ```
+
+   then `monit -t && monit reload` (if httpd does not switch to HTTPS, `monit quit`
+   and start it again). With the next report Bmon-web uses `https://`.
+
+4. **In Admin → Configuration → Monit actions**: paste `ca.crt` in *CA
+   certificate* (only the certificate, never `ca.key`) and turn on *Verify the
+   certificate of Monit httpd*. With a CA set, only certificates issued by it are
+   accepted, not the public CAs of the server. *Check the name in the
+   certificate* (on by default) also requires the address to be in the
+   subjectAltName: turn it off only if the certificates do not carry the
+   addresses. *Require HTTPS to Monit httpd* refuses actions and the
+   reachability check toward hosts still on plain HTTP.
+
+When the check fails, the tooltip of the Service monit dot and the action
+message say why: certificate not issued by the configured CA or expired,
+address not in the certificate, port not speaking HTTPS, host not on HTTPS
+while it is required. Several CAs can be pasted one after the other (e.g. while
+replacing one).
+
 ## Slack report
 
 `bin/bmon-web report:slack` posts to a Slack channel the active alerts of that

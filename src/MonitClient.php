@@ -107,7 +107,6 @@ final class MonitClient
         }
         $headers[] = 'User-Agent: Bmon-web/' . BMON_WEB_VERSION;
         $headers[] = 'Connection: close';
-        $verify = (bool) Config::get('monit.tls_verify');
         $ctx = stream_context_create([
             'http' => [
                 'method' => $method,
@@ -118,17 +117,13 @@ final class MonitClient
                 'ignore_errors' => true,
                 'protocol_version' => 1.1,
             ],
-            'ssl' => [
-                'verify_peer' => $verify,
-                'verify_peer_name' => $verify,
-                'allow_self_signed' => !$verify,
-            ],
+            'ssl' => self::sslOptions(),
         ]);
 
         $http_response_header = [];
-        $err = 'no response';
-        set_error_handler(static function (int $no, string $msg) use (&$err): bool {
-            $err = $msg;
+        $errs = [];
+        set_error_handler(static function (int $no, string $msg) use (&$errs): bool {
+            $errs[] = $msg;   // OpenSSL reports the real cause before the generic "failed to open stream"
             return true;
         });
         try {
@@ -137,7 +132,7 @@ final class MonitClient
             restore_error_handler();
         }
         if ($response === false && $http_response_header === []) {
-            return ['status' => 0, 'body' => '', 'error' => preg_replace('/^.*?failed to open stream: /i', '', $err)];
+            return ['status' => 0, 'body' => '', 'error' => self::friendlyError($errs === [] ? 'no response' : implode(' | ', $errs), $url)];
         }
         $status = preg_match('#^HTTP/\S+\s+(\d{3})#', $http_response_header[0] ?? '', $m) ? (int) $m[1] : 0;
         return ['status' => $status, 'body' => (string) $response, 'error' => null];
@@ -149,6 +144,10 @@ final class MonitClient
         $port = (int) $host['httpd_port'];
         if ($port <= 0 || $port > 65535) {
             throw new \RuntimeException('Monit httpd is not enabled on this host (no "set httpd" in monitrc).');
+        }
+        if (!(int) $host['httpd_ssl'] && Config::get('monit.require_tls')) {
+            throw new \RuntimeException('Monit httpd on this host does not use HTTPS, and HTTPS is required (Admin → Configuration): '
+                . 'add "with ssl { pemfile: … }" to "set httpd" in its monitrc.');
         }
         // address set in Bmon-web (e.g. the public IP instead of the private one Monit reports)
         $addr = trim((string) ($host['monit_address'] ?? ''));
@@ -194,6 +193,91 @@ final class MonitClient
             return null;
         }
         return 'Enter an IP address or a host name (without http:// or port).';
+    }
+
+    /**
+     * TLS options for Monit httpd: with monit.tls_verify, the certificate must be
+     * issued by monit.ca_cert (or by a CA of this server when it is empty) and,
+     * with monit.tls_verify_name, name the address Bmon connects to.
+     */
+    public static function sslOptions(): array
+    {
+        if (!Config::get('monit.tls_verify')) {
+            return ['verify_peer' => false, 'verify_peer_name' => false, 'allow_self_signed' => true, 'SNI_enabled' => true];
+        }
+        $opts = [
+            'verify_peer' => true,
+            'verify_peer_name' => (bool) Config::get('monit.tls_verify_name', true),
+            'allow_self_signed' => false,
+            'SNI_enabled' => true,
+            'disable_compression' => true,
+        ];
+        if (($ca = self::caFile()) !== null) {
+            $opts['cafile'] = $ca;
+            $opts['capath'] = '/nonexistent';   // only this CA, not the system ones
+        }
+        return $opts;
+    }
+
+    /** monit.ca_cert written to a file (OpenSSL needs a path); null if not set. */
+    public static function caFile(): ?string
+    {
+        $pem = trim((string) Config::get('monit.ca_cert', ''));
+        if ($pem === '') {
+            return null;
+        }
+        $file = sys_get_temp_dir() . '/bmon-web-monit-ca-' . hash('sha256', $pem) . '.pem';
+        if (!is_file($file)) {
+            $tmp = $file . '.' . bin2hex(random_bytes(4));
+            file_put_contents($tmp, $pem . "\n");
+            chmod($tmp, 0644);
+            rename($tmp, $file);
+        }
+        return $file;
+    }
+
+    /** One line per certificate of a PEM bundle: subject, validity, fingerprint. */
+    public static function caSummary(string $pem): array
+    {
+        $out = [];
+        preg_match_all('/-----BEGIN CERTIFICATE-----[A-Za-z0-9+\/=\s]+-----END CERTIFICATE-----/', $pem, $m);
+        foreach ($m[0] as $c) {
+            $info = @openssl_x509_parse($c);
+            if ($info === false) {
+                continue;
+            }
+            $cn = $info['subject']['CN'] ?? ($info['subject']['O'] ?? '?');
+            $cn = is_array($cn) ? implode(', ', $cn) : $cn;
+            $fp = strtoupper(implode(':', str_split((string) openssl_x509_fingerprint($c, 'sha256'), 2)));
+            $out[] = "CN=$cn · valid until " . gmdate('Y-m-d', (int) $info['validTo_time_t'])
+                . (empty($info['extensions']['basicConstraints']) || !str_contains($info['extensions']['basicConstraints'], 'CA:TRUE') ? ' · NOT a CA certificate' : '')
+                . ' · SHA-256 ' . substr($fp, 0, 23) . '…';
+        }
+        return $out;
+    }
+
+    /** Readable reason from PHP/OpenSSL stream errors. */
+    private static function friendlyError(string $err, string $url = ''): string
+    {
+        $last = $err;
+        if (($p = strrpos($err, ' | ')) !== false) {
+            $last = substr($err, $p + 3);
+        }
+        return match (true) {
+            str_contains($err, 'certificate verify failed') =>
+                'the certificate of Monit httpd is not issued by the configured CA (or it has expired)',
+            (bool) preg_match('/Peer certificate CN=`([^\']*)\' did not match expected CN=`([^\']*)\'/', $err, $m) =>
+                "the certificate of Monit httpd is for “{$m[1]}”, not for “{$m[2]}”: add that address to its subjectAltName, "
+                . 'or turn off the name check in Admin → Configuration',
+            (bool) preg_match('/did not match expected (?:CN|name)=?\s*`([^\']*)\'/', $err, $m) =>
+                "the certificate of Monit httpd is not valid for “{$m[1]}”: add that address to its subjectAltName, "
+                . 'or turn off the name check in Admin → Configuration',
+            str_contains($err, 'wrong version number') || str_contains($err, 'record layer failure') || str_contains($err, 'packet length too long') =>
+                'Monit httpd does not speak HTTPS on this port (SSL not enabled in monitrc?)',
+            str_starts_with($url, 'http://') && str_contains($err, 'HTTP request failed') =>
+                'no HTTP answer: if Monit httpd uses SSL, Bmon will switch to HTTPS after its next report',
+            default => preg_replace('/^.*?failed to open stream: /i', '', $last),
+        };
     }
 
     /** Whether actions can be attempted at all (for showing the controls). */

@@ -469,6 +469,9 @@ final class AgentTemplates
                     self::f('collector', 'Collector URL', (string) Config::get('agentconf.collector_url', 'https://monit:PASSWORD@collector.example.com/collector'),
                         '^https?://[^"\\\\\s]+$', 'With the user and password of the collector.', true, 'An http(s) URL without spaces or quotes.'),
                     $port('2812'),
+                    self::f('pemfile', 'HTTPS certificate (pemfile)', '/etc/monit/ssl/monit.pem', '^(/[A-Za-z0-9._/-]{1,200})?$',
+                        'Private key + certificate issued by your CA (see README, "HTTPS to Monit"). Empty = plain HTTP.', false,
+                        'An absolute path, or empty for plain HTTP.'),
                     self::f('listen', 'httpd listens on', '0.0.0.0', self::ADDRESS, 'Address reachable from the Bmon-web server.', true, 'An IP address or host name.'),
                     self::f('allow', 'Allow Bmon-web from', (string) Config::get('agentconf.web_address', '203.0.113.5'),
                         '^[A-Za-z0-9.:/-]{1,64}$', 'Address of the Bmon-web server (or a network, e.g. 10.0.0.0/8).', true, 'An address or network.'),
@@ -478,6 +481,7 @@ final class AgentTemplates
                 ],
                 'body' => "set mmonit {{collector}}\n"
                     . "set httpd port {{port}} and\n"
+                    . "{{ssl_clause}}"
                     . "    use address {{listen}}\n"
                     . "    allow {{allow}}\n"
                     . "    allow {{user}}:\"{{password}}\"\n",
@@ -502,6 +506,9 @@ final class AgentTemplates
     {
         if (isset($values['protocol'])) {
             $values['protocol_clause'] = $values['protocol'] !== '' ? 'protocol ' . $values['protocol'] . ' ' : 'type tcp ';
+        }
+        if (array_key_exists('pemfile', $values)) {
+            $values['ssl_clause'] = $values['pemfile'] !== '' ? "    with ssl {\n        pemfile: " . $values['pemfile'] . "\n    }\n" : '';
         }
         if (array_key_exists('content', $values)) {
             $values['content_clause'] = $values['content'] !== '' ? 'content = "' . $values['content'] . '" ' : '';

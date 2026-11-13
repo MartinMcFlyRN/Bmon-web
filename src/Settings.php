@@ -50,8 +50,14 @@ final class Settings
             'security.trusted_proxies' => ['section' => 'security', 'type' => 'cidrs', 'label' => 'Trusted proxies',
                 'help' => 'One address or network per line (e.g. 10.0.0.0/8): only these may set X-Forwarded-For / X-Real-IP. Leave empty when nginx talks to PHP-FPM directly.'],
 
+            'monit.require_tls' => ['section' => 'monit', 'type' => 'bool', 'label' => 'Require HTTPS to Monit httpd',
+                'help' => 'Actions and the reachability check refuse agents whose httpd does not use SSL, instead of talking to them in clear.'],
             'monit.tls_verify' => ['section' => 'monit', 'type' => 'bool', 'label' => 'Verify the certificate of Monit httpd',
-                'help' => 'Leave off when the agents use self-signed certificates.'],
+                'help' => 'With a CA certificate below, only certificates issued by that CA are accepted; without it, the CAs of this server are used.'],
+            'monit.ca_cert' => ['section' => 'monit', 'type' => 'pem', 'label' => 'CA certificate',
+                'help' => 'PEM of the CA (or CAs) that issue the certificates of the Monit agents: -----BEGIN CERTIFICATE----- … Only the public certificate, never the CA key.'],
+            'monit.tls_verify_name' => ['section' => 'monit', 'type' => 'bool', 'label' => 'Check the name in the certificate',
+                'help' => 'The certificate must contain the IP address or host name Bmon connects to (subjectAltName). Turn off to accept any certificate issued by the CA.'],
             'monit.timeout' => $int('monit', 'Timeout of an action', 1, 120, '', 'seconds'),
 
             'slack.webhook_url' => ['section' => 'slack', 'type' => 'secret', 'label' => 'Incoming Webhook URL',
@@ -156,6 +162,26 @@ final class Settings
                     }
                     $parsed[$key] = $v === '/' ? $v : rtrim($v, '/');
                     break;
+                case 'pem':
+                    $v = str_replace(["\r\n", "\r"], "\n", $v);
+                    $parsed[$key] = $v === '' ? '' : trim($v) . "\n";
+                    if ($v !== '') {
+                        preg_match_all('/-----BEGIN CERTIFICATE-----[A-Za-z0-9+\/=\s]+-----END CERTIFICATE-----/', $v, $mm);
+                        if (!$mm[0]) {
+                            $err = 'Paste one or more certificates in PEM format (-----BEGIN CERTIFICATE----- …).';
+                        } elseif (str_contains($v, 'PRIVATE KEY')) {
+                            $err = 'This contains a private key: paste only the CA certificate.';
+                        } else {
+                            foreach ($mm[0] as $pem) {
+                                $info = @openssl_x509_parse($pem);
+                                if ($info === false) {
+                                    $err = 'A certificate cannot be read.';
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                    break;
                 case 'cidrs':
                     $list = array_values(array_filter(array_map('trim', preg_split('/[\s,]+/', $v) ?: []), 'strlen'));
                     foreach ($list as $c) {
@@ -178,7 +204,7 @@ final class Settings
             if ($err === null && isset($f['pattern']) && $v !== '' && !preg_match($f['pattern'], (string) $v)) {
                 $err = $f['error'] ?? 'Invalid value.';
             }
-            if ($err === null && preg_match('/[\x00-\x1F\x7F]/u', is_string($parsed[$key]) ? $parsed[$key] : '')) {
+            if ($err === null && $f['type'] !== 'pem' && preg_match('/[\x00-\x1F\x7F]/u', is_string($parsed[$key]) ? $parsed[$key] : '')) {
                 $err = 'No control characters.';
             }
             if ($err !== null) {

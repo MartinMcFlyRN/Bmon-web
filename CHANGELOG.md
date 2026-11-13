@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0 — 2026-11-13
+
+No migrations.
+
+- HTTPS to Monit httpd with your own CA: in Admin → Configuration → Monit actions, *CA certificate* (PEM, shown with subject, expiry and fingerprint) — with *Verify the certificate of Monit httpd* on, only certificates issued by that CA are accepted, not the public CAs of the server
+- *Check the name in the certificate*: the certificate must contain the address Bmon-web connects to (on by default)
+- *Require HTTPS to Monit httpd*: no actions or reachability checks toward hosts whose Monit httpd is still plain HTTP
+- Clear reasons when the connection fails: certificate not from the CA or expired, address not in the certificate, port not speaking HTTPS, host not on HTTPS
+- AgentConf "Reporting to Bmon": optional *HTTPS certificate (pemfile)* adds `with ssl { pemfile: … }` to `set httpd`; `monit -t` validation uses a stub for SSL files, which exist only on the agents
+- README: how to create the CA and the host certificates
+
 ## 0.13.1 — 2026-11-12
 
 - Host page layout: Host, Monit and Inventory + Notes side by side on wide screens (three columns), Host and Monit with Inventory and Notes below on medium screens, one column on phones; tighter card padding, smaller empty Notes field, so the services table starts much higher

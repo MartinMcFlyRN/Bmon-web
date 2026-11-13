@@ -42,7 +42,10 @@ final class Config
             // Actions (start/stop/...) sent to the Monit httpd of the hosts.
             'monit' => [
                 'credentials_key' => '',    // = BMON_CREDENTIALS_KEY of bmon-collector, if set there
-                'tls_verify'      => false, // Monit httpd usually has a self-signed certificate
+                'tls_verify'      => false, // verify the certificate of Monit httpd (HTTPS)
+                'ca_cert'         => '',    // PEM of the CA that issues the Monit certificates ('' = system CAs)
+                'tls_verify_name' => true,  // the certificate must name the address Bmon connects to
+                'require_tls'     => false, // refuse to talk to Monit httpd over plain HTTP
                 'timeout'         => 10,    // seconds
             ],
             // AgentConf: Monit configurations prepared for the agents
