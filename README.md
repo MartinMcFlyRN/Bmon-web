@@ -347,7 +347,7 @@ the agents, to install on each node with all its checks ready.
   "Reporting to Bmon" (`set mmonit` + `set httpd` for actions; its collector URL
   comes from *Collector URL*, *Collector user* and *Collector password* in Admin →
   Configuration, the HTTPS certificate from *Monit directory on the agents*,
-  default `/etc/monit`, as `<directory>/monit.pem`); custom. A
+  default `/etc/monit`, as `<directory>/monit.pem`); your own ones from Agent → Custom Templates. A
   template asks for a few values (checked, so they cannot break the syntax) and
   produces the configuration. The check is a **copy**: from then on it is plain
   text, edited freely for that service only — templates are never linked to the
