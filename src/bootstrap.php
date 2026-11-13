@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-const BMON_WEB_VERSION = '0.17.0';
+const BMON_WEB_VERSION = '0.18.0';
 
 define('BMON_ROOT', dirname(__DIR__));
 

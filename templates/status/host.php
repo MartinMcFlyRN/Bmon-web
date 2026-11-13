@@ -28,7 +28,35 @@ $th = static fn (string $key, string $label, string $class = ''): string
 </div>
 
 <?php if ($offline): ?>
-  <div class="alert alert-info">No report from Monit since <?= e(fmt_dt($host['last_seen'], 'Y-m-d H:i:s')) ?>. The values below are from the last report and may be out of date.</div>
+  <div class="alert alert-info offline-bar">
+    <span>No report from Monit since <?= e(fmt_dt($host['last_seen'], 'Y-m-d H:i:s')) ?>. The values below are from the last report and may be out of date.</span>
+    <?php if ($canEdit): ?>
+      <button type="button" class="btn btn-danger" data-open-dialog="delete-host">Delete host</button>
+    <?php endif ?>
+  </div>
+  <?php if ($canEdit): ?>
+  <dialog id="delete-host" class="dialog" aria-labelledby="delete-host-title">
+    <form method="dialog" class="dialog-close"><button type="submit" aria-label="Close">×</button></form>
+    <form method="post" action="<?= e(url('/status/' . $host['id'] . '/delete')) ?>">
+      <?= csrf_field() ?>
+      <h2 id="delete-host-title">Delete <?= e($host['hostname']) ?>?</h2>
+      <p>This removes the host from Bmon with everything about it: services, events and service groups
+        reported by Monit, its name, notes and Monit address, inventory, AgentConf checks, published versions
+        and download links. The audit log is kept. <strong>It cannot be undone.</strong></p>
+      <p class="muted">If its Monit reports again, it comes back as a new host, without any of this.</p>
+      <?php if (!\Bmon\Web\HostDelete::allowed()): ?>
+        <p class="hint text-warn">Bmon-web may not delete hosts in the collector database yet. A database administrator must run:
+          <code><?= e(\Bmon\Web\HostDelete::grantHint()) ?></code></p>
+      <?php endif ?>
+      <label for="confirm-name">Type <strong class="mono"><?= e($host['hostname']) ?></strong> to confirm</label>
+      <input id="confirm-name" name="confirm_name" type="text" autocomplete="off" required>
+      <div class="dialog-actions">
+        <button type="submit" class="btn" formmethod="dialog" formnovalidate>Cancel</button>
+        <button type="submit" class="btn btn-danger">Delete host</button>
+      </div>
+    </form>
+  </dialog>
+  <?php endif ?>
 <?php endif ?>
 
 <div class="host-grid">

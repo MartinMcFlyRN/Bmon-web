@@ -32,6 +32,7 @@ final class App
         $r->post('/status/{id}/name', [StatusController::class, 'rename'], 'admin');
         $r->post('/status/{id}/notes', [StatusController::class, 'notes'], 'admin');
         $r->post('/status/{id}/monit-address', [StatusController::class, 'monitAddress'], 'admin');
+        $r->post('/status/{id}/delete', [StatusController::class, 'delete'], 'admin');
         $r->post('/status/{id}/inventory', [InventoryController::class, 'assign'], 'admin');
         $r->post('/status/{id}/inventory/{itemId}/delete', [InventoryController::class, 'unassign'], 'admin');
 

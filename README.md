@@ -26,6 +26,7 @@ Composer dependencies: copy the files, configure, run the migrations.
 - `bin/bmon-web` CLI: migrations and user management (first admin, password reset)
 
 - **Status**: list of all hosts with state (OK / N failing / offline), CPU, memory, load, failing/total services and last report
+- **Deleting a host** (administrators): on the page of an offline host, *Delete host* (confirmed by typing its name) removes it with everything about it — services, events and service groups in the collector database, name, notes, Monit address, inventory, AgentConf checks, published versions, auto-update state and download links. The audit log keeps a line about it. If its Monit reports again, it comes back as a new host. Needs `GRANT DELETE ON bmon_collector.hosts`.
   - filters All / OK / Failing / Offline with counts, search by host name or address, sortable columns, 100 hosts per page
 - **Host page** (click a host): host and Monit details, every service with its state (failing checks decoded from the Monit status, not monitored, initializing, pending action) and a summary per type: load/CPU/memory/swap for the system, space and inodes for filesystems, PID/uptime/CPU/memory for processes, response time for remote host ports and ping, size and modification time for files, exit status and output for programs, link and traffic for network interfaces; "All values" shows every metric Monit sent. Plus service groups and the last 30 events. The services table can be sorted by status, name, type, "since" and last check.
 - **Auto-refresh** (off, 5 s, 10 s, 30 s, 1 min) on Dashboard, Status and host pages, remembered per browser; it pauses while the tab is hidden, you are typing or an "All values" panel is open. The sort order is kept across refreshes.
@@ -53,8 +54,9 @@ bin/bmon-web     command line tool
 ## Database
 
 Bmon-web keeps its own tables (`users`, `login_attempts`, `audit_log`, `inventory`, `host_inventory`, `agent_checks`, `download_links`, `host_meta`, `settings`, `service_group_defs`, `agent_check_groups`) in a
-separate database and only **reads** the collector database. Both must be on the
-same MySQL/MariaDB server.
+separate database and **reads** the collector database (it only deletes rows of
+its `hosts` table, when an administrator deletes an offline host). Both must be
+on the same MySQL/MariaDB server.
 
 ```sql
 CREATE DATABASE bmon_web CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -62,6 +64,8 @@ CREATE USER 'bmon_web'@'localhost' IDENTIFIED BY '...';
 GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, DROP, INDEX, REFERENCES
   ON bmon_web.* TO 'bmon_web'@'localhost';
 GRANT SELECT ON bmon_collector.* TO 'bmon_web'@'localhost';
+-- only to delete offline hosts (services, events and groups follow by cascade):
+GRANT DELETE ON bmon_collector.hosts TO 'bmon_web'@'localhost';
 ```
 
 ## Installation (Debian 12/13)
@@ -263,9 +267,9 @@ stops before that with "…and N more alerts" (a few hundred lines).
 The **AgentConf** menu (administrators only) prepares Monit configurations for
 the agents, to install on each node with all its checks ready.
 
-- **Agents**: the list shows the active agents (those sending reports; a button
-  shows the offline ones too), with the services they report and the checks
-  prepared in Bmon. Search by name, address, OS or Monit version; click a
+- **Agents**: the list shows all agents, offline ones included (marked
+  *Offline*: their zip can still be downloaded and installed by hand; a button
+  hides them), with the services they report and the checks prepared in Bmon. Search by name, address, OS or Monit version; click a
   column title to sort by it (again to reverse).
 - **Agent page**: the checks prepared in Bmon (one file each), and the checks
   currently on the agent as Monit reports them, marked *managed* when a Bmon

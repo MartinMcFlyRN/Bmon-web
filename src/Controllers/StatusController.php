@@ -6,6 +6,7 @@ namespace Bmon\Web\Controllers;
 
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
+use Bmon\Web\HostDelete;
 use Bmon\Web\HostMeta;
 use Bmon\Web\HttpException;
 use Bmon\Web\Inventory;
@@ -294,6 +295,27 @@ final class StatusController
             ? "The host is now shown as “{$name}” (Monit calls it “{$host['monit_hostname']}”)."
             : "The host is shown again with the name sent by Monit, “{$host['monit_hostname']}”.");
         redirect('/status/' . $id);
+    }
+
+    /** POST /status/{id}/delete: an offline host and everything about it. */
+    public function delete(int $id): never
+    {
+        $host = Db::host($id) ?? throw new HttpException(404, 'Host not found.');
+        if (($_POST['confirm_name'] ?? '') !== $host['hostname']) {
+            flash('error', 'Type the name of the host to confirm the deletion.');
+            redirect('/status/' . $id);
+        }
+        $r = HostDelete::delete($id);
+        if (!$r['ok']) {
+            flash('error', $r['error']);
+            redirect('/status/' . $id);
+        }
+        $c = $r['counts'];
+        Audit::log('host.delete', "{$host['hostname']} (id $id, Monit ID {$host['monit_id']}, {$host['remote_addr']}): "
+            . "{$c['services']} services, {$c['events']} events, {$c['agent_checks']} AgentConf checks, {$c['agent_releases']} published versions");
+        flash('success', "Host “{$host['hostname']}” deleted with its services, events, notes, inventory and AgentConf checks."
+            . ' If its Monit reports again, it appears as a new host.');
+        redirect('/status');
     }
 
     /** POST /status/{id}/notes */

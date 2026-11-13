@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.18.0 — 2026-11-13
+
+No migrations. **To delete hosts, grant:** `GRANT DELETE ON bmon_collector.hosts TO 'bmon_web'@'localhost';`
+
+- *Delete host* on the page of an offline host (administrators, confirmed by typing the host name): removes the host from the collector database (services, events and service groups follow by cascade) and its Bmon-web data — name, notes, Monit address, inventory, AgentConf checks with their service groups, published versions, auto-update state, download links — in one transaction; refused if the host reports meanwhile. Logged in the audit log. Without the grant, the dialog and the error show the GRANT to run
+- AgentConf list: offline agents are shown by default (marked *Offline*), so their zip can be downloaded and installed by hand; *Hide offline agents* hides them
+
 ## 0.17.0 — 2026-11-13
 
 - Admin → Configuration → AgentConf: *Monit binary on the agents* (default `monit`, from the PATH). The install commands of the zip README and of the download links use it with the full monitrc path (`/usr/local/bin/monit -c /etc/monit/monitrc -t && … reload`, plus the restart commands for when `set httpd` changes), and the "Bmon auto-update" template passes it to `bmon-update.sh` (new `--monit` option) for `monit -t`, reload and restart. Existing auto-update checks are copies: add `--monit /path/to/monit` to both their commands, or create them again

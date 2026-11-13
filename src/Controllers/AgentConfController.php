@@ -41,7 +41,8 @@ final class AgentConfController
 
     public function index(): string
     {
-        $all = ($_GET['all'] ?? '') === '1';
+        // offline agents are listed too (their zip can be installed by hand); ?active=1 hides them
+        $all = ($_GET['active'] ?? '') !== '1';
         $q = trim(is_string($_GET['q'] ?? null) ? $_GET['q'] : '');
         $where = [];
         $params = [];
