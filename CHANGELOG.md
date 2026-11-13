@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.22.2 — 2026-11-13
+
+- Installer: the `@reboot` line is added with `crontab -` (keeps the other entries, sets the right owner and mode, works on every distribution, not added twice when the commands are run again) instead of appending to /var/spool/cron/crontabs/root
+
 ## 0.22.1 — 2026-11-13
 
 - Installer: the Monit ID file is `<install directory>/monit.id` (was `/var/lib/monit/id`), so everything is in one directory; the install commands add `@reboot <dir>/bin/monit -c <dir>/conf/monitrc` to root's crontab to start Monit at boot

@@ -271,7 +271,7 @@ final class AgentPackages
             . "chmod 600 $b/conf/monitrc $b/conf/monit.pem\n"
             . "$b/bin/monit -c $b/conf/monitrc -t\n"
             . "$b/bin/monit -c $b/conf/monitrc\n"
-            . "echo \"@reboot $b/bin/monit -c $b/conf/monitrc > /dev/null 2>&1\" >> /var/spool/cron/crontabs/root\n";
+            . "(crontab -l 2>/dev/null | grep -vF '$b/bin/monit -c $b/conf/monitrc'; echo '@reboot $b/bin/monit -c $b/conf/monitrc > /dev/null 2>&1') | crontab -\n";
     }
 
     public static function save(?int $id, array $f, ?string $binary, ?string $binName, ?string $binInfo, ?string $pem, ?string $pemInfo, string $by): int
