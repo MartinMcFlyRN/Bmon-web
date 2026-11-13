@@ -30,7 +30,7 @@ final class AgentTemplates
     private const URLPATH = '^/[^"\\\\\s]*$';
 
     public const CATEGORIES = [
-        'mine' => 'Custom templates',   // AgentConf → Custom Templates
+        'mine' => 'Custom templates',   // Agent → Custom Templates
         'system' => 'System',
         'service' => 'Services (processes)',
         'remote' => 'Remote checks',
@@ -51,6 +51,12 @@ final class AgentTemplates
     {
         static $all = null;
         return ($all ??= self::build()) + CustomTemplates::asTemplates();
+    }
+
+    /** Built-in templates built now (not cached): their paths follow the current Config. */
+    public static function fresh(): array
+    {
+        return self::build();
     }
 
     public static function get(string $key): ?array

@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bmon\Web;
 
 /**
- * AgentConf → Group Checks: named sets of checks (rows of agent_checks with
+ * Agent → Group Checks: named sets of checks (rows of agent_checks with
  * host_id = -<group id>, edited like the checks of an agent). "Add group checks"
  * on an agent copies them into it in one go: the copies are independent, so
  * changing the group later does not change the agents.

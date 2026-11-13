@@ -7,14 +7,14 @@ $base = '/agentconf/' . $host['id'];
 ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url($base)) ?>"><?= e($host['hostname']) ?></a> /</p>
+    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">Agent</a> / <a href="<?= e(url($base)) ?>"><?= e($host['hostname']) ?></a> /</p>
     <h1>Add group checks</h1>
   </div>
   <a class="btn" href="<?= e(url($base)) ?>">Back to the agent</a>
 </div>
 <p class="muted">Adding a group copies all its checks into <?= e($host['hostname']) ?> (enabled or disabled as in the group). They become
   checks of this agent like the others: later changes to the group do not touch them. If even one of them is already on the agent
-  (same name or same script), nothing is added. Groups are managed in <a href="<?= e(url('/agentconf/groups')) ?>">AgentConf → Group Checks</a>.</p>
+  (same name or same script), nothing is added. Groups are managed in <a href="<?= e(url('/agentconf/groups')) ?>">Agent → Group Checks</a>.</p>
 
 <?php if (!$groups): ?>
   <div class="card muted">No groups yet. <a href="<?= e(url('/agentconf/groups/new')) ?>">Create one</a> with the checks you add often.</div>

@@ -267,8 +267,38 @@ stops before that with "…and N more alerts" (a few hundred lines).
 The **AgentConf** menu (administrators only) prepares Monit configurations for
 the agents, to install on each node with all its checks ready.
 
-- **Menu**: AgentConf is a dropdown with **Manage** (the agents and their
-  checks), **Group Checks** and **Custom Templates**.
+- **Menu**: **Agent** is a dropdown with **Manage** (the agents and their
+  checks), **Group Checks**, **Custom Templates** and **Installer**.
+- **Installer**: packages to set up Monit on a new server. *Add package* asks
+  for a name, the install directory (default `/usr/local/monit`), the **Monit
+  binary** and the **monit.pem** (private key + certificate for HTTPS), the
+  httpd user, password and port; the binary and the pem are stored in the
+  database (key and password encrypted with `monit.credentials_key`). Each
+  package has a **permanent link** `/pkg/<64 hex>` (it does not expire; *New
+  link* replaces it) giving a zip to extract in the install directory:
+
+  ```
+  bin/monit                      the uploaded binary
+  conf/monitrc                   set daemon 60, log syslog, pid/state/id files,
+                                 event queue, include <dir>/conf.d/*.conf
+  conf/monit.pem                 the uploaded certificate
+  conf.d/bmon-00-bmon.conf       Reporting to Bmon (set mmonit, set httpd with ssl)
+  conf.d/bmon-bmon-update.conf   Bmon auto-update
+  conf.d/bmon-os-info.conf       OS information
+  script/bmon-update.sh, script/bmon-osinfo.sh
+  ```
+
+  The checks are rendered when the zip is downloaded, from the required
+  templates and Admin → Configuration (collector URL and credentials, Bmon-web
+  address, interval), with the paths of the install directory. The package page
+  shows the link, the install commands
+  (`mkdir -p <dir> /var/lib/monit; cd <dir> && wget … && unzip …;
+  bin/monit -c conf/monitrc -t; bin/monit -c conf/monitrc`), the files with
+  their content and `monit -t`, the number of downloads, and warns when the
+  Configuration (Monit include, script and monitrc directories, Monit binary)
+  does not match the layout, since later zips and publications use it. Uploads
+  need `client_max_body_size 40m` in nginx and `upload_max_filesize = 32M`,
+  `post_max_size = 34M` in PHP (as in `deploy/`).
 - **Custom Templates**: your own templates, with fields like the built-in ones.
   Each field has a key, a label, a type (text, whole number, number, name,
   path, host/IP, URL, password/token — the type decides the accepted values,

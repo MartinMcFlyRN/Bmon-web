@@ -14,7 +14,7 @@ use Bmon\Web\ServiceGroups;
 use Bmon\Web\View;
 
 /**
- * AgentConf → Group Checks: sets of checks to copy into agents in one go
+ * Agent → Group Checks: sets of checks to copy into agents in one go
  * ("Add group checks" on the agent page). The checks of a group are handled by
  * the same code as the checks of an agent (newCheck, create, edit, update,
  * delete of AgentConfController), with the group as scope.

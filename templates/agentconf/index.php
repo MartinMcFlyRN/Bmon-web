@@ -3,7 +3,7 @@ $th = static fn (string $key, string $label, string $class = ''): string
     => sort_th('/agentconf', $key, $label, $sort, $dir, $class);
 ?>
 <div class="page-head">
-  <h1>AgentConf</h1>
+  <h1>Agent</h1>
   <?php if ($offlineCount > 0 || !$all): ?>
   <a class="btn" href="<?= e(url('/agentconf') . query_with(['active' => $all ? '1' : null])) ?>">
     <?= $all ? 'Hide offline agents (' . e($offlineCount) . ')' : 'Show also offline agents (' . e($offlineCount) . ')' ?>

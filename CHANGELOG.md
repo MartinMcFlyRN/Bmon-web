@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.22.0 — 2026-11-13
+
+**Run `bin/bmon-web migrate` after upgrading** (table `agent_packages`). For the uploads, raise nginx `client_max_body_size` (40m) and PHP `upload_max_filesize` (32M) / `post_max_size` (34M), as in `deploy/nginx.conf` and `deploy/php-fpm-pool.conf`.
+
+- The AgentConf menu is now **Agent**
+- **Agent → Installer**: packages to set up Monit on new servers — Monit binary (checked to be an ELF executable) and monit.pem (key and certificate, checked to match) uploaded and stored in the database, private key and httpd password encrypted; a permanent link `/pkg/<token>` gives a zip with `bin/monit`, `conf/monitrc`, `conf/monit.pem`, `conf.d/bmon-00-bmon.conf`, `conf.d/bmon-bmon-update.conf`, `conf.d/bmon-os-info.conf` and `script/` with their scripts, rendered for the install directory; install commands, download counter, *New link*, warning when Admin → Configuration does not match the package layout
+- A request too big for PHP now gives a clear message instead of an expired-form error
+
 ## 0.21.1 — 2026-11-13
 
 - *Add group checks* adds the whole group (all its checks, enabled or disabled as in the group) with one button, all or nothing: if any of its checks is already on the agent (same name or script), nothing is added and the clashes are listed. The button is always available, so a group can be added again after its checks were deleted from the agent

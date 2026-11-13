@@ -9,6 +9,7 @@ use Bmon\Web\Controllers\AgentConfController;
 use Bmon\Web\Controllers\AgentUpdateController;
 use Bmon\Web\Controllers\CustomTemplatesController;
 use Bmon\Web\Controllers\GroupChecksController;
+use Bmon\Web\Controllers\InstallerController;
 use Bmon\Web\Controllers\AuthController;
 use Bmon\Web\Controllers\DashboardController;
 use Bmon\Web\Controllers\InventoryController;
@@ -60,6 +61,14 @@ final class App
         $r->get('/agentconf/templates/{id}', [CustomTemplatesController::class, 'edit'], 'admin');
         $r->post('/agentconf/templates/{id}', [CustomTemplatesController::class, 'update'], 'admin');
         $r->post('/agentconf/templates/{id}/delete', [CustomTemplatesController::class, 'delete'], 'admin');
+        $r->get('/agentconf/installer', [InstallerController::class, 'index'], 'admin');
+        $r->get('/agentconf/installer/new', [InstallerController::class, 'newForm'], 'admin');
+        $r->post('/agentconf/installer/new', [InstallerController::class, 'create'], 'admin');
+        $r->get('/agentconf/installer/{id}', [InstallerController::class, 'edit'], 'admin');
+        $r->post('/agentconf/installer/{id}', [InstallerController::class, 'update'], 'admin');
+        $r->post('/agentconf/installer/{id}/relink', [InstallerController::class, 'regenerate'], 'admin');
+        $r->post('/agentconf/installer/{id}/delete', [InstallerController::class, 'delete'], 'admin');
+        $r->get('/pkg/{token}', [InstallerController::class, 'download'], 'public');
         $r->get('/agentconf/groups', [GroupChecksController::class, 'index'], 'admin');
         $r->get('/agentconf/groups/new', [GroupChecksController::class, 'newGroup'], 'admin');
         $r->post('/agentconf/groups/new', [GroupChecksController::class, 'createGroup'], 'admin');
@@ -138,6 +147,12 @@ final class App
                 }
                 redirect('/login');
             }
+            if ($method === 'POST' && $_POST === [] && (int) ($_SERVER['CONTENT_LENGTH'] ?? 0) > self::iniBytes((string) ini_get('post_max_size'))) {
+                // PHP dropped the whole request body (uploads too big)
+                flash('error', 'The upload is too big for PHP (post_max_size = ' . ini_get('post_max_size') . ', upload_max_filesize = '
+                    . ini_get('upload_max_filesize') . '). Raise them (public/.user.ini or php.ini) and nginx client_max_body_size.');
+                redirect(self::path());
+            }
             if ($method === 'POST' && !Csrf::valid()) {
                 if ($access === 'guest') {
                     // typically a login form left open past the session lifetime
@@ -193,5 +208,15 @@ final class App
             header('Content-Type: text/plain; charset=utf-8');
             echo "$status " . ($titles[$status] ?? 'Error') . "\n";
         }
+    }
+
+    /** "32M" -> bytes. */
+    public static function iniBytes(string $v): int
+    {
+        $v = trim($v);
+        $n = (int) $v;
+        return match (strtolower(substr($v, -1))) {
+            'g' => $n * 1024 ** 3, 'm' => $n * 1024 ** 2, 'k' => $n * 1024, default => $n,
+        } ?: PHP_INT_MAX;
     }
 }

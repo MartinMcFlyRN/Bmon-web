@@ -24,7 +24,7 @@ $blank = ['key' => '', 'label' => '', 'type' => 'text', 'default' => '', 'requir
 ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url('/agentconf/templates')) ?>">Custom Templates</a> /</p>
+    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">Agent</a> / <a href="<?= e(url('/agentconf/templates')) ?>">Custom Templates</a> /</p>
     <h1><?= $id === null ? 'New custom template' : e($t['label']) ?></h1>
   </div>
 </div>

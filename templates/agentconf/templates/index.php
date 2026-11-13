@@ -1,7 +1,7 @@
 <?php /** @var array $templates */ ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> /</p>
+    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">Agent</a> /</p>
     <h1>Custom Templates</h1>
   </div>
   <a class="btn btn-primary" href="<?= e(url('/agentconf/templates/new')) ?>">New template</a>

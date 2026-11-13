@@ -8,7 +8,7 @@ $base = $scope['base'];
 ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url('/agentconf/groups')) ?>">Group Checks</a> /</p>
+    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">Agent</a> / <a href="<?= e(url('/agentconf/groups')) ?>">Group Checks</a> /</p>
     <h1><?= e($group['name']) ?></h1>
     <?php if ($group['description'] !== ''): ?><p class="muted"><?= e($group['description']) ?></p><?php endif ?>
   </div>

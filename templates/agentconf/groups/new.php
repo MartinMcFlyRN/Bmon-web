@@ -1,7 +1,7 @@
 <?php /** @var array $form @var array $errors */ ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> / <a href="<?= e(url('/agentconf/groups')) ?>">Group Checks</a> /</p>
+    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">Agent</a> / <a href="<?= e(url('/agentconf/groups')) ?>">Group Checks</a> /</p>
     <h1>New group</h1>
   </div>
 </div>

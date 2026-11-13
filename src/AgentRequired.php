@@ -40,7 +40,7 @@ final class AgentRequired
     {
         $missing = self::missing($hostId);
         return $missing ? 'These checks are required and missing or disabled: ' . self::labels($missing)
-            . '. Add them back (AgentConf → Add the required checks) before downloading or publishing.' : null;
+            . '. Add them back (Agent → Add the required checks) before downloading or publishing.' : null;
     }
 
     /**

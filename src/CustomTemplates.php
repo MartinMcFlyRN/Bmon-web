@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace Bmon\Web;
 
 /**
- * AgentConf → Custom Templates: templates written by the administrators, with
+ * Agent → Custom Templates: templates written by the administrators, with
  * the same syntax as the built-in ones (body with {{field}} and ?field lines,
  * fields with a type, optional attached script). They appear in "Add check"
  * (for agents and Group Checks) as "custom-<id>"; checks are copies, so editing

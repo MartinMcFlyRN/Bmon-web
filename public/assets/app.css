@@ -445,3 +445,10 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .inline-form select { max-width: 320px; }
 .tpl-form h2 { margin-top: 22px; }
 .add-group { margin-bottom: 16px; } .add-group h2 a { font-weight: 400; margin-left: 8px; }
+
+/* Installer */
+.grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+@media (max-width: 800px) { .grid-3 { grid-template-columns: 1fr; } }
+.pkg-files { columns: 2; margin: 8px 0 12px; }
+.pkg-form input[type=file] { display: block; margin: 4px 0; }
+.pkg-form input[type=number] { width: 100%; }

@@ -15,7 +15,7 @@ use Bmon\Web\Monit;
 <?php endif ?>
 <div class="page-head">
   <div>
-    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">AgentConf</a> /</p>
+    <p class="crumbs"><a href="<?= e(url('/agentconf')) ?>">Agent</a> /</p>
     <h1 class="host-title"><?= e($host['hostname']) ?>
       <?php if ($host['offline_since'] !== null): ?><span class="status status-off">Offline</span><?php endif ?>
     </h1>

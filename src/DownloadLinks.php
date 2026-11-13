@@ -76,13 +76,19 @@ final class DownloadLinks
     /** Absolute URL of a token: app.url, or the address this request came to. */
     public static function url(string $token): string
     {
+        return self::absolute('/dl/' . $token);
+    }
+
+    /** Absolute URL of a path of Bmon-web. */
+    public static function absolute(string $path): string
+    {
         $base = rtrim((string) Config::get('app.url'), '/');
         if ($base === '') {
             $https = ($_SERVER['HTTPS'] ?? '') !== '' && ($_SERVER['HTTPS'] ?? '') !== 'off';
             $host = preg_replace('/[^A-Za-z0-9.:\[\]-]/', '', (string) ($_SERVER['HTTP_HOST'] ?? 'localhost'));
             $base = ($https ? 'https' : 'http') . '://' . $host . rtrim((string) Config::get('app.base_path'), '/');
         }
-        return $base . '/dl/' . $token;
+        return $base . $path;
     }
 
     /** Shell commands to download and install the zip on the agent, for copy & paste. */

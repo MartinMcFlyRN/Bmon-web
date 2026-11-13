@@ -86,7 +86,7 @@ class AgentConfController
 
         $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
         return View::render('agentconf/index', [
-            'title' => 'AgentConf', 'nav' => 'agentconf',
+            'title' => 'Agent', 'nav' => 'agentconf',
             'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
             'q' => $q, 'sort' => $sort, 'dir' => $dir,
         ]);

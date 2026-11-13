@@ -10,7 +10,7 @@ use Bmon\Web\CustomTemplates;
 use Bmon\Web\HttpException;
 use Bmon\Web\View;
 
-/** AgentConf → Custom Templates. */
+/** Agent → Custom Templates. */
 final class CustomTemplatesController
 {
     public function index(): string
