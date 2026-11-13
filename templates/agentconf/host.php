@@ -2,7 +2,7 @@
 /**
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
- * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update
+ * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update @var array $requiredMissing
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -24,13 +24,24 @@ $enabledCount = count(array_filter($checks, static fn ($c) => (int) $c['enabled'
   </div>
   <div class="head-actions">
     <a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/new')) ?>">Add check</a>
-    <?php if ($enabledCount): ?>
+    <?php if ($enabledCount && !$requiredMissing): ?>
       <a class="btn btn-primary" href="#download-dialog" data-open-dialog="download-dialog">Download zip (<?= $enabledCount ?>)</a>
     <?php else: ?>
-      <span class="btn btn-disabled" title="No enabled checks">Download zip</span>
+      <span class="btn btn-primary btn-disabled" title="<?= e($requiredMissing ? 'Required checks missing' : 'No enabled checks') ?>">Download zip</span>
     <?php endif ?>
   </div>
 </div>
+
+<?php if ($requiredMissing): ?>
+  <div class="alert alert-error required-bar">
+    <span>Required checks missing or disabled: <?= e(\Bmon\Web\AgentRequired::labels($requiredMissing)) ?>.
+      Every agent needs them (reporting, auto-update, OS information): until they are back the zip cannot be downloaded or published.</span>
+    <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/required')) ?>">
+      <?= csrf_field() ?>
+      <button type="submit" class="btn">Add the required checks</button>
+    </form>
+  </div>
+<?php endif ?>
 
 <section class="panel">
   <h2>Checks prepared in Bmon <span class="muted">(<?= count($checks) ?>)</span></h2>
@@ -120,7 +131,7 @@ $short = static fn (string $v): string => $v === '' ? '—' : substr($v, 0, 12);
       <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/publish')) ?>"
             data-confirm="Publish the enabled checks? The agent replaces its whole Bmon configuration with them at its next auto-update run.">
         <?= csrf_field() ?>
-        <button type="submit" class="btn btn-primary"<?= $update['changed'] && $enabledCount ? '' : ' disabled title="Nothing changed since the last publication"' ?>>Publish</button>
+        <button type="submit" class="btn btn-primary"<?= $requiredMissing ? ' disabled title="Required checks missing"' : ($update['changed'] && $enabledCount ? '' : ' disabled title="Nothing changed since the last publication"') ?>>Publish</button>
       </form>
       <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/update-now')) ?>">
         <?= csrf_field() ?>

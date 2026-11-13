@@ -425,3 +425,4 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 /* offline host: notice with the Delete button */
 .offline-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
 #delete-host input[type=text] { width: 100%; margin: 4px 0 12px; }
+.required-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }

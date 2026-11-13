@@ -54,7 +54,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.title = title || '';
   };
   fetch(el.dataset.monitCheck, { credentials: 'same-origin', headers: { Accept: 'application/json' } })
-    .then((r) => (r.ok ? r.json() : Promise.reject(new Error('HTTP ' + r.status))))
+    .then((r) => (r.ok ? r.json() : r.json().catch(() => ({})).then((j) => Promise.reject(new Error(j.error || ('HTTP ' + r.status))))))
     .then((d) => show(d.state, d.label + (d.target ? ' · ' + d.target.replace(/^https?:\/\//, '') : ''), d.detail))
     .catch((e) => show('unknown', 'Check failed', e.message));
 });

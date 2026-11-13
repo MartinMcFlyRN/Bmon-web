@@ -63,6 +63,9 @@ final class AgentUpdate
     public static function publish(array $host, string $by): array
     {
         $id = (int) $host['id'];
+        if (($why = AgentRequired::refusal($id)) !== null) {
+            return ['ok' => false, 'error' => $why];
+        }
         $enabled = AgentChecks::enabledSet($id);
         if ($enabled === []) {
             return ['ok' => false, 'error' => 'There are no enabled checks to publish: the agent would remove all its Bmon checks, including the auto-update itself.'];

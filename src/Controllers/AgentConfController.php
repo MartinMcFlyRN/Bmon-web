@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Bmon\Web\Controllers;
 
 use Bmon\Web\AgentChecks;
+use Bmon\Web\AgentRequired;
+use Bmon\Web\AgentRequiredException;
 use Bmon\Web\AgentTemplates;
 use Bmon\Web\AgentUpdate;
 use Bmon\Web\Audit;
@@ -93,6 +95,23 @@ final class AgentConfController
     {
         $host = $this->hostRow($id);
         $checks = AgentChecks::forHost($id);
+        if ($checks === [] && Auth::isAdmin()) {
+            // a new agent gets the required checks at once
+            try {
+                $added = AgentRequired::addMissing($host, (string) Auth::user()['username']);
+                if ($added) {
+                    Audit::log('agentconf.required_add', "{$host['hostname']} (id $id): " . implode(', ', $added) . ' (automatically)');
+                    flash('success', 'Required checks added automatically: ' . implode(', ', $added) . '. Review them, then download or publish.');
+                }
+            } catch (AgentRequiredException $e) {
+                if ($e->added) {
+                    Audit::log('agentconf.required_add', "{$host['hostname']} (id $id): " . implode(', ', $e->added) . ' (automatically)');
+                    flash('success', 'Required checks added automatically: ' . implode(', ', $e->added) . '.');
+                }
+                flash('error', $e->getMessage());
+            }
+            $checks = AgentChecks::forHost($id);
+        }
         $managed = [];
         foreach ($checks as &$c) {
             $c['services'] = AgentChecks::definedServices($c['config'], $host['monit_hostname']);
@@ -114,7 +133,29 @@ final class AgentConfController
             'link' => DownloadLinks::active($id), 'newLink' => $newLink,
             'monitAvailable' => AgentChecks::monitBinary() !== null,
             'update' => $this->updateInfo($host),
+            'requiredMissing' => AgentRequired::missing($id),
         ]);
+    }
+
+    /** POST /agentconf/{id}/required: adds (or enables) the missing required checks. */
+    public function addRequired(int $id): never
+    {
+        $host = $this->hostRow($id);
+        try {
+            $added = AgentRequired::addMissing($host, (string) Auth::user()['username']);
+        } catch (AgentRequiredException $e) {
+            if ($e->added) {
+                Audit::log('agentconf.required_add', "{$host['hostname']} (id $id): " . implode(', ', $e->added));
+                flash('success', 'Required checks added: ' . implode(', ', $e->added) . '.');
+            }
+            flash('error', $e->getMessage());
+            redirect("/agentconf/$id");
+        }
+        if ($added) {
+            Audit::log('agentconf.required_add', "{$host['hostname']} (id $id): " . implode(', ', $added));
+        }
+        flash('success', $added ? 'Required checks added: ' . implode(', ', $added) . '.' : 'All required checks are already there.');
+        redirect("/agentconf/$id");
     }
 
     /** Template gallery, or the form of the chosen template (?template=key). */
@@ -281,6 +322,10 @@ final class AgentConfController
     public function download(int $id): never
     {
         $host = $this->hostRow($id);
+        if (($why = AgentRequired::refusal($id)) !== null) {
+            flash('error', $why);
+            redirect("/agentconf/$id");
+        }
         $bytes = AgentChecks::zip($host);
         Audit::log('agentconf.download', "{$host['hostname']} (id $id)");
         header('Content-Type: application/zip');
@@ -299,6 +344,15 @@ final class AgentConfController
     public function createLink(int $id): string
     {
         $host = $this->hostRow($id);
+        if (($why = AgentRequired::refusal($id)) !== null) {
+            if (str_contains((string) ($_SERVER['HTTP_ACCEPT'] ?? ''), 'application/json')) {
+                http_response_code(409);
+                header('Content-Type: application/json; charset=utf-8');
+                return json_encode(['error' => $why], JSON_UNESCAPED_UNICODE);
+            }
+            flash('error', $why);
+            redirect("/agentconf/$id");
+        }
         $link = DownloadLinks::create($id, (string) Auth::user()['username']);
         Audit::log('agentconf.link_create', "{$host['hostname']} (id $id), expires " . fmt_dt($link['expires_at'], 'Y-m-d H:i'));
         $payload = [
@@ -381,6 +435,12 @@ final class AgentConfController
             exit;
         }
         $hostFull = $this->hostRow((int) $host['id']);
+        if (($why = AgentRequired::refusal((int) $host['id'])) !== null) {
+            http_response_code(409);
+            header('Content-Type: text/plain; charset=utf-8');
+            echo $why, "\n";
+            exit;
+        }
         $bytes = AgentChecks::zip($hostFull);
         $ip = client_ip();
         DownloadLinks::markUsed((int) $row['id'], $ip);

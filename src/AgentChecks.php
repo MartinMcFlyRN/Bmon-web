@@ -90,6 +90,11 @@ final class AgentChecks
         );
     }
 
+    public static function setEnabled(int $id, bool $enabled, string $by): void
+    {
+        Db::exec('UPDATE agent_checks SET enabled = ?, updated_at = ?, updated_by = ? WHERE id = ?', [$enabled ? 1 : 0, now_utc(), $by, $id]);
+    }
+
     public static function update(int $id, string $name, string $config, bool $enabled, string $by,
                                   string $scriptName = '', string $script = ''): void
     {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.19.0 — 2026-11-13
+
+No migrations.
+
+- AgentConf required checks: **Reporting to Bmon**, **Bmon auto-update** and **OS information** must be present and enabled. They are added automatically to an agent without checks (Reporting to Bmon with the httpd user, password, port and HTTPS the agent reports); when one is missing or disabled the agent page says so, and the zip download, download links (new and existing) and Publish are refused until *Add the required checks* puts it back
+
 ## 0.18.0 — 2026-11-13
 
 No migrations. **To delete hosts, grant:** `GRANT DELETE ON bmon_collector.hosts TO 'bmon_web'@'localhost';`

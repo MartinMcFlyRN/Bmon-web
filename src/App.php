@@ -61,6 +61,7 @@ final class App
         $r->post('/agentconf/{id}/link', [AgentConfController::class, 'createLink'], 'admin');
         $r->post('/agentconf/{id}/link/revoke', [AgentConfController::class, 'revokeLink'], 'admin');
         $r->post('/agentconf/{id}/publish', [AgentConfController::class, 'publish'], 'admin');
+        $r->post('/agentconf/{id}/required', [AgentConfController::class, 'addRequired'], 'admin');
         $r->post('/agentconf/{id}/update-now', [AgentConfController::class, 'updateNow'], 'admin');
         $r->get('/dl/{token}', [AgentConfController::class, 'publicDownload'], 'public');
         // bmon-update.sh on the agents (signed requests, no session)

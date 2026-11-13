@@ -267,6 +267,14 @@ stops before that with "…and N more alerts" (a few hundred lines).
 The **AgentConf** menu (administrators only) prepares Monit configurations for
 the agents, to install on each node with all its checks ready.
 
+- **Required checks**: every agent must have, enabled, **Reporting to Bmon**,
+  **Bmon auto-update** and **OS information**. The first time the page of an
+  agent without checks is opened they are added automatically (Reporting to
+  Bmon keeps the httpd user, password, port and HTTPS the agent reports, or
+  generates a password); if one is deleted or disabled, the page says so, the
+  zip cannot be downloaded (also through download links) and nothing can be
+  published until *Add the required checks* puts it back (it re-enables a
+  disabled one, or creates it from the template).
 - **Agents**: the list shows all agents, offline ones included (marked
   *Offline*: their zip can still be downloaded and installed by hand; a button
   hides them), with the services they report and the checks prepared in Bmon. Search by name, address, OS or Monit version; click a
