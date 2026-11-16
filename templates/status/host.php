@@ -1,7 +1,7 @@
 <?php
 /** @var array $host @var array $services @var array $groups @var array $events @var string $sort @var string $dir
  * @var array|null $osInfo
- * @var array $inventory @var array $allItems @var bool $canEdit @var bool $canAct @var string|null $actionsNote */
+ * @var array $inventory @var bool $canEdit @var bool $canAct @var string|null $actionsNote */
 use Bmon\Web\MonitClient;
 use Bmon\Web\Monit;
 
@@ -142,40 +142,14 @@ $th = static fn (string $key, string $label, string $class = ''): string
     <?php if ($inventory): ?>
       <ul class="inv-list">
         <?php foreach ($inventory as $it): ?>
-          <li class="inv-chip" title="<?= e($it['description']) ?>">
-            <a href="<?= e(url('/inventory/' . $it['id'])) ?>"><?= e($it['name']) ?></a>
-            <?php if ($canEdit): ?>
-              <form method="post" action="<?= e(url('/status/' . $host['id'] . '/inventory/' . $it['id'] . '/delete')) ?>">
-                <?= csrf_field() ?>
-                <button type="submit" class="chip-remove" title="Remove <?= e($it['name']) ?>" aria-label="Remove <?= e($it['name']) ?> from the inventory">×</button>
-              </form>
-            <?php endif ?>
-          </li>
+          <li class="inv-chip" title="<?= e($it['description']) ?>"><a href="<?= e(url('/inventory/' . $it['id'])) ?>"><?= e($it['name']) ?></a></li>
         <?php endforeach ?>
       </ul>
     <?php else: ?>
       <p class="muted">No inventory items on this host.</p>
     <?php endif ?>
-
-    <?php if ($canEdit):
-        $assigned = array_column($inventory, 'id');
-        $available = array_filter($allItems, static fn ($it) => !in_array($it['id'], $assigned, true)); ?>
-      <?php if ($available): ?>
-        <form method="post" action="<?= e(url('/status/' . $host['id'] . '/inventory')) ?>" class="inline-form">
-          <?= csrf_field() ?>
-          <select name="item_id" aria-label="Inventory item to add" required>
-            <option value="">Add an item…</option>
-            <?php foreach ($available as $it): ?>
-              <option value="<?= e($it['id']) ?>"><?= e($it['name']) ?><?= $it['description'] !== '' ? ' — ' . e(mb_strimwidth($it['description'], 0, 60, '…')) : '' ?></option>
-            <?php endforeach ?>
-          </select>
-          <button type="submit" class="btn">Add</button>
-        </form>
-      <?php elseif (!$allItems): ?>
-        <p class="hint">The inventory is empty: <a href="<?= e(url('/inventory/new')) ?>">create an item</a>.</p>
-      <?php else: ?>
-        <p class="hint">All inventory items are already on this host. <a href="<?= e(url('/inventory/new')) ?>">New item</a></p>
-      <?php endif ?>
+    <?php if ($canEdit): ?>
+      <p class="hint">Items are added and removed in <a href="<?= e(url('/agentconf/' . $host['id'] . '#inventory')) ?>">Agent → Manage → <?= e($host['hostname']) ?></a>.</p>
     <?php endif ?>
   </section>
 

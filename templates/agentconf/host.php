@@ -4,6 +4,7 @@
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
  * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update @var array $requiredMissing
  * @var int $enabledCount @var bool $hasGroups @var array $varsMissing @var array|null $ports
+ * @var array $inventory @var array $allItems
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -49,6 +50,46 @@ use Bmon\Web\Monit;
     </form>
   </div>
 <?php endif ?>
+
+<section class="panel" id="inventory">
+  <h2>Inventory <span class="muted">(<?= count($inventory) ?>)</span></h2>
+  <div class="card">
+    <?php if ($inventory): ?>
+      <ul class="inv-list">
+        <?php foreach ($inventory as $it): ?>
+          <li class="inv-chip" title="<?= e($it['description']) ?>">
+            <a href="<?= e(url('/inventory/' . $it['id'])) ?>"><?= e($it['name']) ?></a>
+            <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/inventory/' . $it['id'] . '/delete')) ?>">
+              <?= csrf_field() ?>
+              <button type="submit" class="chip-remove" title="Remove <?= e($it['name']) ?>" aria-label="Remove <?= e($it['name']) ?> from the inventory">×</button>
+            </form>
+          </li>
+        <?php endforeach ?>
+      </ul>
+    <?php else: ?>
+      <p class="muted">No inventory items on this agent.</p>
+    <?php endif ?>
+    <?php $assigned = array_column($inventory, 'id');
+          $available = array_filter($allItems, static fn ($it) => !in_array($it['id'], $assigned, true)); ?>
+    <?php if ($available): ?>
+      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/inventory')) ?>" class="inline-form inv-add">
+        <?= csrf_field() ?>
+        <select name="item_id" aria-label="Inventory item to add" required>
+          <option value="">Add an item…</option>
+          <?php foreach ($available as $it): ?>
+            <option value="<?= e($it['id']) ?>"><?= e($it['name']) ?><?= $it['description'] !== '' ? ' — ' . e(mb_strimwidth($it['description'], 0, 60, '…')) : '' ?></option>
+          <?php endforeach ?>
+        </select>
+        <button type="submit" class="btn">Add</button>
+      </form>
+    <?php elseif (!$allItems): ?>
+      <p class="hint">The inventory is empty: <a href="<?= e(url('/inventory/new')) ?>">create an item</a>.</p>
+    <?php else: ?>
+      <p class="hint">All inventory items are already on this agent. <a href="<?= e(url('/inventory/new')) ?>">New item</a></p>
+    <?php endif ?>
+    <p class="hint">Shown, read-only, on the <a href="<?= e(url('/status/' . $host['id'])) ?>">status page</a> of the host. Items are defined in Agent → Inventory.</p>
+  </div>
+</section>
 
 <section class="panel">
   <h2>Checks prepared in Bmon <span class="muted">(<?= count($checks) ?>)</span></h2>

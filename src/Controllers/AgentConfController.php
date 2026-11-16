@@ -141,6 +141,7 @@ class AgentConfController
             'requiredMissing' => AgentRequired::missing($id),
             'varsMissing' => \Bmon\Web\AgentVars::missingForHost($host),
             'ports' => \Bmon\Web\AgentPorts::get($id),
+            'inventory' => \Bmon\Web\Inventory::forHost($id), 'allItems' => \Bmon\Web\Inventory::all(),
         ]);
     }
 

@@ -21,7 +21,7 @@ final class InventoryController
     {
         return View::render('inventory/index', [
             'title' => 'Inventory',
-            'nav' => 'inventory',
+            'nav' => 'agentconf',
             'items' => Inventory::allWithCounts(),
             'canEdit' => Auth::isAdmin(),
         ]);
@@ -30,7 +30,7 @@ final class InventoryController
     public function newItem(array $errors = [], array $form = ['name' => '', 'description' => '']): string
     {
         return View::render('inventory/form', [
-            'title' => 'New inventory item', 'nav' => 'inventory',
+            'title' => 'New inventory item', 'nav' => 'agentconf',
             'isNew' => true, 'form' => $form, 'errors' => $errors, 'hosts' => [],
         ]);
     }
@@ -52,7 +52,7 @@ final class InventoryController
     {
         $item = $this->item($id);
         return View::render('inventory/form', [
-            'title' => 'Inventory item ' . $item['name'], 'nav' => 'inventory',
+            'title' => 'Inventory item ' . $item['name'], 'nav' => 'agentconf',
             'isNew' => false, 'item' => $item, 'form' => $form ?? $item, 'errors' => $errors,
             'hosts' => Inventory::hosts($id), 'canEdit' => Auth::isAdmin(),
         ]);
@@ -89,7 +89,7 @@ final class InventoryController
         exit;
     }
 
-    // --- host assignment (POST from the host page) ---------------------------
+    // --- host assignment (POST from the agent page, Agent → Manage → host) ---------------------------
 
     public function assign(int $id): never
     {
@@ -102,7 +102,7 @@ final class InventoryController
             Audit::log('host.inventory_add', "{$host['hostname']} (id $id): {$item['name']}");
             flash('success', "“{$item['name']}” added to the inventory of {$host['hostname']}.");
         }
-        redirect('/status/' . $id);
+        redirect('/agentconf/' . $id . '#inventory');
     }
 
     public function unassign(int $id, int $itemId): never
@@ -113,7 +113,7 @@ final class InventoryController
             Audit::log('host.inventory_remove', "{$host['hostname']} (id $id): {$item['name']}");
             flash('success', "“{$item['name']}” removed from the inventory of {$host['hostname']}.");
         }
-        redirect('/status/' . $id);
+        redirect('/agentconf/' . $id . '#inventory');
     }
 
     // -------------------------------------------------------------------------

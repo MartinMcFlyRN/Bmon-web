@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.30.0 — 2026-11-16
+
+No migrations.
+
+- **Inventory** moved into the Agent menu, after *Manage* (the top-level Inventory tab is gone; the pages keep their addresses)
+- Inventory items are added to and removed from a host only in the new **Inventory** panel of its agent page (Agent → Manage → the agent); the status page of a host shows them read-only, with a link to the agent page for administrators
+
 ## 0.29.0 — 2026-11-16
 
 No migrations.

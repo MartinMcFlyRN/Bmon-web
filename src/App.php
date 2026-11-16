@@ -38,8 +38,6 @@ final class App
         $r->post('/status/{id}/notes', [StatusController::class, 'notes'], 'admin');
         $r->post('/status/{id}/monit-address', [StatusController::class, 'monitAddress'], 'admin');
         $r->post('/status/{id}/delete', [StatusController::class, 'delete'], 'admin');
-        $r->post('/status/{id}/inventory', [InventoryController::class, 'assign'], 'admin');
-        $r->post('/status/{id}/inventory/{itemId}/delete', [InventoryController::class, 'unassign'], 'admin');
 
         $r->get('/inventory', [InventoryController::class, 'index']);
         $r->get('/inventory/new', [InventoryController::class, 'newItem'], 'admin');
@@ -100,6 +98,8 @@ final class App
         $r->post('/agentconf/{id}/deploy', [AgentConfController::class, 'deploy'], 'admin');
         $r->get('/agentconf/{id}/update-status', [AgentConfController::class, 'updateStatus'], 'admin');
         $r->post('/agentconf/{id}/ports', [AgentConfController::class, 'scanPorts'], 'admin');
+        $r->post('/agentconf/{id}/inventory', [InventoryController::class, 'assign'], 'admin');
+        $r->post('/agentconf/{id}/inventory/{itemId}/delete', [InventoryController::class, 'unassign'], 'admin');
         $r->get('/agentconf/{id}/ports-status', [AgentConfController::class, 'portsStatus'], 'admin');
         $r->post('/agentconf/{id}/required', [AgentConfController::class, 'addRequired'], 'admin');
         $r->get('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroupForm'], 'admin');

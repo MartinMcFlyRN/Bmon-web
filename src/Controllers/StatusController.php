@@ -166,7 +166,6 @@ final class StatusController
             'events' => $events,
             'inventory' => Inventory::forHost($id),
             'osInfo' => OsInfo::fromServices($services),
-            'allItems' => Inventory::all(),
             'canEdit' => Auth::isAdmin(),
             'canAct' => Auth::isAdmin() && MonitClient::available($host) && $host['offline_since'] === null,
             'actionsNote' => self::actionsNote($host),
