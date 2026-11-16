@@ -222,6 +222,31 @@ document.querySelectorAll('.ports-box').forEach((box) => {
   sync();
 });
 
+// Bulk selection in a list: <form data-bulk> with a [data-bulk-submit] button and a [data-bulk-count];
+// checkboxes [data-bulk-item] (and a [data-bulk-all] that selects them all) belong to it via form="…".
+document.querySelectorAll('form[data-bulk]').forEach((form) => {
+  const items = () => Array.from(document.querySelectorAll('[data-bulk-item][form="' + form.id + '"]'));
+  const all = document.querySelector('[data-bulk-all][form="' + form.id + '"]');
+  const submit = form.querySelector('[data-bulk-submit]');
+  const count = form.querySelector('[data-bulk-count]');
+  const sync = () => {
+    const list = items();
+    const n = list.filter((c) => c.checked).length;
+    if (submit) submit.disabled = n === 0;
+    if (count) count.textContent = '(' + n + ')';
+    if (all) {
+      all.disabled = list.length === 0;
+      all.checked = list.length > 0 && n === list.length;
+      all.indeterminate = n > 0 && n < list.length;
+    }
+  };
+  document.addEventListener('change', (ev) => {
+    if (ev.target === all) items().forEach((c) => { c.checked = all.checked; });
+    if (ev.target === all || (ev.target.matches && ev.target.matches('[data-bulk-item]'))) sync();
+  });
+  sync();
+});
+
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,
 // [data-add-row] adds one, [data-remove-row] removes its row.
 document.addEventListener('click', (ev) => {

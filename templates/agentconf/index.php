@@ -26,13 +26,25 @@ $th = static fn (string $key, string $label, string $class = ''): string
 <?php if (!$agents): ?>
   <div class="card muted"><?= $q !== '' ? 'No agents match “' . e($q) . '”.' : 'No ' . ($all ? '' : 'active ') . 'agents.' ?></div>
 <?php else: ?>
+<?php $anyOffline = (bool) array_filter($agents, static fn ($a) => $a['offline_since'] !== null); ?>
+<form method="get" action="<?= e(url('/agentconf/delete')) ?>" id="bulk" class="bulk-bar" data-bulk<?= $anyOffline ? '' : ' hidden' ?>>
+  <button type="submit" class="btn btn-danger" data-bulk-submit disabled>Delete selected agents <span data-bulk-count>(0)</span></button>
+  <span class="muted small">Only offline agents can be selected: an agent still reporting would come back at its next report.</span>
+</form>
 <table class="table">
-  <thead><tr><?= $th('agent', 'Agent') . $th('address', 'Address') . $th('monit', 'Monit') . $th('services', 'Reported services', 'num')
+  <thead><tr><th class="col-check"><input type="checkbox" data-bulk-all form="bulk" aria-label="Select all offline agents in the list" title="Select all offline agents in the list"></th><?= $th('agent', 'Agent') . $th('address', 'Address') . $th('monit', 'Monit') . $th('services', 'Reported services', 'num')
     . $th('checks', 'Bmon checks', 'num') . $th('update', 'Auto-update') . $th('seen', 'Last report') ?></tr></thead>
   <tbody>
   <?php foreach ($agents as $a):
       $c = $counts[(int) $a['id']] ?? null; ?>
     <tr class="<?= $a['offline_since'] !== null ? 'row-off' : '' ?>">
+      <td class="col-check">
+        <?php if ($a['offline_since'] !== null): ?>
+          <input type="checkbox" name="ids[]" value="<?= e($a['id']) ?>" form="bulk" data-bulk-item aria-label="Select <?= e($a['hostname']) ?>">
+        <?php else: ?>
+          <input type="checkbox" disabled title="Still reporting: only offline agents can be deleted" aria-label="<?= e($a['hostname']) ?> is still reporting">
+        <?php endif ?>
+      </td>
       <td>
         <?php if ($a['offline_since'] !== null): ?><span class="dot dot-off" title="Offline"></span><?php else: ?><span class="dot dot-ok" title="Active"></span><?php endif ?>
         <a class="strong" href="<?= e(url('/agentconf/' . $a['id'])) ?>"><?= e($a['hostname']) ?></a>

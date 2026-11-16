@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.28.0 — 2026-11-16
+
+No migrations.
+
+- **Delete agents in bulk** from the Agent list: a checkbox on each offline agent (and one in the header to select all the offline agents listed, also after a search), then *Delete selected agents*. A confirmation page lists them with services, checks and since when they are offline, and asks to type how many they are; each is then deleted as with Status → host → *Delete host* (collector host with services and events, name and notes, inventory, checks, published versions, auto-update state, download links), one audit entry per agent. Agents still reporting cannot be selected; one that reports again meanwhile is left alone
+- Deleting a host also removes its listening-ports scan
+
 ## 0.27.2 — 2026-11-16
 
 No migrations.

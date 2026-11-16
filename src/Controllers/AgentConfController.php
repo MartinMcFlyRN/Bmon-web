@@ -14,6 +14,7 @@ use Bmon\Web\Audit;
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
 use Bmon\Web\DownloadLinks;
+use Bmon\Web\HostDelete;
 use Bmon\Web\HttpException;
 use Bmon\Web\Monit;
 use Bmon\Web\MonitClient;
@@ -437,6 +438,81 @@ class AgentConfController
             'update' => $this->updateInfo($host),
             'enabledCount' => count(AgentChecks::enabledSet($id)),
         ], null);
+    }
+
+    /** Selected agent ids of a bulk form (ids[]), at most 500. @return list<int> */
+    private static function selectedIds(array $src): array
+    {
+        $ids = is_array($src['ids'] ?? null) ? $src['ids'] : [];
+        $ids = array_values(array_unique(array_filter(array_map(
+            static fn ($v) => is_string($v) && ctype_digit($v) ? (int) $v : 0, $ids), static fn (int $v) => $v > 0)));
+        return array_slice($ids, 0, 500);
+    }
+
+    /** GET /agentconf/delete?ids[]=…: the agents selected in the list, to confirm their deletion. */
+    public function deleteConfirm(): string
+    {
+        $ids = self::selectedIds($_GET);
+        if (!$ids) {
+            flash('error', 'Select the agents to delete first.');
+            redirect('/agentconf');
+        }
+        $hosts = Db::all(
+            'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.os_name, h.os_release, h.last_seen, h.offline_since,
+                    (SELECT COUNT(*) FROM ' . Db::collector('services') . ' s WHERE s.host_id = h.id) AS services
+               FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin()
+            . ' WHERE h.id IN (' . implode(',', array_fill(0, count($ids), '?')) . ') ORDER BY hostname',
+            $ids
+        );
+        $counts = AgentChecks::counts();
+        return View::render('agentconf/delete', [
+            'title' => 'Delete agents', 'nav' => 'agentconf', 'hosts' => $hosts, 'counts' => $counts,
+            'allowed' => HostDelete::allowed(), 'back' => is_string($_GET['back'] ?? null) ? $_GET['back'] : '',
+        ]);
+    }
+
+    /** POST /agentconf/delete: deletes the selected offline agents (as Status → host → Delete, one by one). */
+    public function deleteMany(): never
+    {
+        $ids = self::selectedIds($_POST);
+        $offline = array_filter($ids, static fn (int $id) => (Db::host($id)['offline_since'] ?? null) !== null);
+        if (!$ids) {
+            flash('error', 'No agents selected.');
+            redirect('/agentconf');
+        }
+        if (trim((string) ($_POST['confirm_count'] ?? '')) !== (string) count($offline)) {
+            flash('error', 'Type the number of agents to delete (' . count($offline) . ') to confirm.');
+            redirect('/agentconf/delete?' . http_build_query(['ids' => $ids]));
+        }
+        $done = [];
+        $failed = [];
+        foreach ($offline as $id) {
+            $host = Db::host($id);
+            $r = HostDelete::delete($id);
+            if (!$r['ok']) {
+                $failed[] = ($host['hostname'] ?? "id $id") . ': ' . $r['error'];
+                if (str_contains($r['error'], 'GRANT')) {
+                    break;  // the same for every host
+                }
+                continue;
+            }
+            $c = $r['counts'];
+            $done[] = $host['hostname'];
+            Audit::log('host.delete', "{$host['hostname']} (id $id, Monit ID {$host['monit_id']}, {$host['remote_addr']}, bulk from Agent): "
+                . "{$c['services']} services, {$c['events']} events, {$c['agent_checks']} AgentConf checks, {$c['agent_releases']} published versions");
+        }
+        $skipped = count($ids) - count($offline);
+        if ($done) {
+            flash('success', count($done) . ' agent' . (count($done) === 1 ? '' : 's') . ' deleted with services, events, notes, inventory and checks: '
+                . implode(', ', $done) . '. If one of them reports again, it appears as a new host.');
+        }
+        if ($failed) {
+            flash('error', 'Not deleted: ' . implode(' · ', $failed));
+        }
+        if ($skipped > 0) {
+            flash('error', $skipped . ' selected agent' . ($skipped === 1 ? ' is' : 's are') . ' reporting again (or gone) and ' . ($skipped === 1 ? 'was' : 'were') . ' left alone.');
+        }
+        redirect('/agentconf');
     }
 
     /** POST /agentconf/{id}/ports: asks the agent for its listening ports (through the auto-update check). */

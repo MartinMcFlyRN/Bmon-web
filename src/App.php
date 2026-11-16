@@ -84,6 +84,8 @@ final class App
         $r->get('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'edit'], 'admin');
         $r->post('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'update'], 'admin');
         $r->post('/agentconf/groups/{id}/checks/{checkId}/delete', [GroupChecksController::class, 'delete'], 'admin');
+        $r->get('/agentconf/delete', [AgentConfController::class, 'deleteConfirm'], 'admin');
+        $r->post('/agentconf/delete', [AgentConfController::class, 'deleteMany'], 'admin');
         $r->get('/agentconf/{id}', [AgentConfController::class, 'host'], 'admin');
         $r->get('/agentconf/{id}/new', [AgentConfController::class, 'newCheck'], 'admin');
         $r->post('/agentconf/{id}/new', [AgentConfController::class, 'create'], 'admin');
