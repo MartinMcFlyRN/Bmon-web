@@ -487,7 +487,15 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 /* Listening ports */
 .ports-scan { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
 .ports-scan .hint { margin: 0; flex: 1; min-width: 260px; }
-.ports-table td { vertical-align: middle; }
+.ports-table td { vertical-align: top; }
+.ports-views { margin-bottom: 10px; }
+button.seg { border: 0; border-right: 1px solid var(--border); background: transparent; font: inherit; cursor: pointer; }
+button.seg:last-child { border-right: 0; }
+button.seg.active { background: var(--topbar); color: #fff; }
+.ports-box .ports-table { display: none; }
+.ports-box[data-ports-active="port"] .ports-table[data-ports-view="port"],
+.ports-box[data-ports-active="service"] .ports-table[data-ports-view="service"],
+.ports-box[data-ports-active="socket"] .ports-table[data-ports-view="socket"] { display: table; }
 .spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent;
   border-radius: 50%; vertical-align: -1px; animation: spin .8s linear infinite; margin-right: 4px; }
 @keyframes spin { to { transform: rotate(360deg); } }

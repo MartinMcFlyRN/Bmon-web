@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.1 — 2026-11-16
+
+No migrations.
+
+- Listening ports: the panel groups the sockets **By port** (one row per port: protocols such as TCP+UDP, usual service, processes with PID, all addresses, widest reachability) or **By service** (one row per process: PIDs, its ports such as `80/tcp, 443/tcp`, usual services, addresses, reachability), or lists **All sockets** as before. The choice survives the automatic refresh and is remembered in the browser
+
 ## 0.27.0 — 2026-11-16
 
 **Run `bin/bmon-web migrate` after upgrading** (table `agent_ports`), then **deploy each agent once** to give it the new auto-update script.

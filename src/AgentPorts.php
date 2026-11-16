@@ -112,6 +112,80 @@ final class AgentPorts
         return $rows;
     }
 
+    /**
+     * Sockets grouped by port: one entry per port with its protocols, addresses, processes and usual services.
+     *
+     * @param list<array> $rows from parse()
+     * @return list<array{port:int,protos:list<string>,addrs:list<string>,scope:string,procs:list<array{process:string,pid:string}>,services:list<string>}>
+     */
+    public static function byPort(array $rows): array
+    {
+        $groups = [];
+        foreach ($rows as $r) {
+            $g = &$groups[$r['port']];
+            $g ??= ['port' => $r['port'], 'protos' => [], 'addrs' => [], 'scope' => 'local', 'procs' => [], 'services' => []];
+            self::merge($g, $r);
+            unset($g);
+        }
+        ksort($groups);
+        return array_map([self::class, 'tidy'], array_values($groups));
+    }
+
+    /**
+     * Sockets grouped by service (process name): one entry per process with its ports.
+     *
+     * @param list<array> $rows from parse()
+     * @return list<array{process:string,pids:list<string>,ports:list<array{port:int,protos:list<string>}>,scope:string,addrs:list<string>,services:list<string>}>
+     */
+    public static function byService(array $rows): array
+    {
+        $groups = [];
+        foreach ($rows as $r) {
+            $g = &$groups[$r['process']];
+            $g ??= ['process' => $r['process'], 'pids' => [], 'ports' => [], 'addrs' => [], 'scope' => 'local', 'procs' => [], 'services' => []];
+            self::merge($g, $r);
+            if ($r['pid'] !== '' && !in_array($r['pid'], $g['pids'], true)) {
+                $g['pids'][] = $r['pid'];
+            }
+            $g['ports'][$r['port']]['port'] = $r['port'];
+            $g['ports'][$r['port']]['protos'][] = $r['proto'];
+            unset($g);
+        }
+        foreach ($groups as &$g) {
+            ksort($g['ports']);
+            $g['ports'] = array_map(static fn ($p) => ['port' => $p['port'], 'protos' => array_values(array_unique($p['protos']))], array_values($g['ports']));
+            sort($g['pids'], SORT_NUMERIC);
+            $g = self::tidy($g);
+        }
+        unset($g);
+        // Named processes first (alphabetically), sockets without a process last.
+        uksort($groups, static fn ($a, $b) => [(string) $a === '', strtolower((string) $a)] <=> [(string) $b === '', strtolower((string) $b)]);
+        return array_values($groups);
+    }
+
+    private static function merge(array &$g, array $r): void
+    {
+        $g['protos'][] = $r['proto'];
+        $g['addrs'][] = $r['addr'];
+        $g['procs'][$r['process'] . '|' . $r['pid']] = ['process' => $r['process'], 'pid' => $r['pid']];
+        if ($r['service'] !== '') {
+            $g['services'][] = $r['service'];
+        }
+        $rank = ['local' => 0, 'one' => 1, 'all' => 2];
+        if ($rank[$r['scope']] > $rank[$g['scope']]) {
+            $g['scope'] = $r['scope'];
+        }
+    }
+
+    private static function tidy(array $g): array
+    {
+        foreach (['protos', 'addrs', 'services'] as $k) {
+            $g[$k] = array_values(array_unique($g[$k] ?? []));
+        }
+        $g['procs'] = array_values($g['procs']);
+        return $g;
+    }
+
     /** all (every interface) | local (loopback only) | one (a specific address). */
     private static function scope(string $addr): string
     {

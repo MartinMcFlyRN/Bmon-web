@@ -189,6 +189,28 @@ document.querySelectorAll('[data-update-status]').forEach((box) => {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 });
 
+// Listening ports: By port / By service / All sockets. The choice is an attribute of the box, so it
+// survives the 5 s refresh of its content; it is remembered in this browser when storage works.
+document.querySelectorAll('.ports-views').forEach((nav) => {
+  const box = nav.parentElement.querySelector('.ports-box');
+  if (!box) return;
+  const show = (view) => {
+    box.dataset.portsActive = view;
+    nav.querySelectorAll('[data-ports-show]').forEach((b) => {
+      const on = b.dataset.portsShow === view;
+      b.classList.toggle('active', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  };
+  try { const saved = localStorage.getItem('bmon.portsView'); if (['port', 'service', 'socket'].includes(saved)) show(saved); } catch (e) { /* no storage */ }
+  nav.addEventListener('click', (ev) => {
+    const b = ev.target.closest('[data-ports-show]');
+    if (!b) return;
+    show(b.dataset.portsShow);
+    try { localStorage.setItem('bmon.portsView', b.dataset.portsShow); } catch (e) { /* no storage */ }
+  });
+});
+
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,
 // [data-add-row] adds one, [data-remove-row] removes its row.
 document.addEventListener('click', (ev) => {
