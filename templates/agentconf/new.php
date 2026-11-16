@@ -95,6 +95,7 @@ $base = $scope['base'];
       <p class="hint"><span class="mono">{{field}}</span> is replaced by the value of the field; lines starting with
         <span class="mono">?field</span> are kept only when that optional field is filled.
         After adding the check you can edit the resulting configuration.</p>
+      <?php $varsHost = $scope['host'] ?? null; require __DIR__ . '/_vars.php' ?>
       <?php if ($existing): ?>
         <p class="hint">Checks already prepared for <?= e($scope['what']) ?>: <?= e(implode(', ', $existing)) ?></p>
       <?php endif ?>

@@ -169,6 +169,8 @@ final class CustomTemplates
             $e['body'] = 'Too long (max 20000 characters).';
         } elseif (preg_match('/^\s*include\s/mi', $t['body'])) {
             $e['body'] = '"include" is not allowed.';
+        } elseif ($bad = AgentVars::unknown($t['body'])) {
+            $e['body'] = 'Unknown variable' . (count($bad) > 1 ? 's' : '') . ': ' . implode(', ', array_map(static fn ($n) => '{{' . $n . '}}', $bad)) . '.';
         } else {
             preg_match_all('/\{\{([a-z_][a-z0-9_]*)\}\}|^\s*\?([a-z_][a-z0-9_]*)\s/m', $t['body'], $m);
             $unknown = array_diff(array_unique(array_filter(array_merge($m[1], $m[2]))), array_keys($seen));
@@ -207,7 +209,9 @@ final class CustomTemplates
             $values[$f['key']] = (string) $f['default'];
         }
         $config = AgentTemplates::render($tpl, $values);
-        return ['config' => $config, 'syntax' => AgentChecks::syntaxCheck([($values['name'] ?: 'preview') => $config])];
+        // {{agent.*}} with example values, as on an agent
+        $check = AgentVars::expand($config, AgentVars::sample())[0];
+        return ['config' => $config, 'syntax' => AgentChecks::syntaxCheck([($values['name'] ?: 'preview') => $check])];
     }
 
     public static function save(array $t, ?int $id, string $by): int

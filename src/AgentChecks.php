@@ -229,6 +229,9 @@ final class AgentChecks
             $errors['config'] = 'The configuration is too long (max ' . self::MAX_CONFIG . ' characters).';
         } elseif (preg_match('/^\s*include\s/mi', $config)) {
             $errors['config'] = '"include" is not allowed: every file of the zip must be self-contained.';
+        } elseif ($bad = AgentVars::unknown($config)) {
+            $errors['config'] = 'Unknown variable' . (count($bad) > 1 ? 's' : '') . ': ' . implode(', ', array_map(static fn ($n) => '{{' . $n . '}}', $bad))
+                . '. See the list of the variables below the configuration.';
         }
         return $errors;
     }
@@ -394,7 +397,7 @@ final class AgentChecks
     public static function checkWith(int $hostId, ?int $id, string $name, string $config, bool $enabled, array $groupNames = []): array
     {
         $set = $enabled ? self::enabledSet($hostId, $id) : [];
-        $set[$name] = ServiceGroups::apply(self::normalize($config), $groupNames);
+        $set[$name] = ServiceGroups::apply(AgentVars::expand(self::normalize($config), self::varsFor($hostId))[0], $groupNames);
         return self::syntaxCheck($set);
     }
 
@@ -405,13 +408,25 @@ final class AgentChecks
     public static function enabledSet(int $hostId, ?int $exceptId = null): array
     {
         $groups = ServiceGroups::namesByCheck($hostId);
+        $vars = self::varsFor($hostId);
         $set = [];
         foreach (self::forHost($hostId) as $c) {
             if ((int) $c['enabled'] && (int) $c['id'] !== $exceptId) {
-                $set[$c['name']] = ServiceGroups::apply($c['config'], $groups[(int) $c['id']] ?? []);
+                $set[$c['name']] = ServiceGroups::apply(AgentVars::expand($c['config'], $vars)[0], $groups[(int) $c['id']] ?? []);
             }
         }
         return $set;
+    }
+
+    /** Values of {{agent.*}} / {{bmon.*}} for an agent, or example values for a group (negative id). */
+    public static function varsFor(int $hostId): array
+    {
+        static $cache = [];
+        if (!isset($cache[$hostId])) {
+            $host = $hostId > 0 ? Db::host($hostId) : null;
+            $cache[$hostId] = $host !== null ? AgentVars::forHost($host) : AgentVars::sample();
+        }
+        return $cache[$hostId];
     }
 
     // --- zip --------------------------------------------------------------------
@@ -459,7 +474,8 @@ final class AgentChecks
                 . ($c['script_name'] !== '' ? '# Script: ' . self::scriptPath($c['script_name']) . "\n" : '')
                 . (!empty($groups[(int) $c['id']]) ? '# Service groups: ' . implode(', ', $groups[(int) $c['id']]) . "\n" : '')
                 . "\n";
-            $out[] = [self::fileName($c['name']), $header . ServiceGroups::apply($c['config'], $groups[(int) $c['id']] ?? []), $time, 0644];
+            $config = AgentVars::expand($c['config'], self::varsFor((int) $host['id']))[0];
+            $out[] = [self::fileName($c['name']), $header . ServiceGroups::apply($config, $groups[(int) $c['id']] ?? []), $time, 0644];
             if ($c['script_name'] !== '' && $c['script'] !== null) {
                 $out[] = [self::SCRIPTS_SUBDIR . '/' . $c['script_name'], $c['script'], $time, 0755];
                 $scripts[] = $c['script_name'];

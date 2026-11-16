@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.24.0 — 2026-11-16
+
+No migrations.
+
+- **Variables** in checks, Group Checks and Custom Templates, filled in by Bmon-web for each agent when its zip is built (download, deploy) and when it is checked with `monit -t`: `{{agent.name}}` (Monit host name), `{{agent.display_name}}`, `{{agent.id}}`, `{{agent.monit_id}}`, `{{agent.report_ip}}`, `{{agent.ip1}}`… (public IPv4), `{{agent.ipv6_1}}`…, `{{agent.private_ip1}}`…, `{{agent.monit_address}}`, `{{agent.os_id}}`, `{{agent.os_version}}`, `{{agent.arch}}`, `{{bmon.url}}`, `{{bmon.web_address}}`. Unknown names are refused when saving; a variable without a value blocks download and deploy of that agent, with a notice. The check editor and the custom template form list the variables (with the agent's values)
+- The **OS information** script also reports the global IP addresses of the interfaces (`ips="…"`). Existing OS information checks are copies with the old script: delete the check and use *Add the required checks* (or paste the new script) to get the addresses; packages of the Installer have the new script already
+
 ## 0.23.3 — 2026-11-14
 
 - Agent → Custom Templates: an actions column with three icons — edit, clone (a copy named “… (copy)”, opened for editing) and delete (asks for confirmation)

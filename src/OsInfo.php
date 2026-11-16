@@ -9,23 +9,23 @@ namespace Bmon\Web;
  * (resources/agentconf/bmon-osinfo.sh): the output of a Monit "check program"
  * that starts with "BMON_OS", e.g.
  *
- *   BMON_OS pretty="Debian GNU/Linux 12 (bookworm)" id="debian" version="12" codename="bookworm" kernel="…" arch="x86_64"
+ *   BMON_OS pretty="Debian GNU/Linux 12 (bookworm)" id="debian" version="12" codename="bookworm" kernel="…" arch="x86_64" ips="203.0.113.5,10.0.0.5"
  */
 final class OsInfo
 {
     public const MARKER = 'BMON_OS ';
 
-    /** @return array{pretty:string,id:string,version:string,codename:string,kernel:string,arch:string}|null */
+    /** @return array{pretty:string,id:string,version:string,codename:string,kernel:string,arch:string,ips:string}|null */
     public static function parse(?string $output): ?array
     {
         $output = trim((string) $output);
         if (!str_starts_with($output, self::MARKER)) {
             return null;
         }
-        $out = ['pretty' => '', 'id' => '', 'version' => '', 'codename' => '', 'kernel' => '', 'arch' => ''];
-        preg_match_all('/\b(pretty|id|version|codename|kernel|arch)="([^"]*)"/', $output, $m, PREG_SET_ORDER);
+        $out = ['pretty' => '', 'id' => '', 'version' => '', 'codename' => '', 'kernel' => '', 'arch' => '', 'ips' => ''];
+        preg_match_all('/\b(pretty|id|version|codename|kernel|arch|ips)="([^"]*)"/', $output, $m, PREG_SET_ORDER);
         foreach ($m as [, $k, $v]) {
-            $out[$k] = mb_substr($v, 0, 120);
+            $out[$k] = $k === 'ips' ? preg_replace('/[^0-9A-Fa-f.:,]/', '', mb_substr($v, 0, 400)) : mb_substr($v, 0, 120);
         }
         return $out['pretty'] !== '' || $out['id'] !== '' ? $out : null;
     }

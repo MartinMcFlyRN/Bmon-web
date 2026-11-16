@@ -464,3 +464,9 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .icon-btn.icon-danger:hover, .icon-btn.icon-danger:focus-visible { color: var(--fail); }
 .icon { display: block; }
 .visually-hidden { position: absolute !important; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* {{agent.*}} variables help */
+.vars-help { margin: 12px 0; }
+.vars-help summary { cursor: pointer; font-weight: 600; }
+.vars-table { margin-top: 8px; }
+.vars-table td:first-child { width: 1%; }

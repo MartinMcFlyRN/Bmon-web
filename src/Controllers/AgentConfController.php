@@ -115,7 +115,7 @@ class AgentConfController
         }
         $managed = [];
         foreach ($checks as &$c) {
-            $c['services'] = AgentChecks::definedServices($c['config'], $host['monit_hostname']);
+            $c['services'] = AgentChecks::definedServices(\Bmon\Web\AgentVars::expand($c['config'], AgentChecks::varsFor($id))[0], $host['monit_hostname']);
             $c['url'] = "/agentconf/$id/checks/{$c['id']}";
             foreach ($c['services'] as $svc) {
                 $managed[$svc] = $c;
@@ -138,6 +138,7 @@ class AgentConfController
             'monitAvailable' => AgentChecks::monitBinary() !== null,
             'update' => $this->updateInfo($host),
             'requiredMissing' => AgentRequired::missing($id),
+            'varsMissing' => \Bmon\Web\AgentVars::missingForHost($host),
         ]);
     }
 

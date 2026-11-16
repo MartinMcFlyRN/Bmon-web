@@ -69,6 +69,7 @@ $blank = ['key' => '', 'label' => '', 'type' => 'text', 'default' => '', 'requir
   <?php $field = 'body'; require __DIR__ . '/../../partials/field_error.php' ?>
   <p class="hint">E.g. <span class="mono">check process {{name}} with pidfile {{pidfile}}</span> · <span class="mono">?timeout     with timeout {{timeout}} seconds</span>.
     <span class="mono">$HOST</span> is the host name, as in Monit. Syntax: <a href="https://mmonit.com/monit/documentation/monit.html" target="_blank" rel="noopener noreferrer">Monit manual</a>.</p>
+  <?php $varsHost = null; require __DIR__ . '/../_vars.php' ?>
 
   <fieldset class="script-box">
     <legend>Attached script <span class="muted small">(optional)</span></legend>

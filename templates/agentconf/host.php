@@ -3,7 +3,7 @@
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
  * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update @var array $requiredMissing
- * @var int $enabledCount @var bool $hasGroups
+ * @var int $enabledCount @var bool $hasGroups @var array $varsMissing
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -25,7 +25,7 @@ use Bmon\Web\Monit;
   <div class="head-actions">
     <a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/new')) ?>">Add check</a>
     <a class="btn" href="<?= e(url('/agentconf/' . $host['id'] . '/add-group')) ?>"<?= $hasGroups ? '' : ' title="No Group Checks defined yet"' ?>>Add group checks</a>
-    <?php if ($enabledCount && !$requiredMissing): ?>
+    <?php if ($enabledCount && !$requiredMissing && !$varsMissing): ?>
       <a class="btn btn-primary" href="#download-dialog" data-open-dialog="download-dialog">Download zip (<?= $enabledCount ?>)</a>
     <?php else: ?>
       <span class="btn btn-primary btn-disabled" title="<?= e($requiredMissing ? 'Required checks missing' : 'No enabled checks') ?>">Download zip</span>
@@ -33,6 +33,12 @@ use Bmon\Web\Monit;
   </div>
 </div>
 
+<?php if ($varsMissing && !$requiredMissing): ?>
+  <div class="alert alert-error">Some variables have no value for this agent, so the zip cannot be downloaded or deployed:
+    <?php foreach ($varsMissing as $cn => $vs): ?><br>· <span class="mono"><?= e(AgentChecks::fileName($cn)) ?></span> uses
+      <span class="mono"><?= e(implode(', ', array_map(static fn ($n) => '{{' . $n . '}}', $vs))) ?></span><?php endforeach ?>
+    <br>Change those checks, or (for the IP addresses) make sure the OS information check reports them.</div>
+<?php endif ?>
 <?php if ($requiredMissing): ?>
   <div class="alert alert-error required-bar">
     <span>Required checks missing or disabled: <?= e(\Bmon\Web\AgentRequired::labels($requiredMissing)) ?>.
@@ -98,12 +104,12 @@ use Bmon\Web\Monit;
     </div>
     <?php foreach ($update['warnings'] as $w): ?><p class="hint text-warn"><?= e($w) ?></p><?php endforeach ?>
     <?php $installed = (string) ($update['state']['installed_version'] ?? '');
-          $canDeploy = !$requiredMissing && $enabledCount && ($update['changed'] || ($rel !== null && $installed !== $rel['version'])); ?>
+          $canDeploy = !$requiredMissing && !$varsMissing && $enabledCount && ($update['changed'] || ($rel !== null && $installed !== $rel['version'])); ?>
     <div class="dialog-actions">
       <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/deploy')) ?>"
             data-confirm="Deploy the enabled checks to <?= e($host['hostname']) ?>? The agent replaces its whole Bmon configuration with them.">
         <?= csrf_field() ?>
-        <button type="submit" class="btn btn-primary"<?= $canDeploy ? '' : ' disabled title="' . e($requiredMissing ? 'Required checks missing' : 'The agent already runs the current configuration') . '"' ?>>Deploy configuration to host</button>
+        <button type="submit" class="btn btn-primary"<?= $canDeploy ? '' : ' disabled title="' . e($requiredMissing ? 'Required checks missing' : ($varsMissing ? 'Some variables have no value for this agent' : 'The agent already runs the current configuration')) . '"' ?>>Deploy configuration to host</button>
       </form>
     </div>
     <p class="hint"><strong>Deploy configuration to host</strong> publishes the enabled checks and asks the agent to install them now

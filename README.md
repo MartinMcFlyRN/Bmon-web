@@ -323,6 +323,30 @@ the agents, to install on each node with all its checks ready.
   be added again any time, e.g. after deleting its checks from the agent. The
   copies are independent — changing or deleting the group later does not change
   the agents.
+- **Variables**: checks, Group Checks and Custom Templates can use values that
+  Bmon-web fills in for each agent when it builds its zip (download, deploy) and
+  when it validates it with `monit -t`:
+
+  | Variable | Value |
+  |---|---|
+  | `{{agent.name}}` | host name reported by Monit (like `$HOST`) |
+  | `{{agent.display_name}}` | name in Bmon (custom name; may contain spaces) |
+  | `{{agent.id}}`, `{{agent.monit_id}}` | id in Bmon, Monit ID |
+  | `{{agent.report_ip}}` | address the reports come from |
+  | `{{agent.ip1}}`, `{{agent.ip2}}`, … | public IPv4 addresses, in interface order |
+  | `{{agent.ipv6_1}}`, … | public IPv6 addresses |
+  | `{{agent.private_ip1}}`, … | private IPv4 addresses (10/8, 172.16/12, 192.168/16, 100.64/10) |
+  | `{{agent.monit_address}}` | address Bmon-web uses for the Monit httpd |
+  | `{{agent.os_id}}`, `{{agent.os_version}}`, `{{agent.arch}}` | from the OS information check |
+  | `{{bmon.url}}`, `{{bmon.web_address}}` | Bmon-web URL and address (Configuration) |
+
+  The IP addresses come from the **OS information** check (its script reports
+  the global addresses of the interfaces, `ips="…"`); without them,
+  `{{agent.ip1}}` is the report address when that is public. A variable name
+  Bmon-web does not know is refused when the check is saved; a variable without
+  a value for the agent (e.g. `{{agent.ip2}}` on a host with one public IP)
+  blocks its download and deploy, with a notice on the agent page. The check
+  editor lists the variables with the values of the agent.
 - **Required checks**: every agent must have, enabled, **Reporting to Bmon**,
   **Bmon auto-update** and **OS information**. The first time the page of an
   agent without checks is opened they are added automatically (Reporting to

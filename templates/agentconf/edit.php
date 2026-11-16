@@ -50,6 +50,7 @@ $base = $scope['base'];
     · <?= $monitAvailable ? 'checked with monit -t when saved' : 'not checked: monit is not installed on this server' ?>.
     Syntax reference: <a href="https://mmonit.com/monit/documentation/monit.html" target="_blank" rel="noopener noreferrer">Monit manual</a>.
   </p>
+  <?php $varsHost = $scope['host'] ?? null; require __DIR__ . '/_vars.php' ?>
   <?php if ($services) require __DIR__ . '/_groups.php'; ?>
 
   <fieldset class="script-box">

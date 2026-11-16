@@ -39,8 +39,15 @@ final class AgentRequired
     public static function refusal(int $hostId): ?string
     {
         $missing = self::missing($hostId);
-        return $missing ? 'These checks are required and missing or disabled: ' . self::labels($missing)
-            . '. Add them back (Agent → Add the required checks) before downloading or deploying.' : null;
+        if ($missing) {
+            return 'These checks are required and missing or disabled: ' . self::labels($missing)
+                . '. Add them back (Agent → Add the required checks) before downloading or deploying.';
+        }
+        $host = Db::host($hostId);
+        $vars = $host !== null ? AgentVars::missingForHost($host) : [];
+        return $vars ? 'Some variables have no value for this agent: '
+            . implode('; ', array_map(static fn ($c, $v) => "$c uses " . implode(', ', array_map(static fn ($n) => '{{' . $n . '}}', $v)), array_keys($vars), $vars))
+            . '. Change the check, or (for the IP addresses) make sure the OS information check reports them.' : null;
     }
 
     /**
