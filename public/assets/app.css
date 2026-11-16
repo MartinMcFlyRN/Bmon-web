@@ -514,5 +514,14 @@ button.seg:last-child { border-right: 0; }
 .bulk-confirm { margin-top: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .form-actions { display: flex; gap: 8px; margin-top: 4px; }
 .bulk-confirm input[name="confirm_count"] { width: 8em; }
-.inv-add { flex-wrap: wrap; }
-.inv-add .inv-search { width: 200px; }
+/* Search-and-add field (agent page → Inventory) */
+.combo { position: relative; max-width: 460px; margin: 0; }
+.combo-input { width: 100%; }
+.combo-list { display: none; position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 2px); margin: 0; padding: 4px 0;
+  list-style: none; max-height: 260px; overflow-y: auto; background: var(--surface); border: 1px solid var(--border);
+  border-radius: 4px; box-shadow: 0 6px 18px rgba(0,0,0,.12); }
+.combo.open .combo-list { display: block; }
+.combo-opt { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; color: var(--text);
+  padding: 6px 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.combo-opt.active { background: #eef7f1; box-shadow: inset 3px 0 0 var(--accent); }
+.combo-empty { padding: 6px 12px; }

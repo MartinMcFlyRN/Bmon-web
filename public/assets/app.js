@@ -249,31 +249,53 @@ document.querySelectorAll('form[data-bulk]').forEach((form) => {
   sync();
 });
 
-// Searchable select: <input data-filter-select="select-id"> keeps in the select only the options whose
-// text contains what is typed (the first, empty option stays) and selects the first match;
-// [data-filter-count] in the same form says how many match. Enter adds the selected item.
-document.querySelectorAll('input[data-filter-select]').forEach((input) => {
-  const select = document.getElementById(input.dataset.filterSelect);
-  if (!select) return;
-  const placeholder = select.options[0] && select.options[0].value === '' ? select.options[0] : null;
-  const all = Array.from(select.options).filter((o) => o !== placeholder);
-  const count = input.form ? input.form.querySelector('[data-filter-count]') : null;
-  const apply = () => {
-    const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
-    const hits = all.filter((o) => words.every((w) => o.textContent.toLowerCase().includes(w)));
-    select.replaceChildren(...(placeholder ? [placeholder] : []), ...hits);
-    if (placeholder) placeholder.textContent = words.length && !hits.length ? 'No items match' : 'Add an item…';
-    select.value = words.length && hits.length ? hits[0].value : '';
-    if (count) {
-      count.hidden = !words.length;
-      count.textContent = hits.length + ' of ' + all.length;
+// Search-and-add field: <form data-combo> with an input and a list of submit buttons (one per item,
+// name="item_id"). Typing filters the list (every word must appear in data-text); arrows move the
+// highlight, Enter or a click adds the highlighted item, Esc closes the list.
+document.querySelectorAll('form[data-combo]').forEach((form) => {
+  const input = form.querySelector('.combo-input');
+  const list = form.querySelector('.combo-list');
+  const opts = Array.from(form.querySelectorAll('.combo-opt'));
+  const empty = form.querySelector('.combo-empty');
+  let active = -1;
+  const visible = () => opts.filter((o) => !o.parentElement.hidden);
+  const highlight = (i) => {
+    const vis = visible();
+    opts.forEach((o) => o.classList.remove('active'));
+    active = vis.length ? Math.max(0, Math.min(i, vis.length - 1)) : -1;
+    if (active >= 0) {
+      vis[active].classList.add('active');
+      vis[active].scrollIntoView({ block: 'nearest' });
+      input.setAttribute('aria-activedescendant', vis[active].id || '');
     }
   };
-  input.addEventListener('input', apply);
+  const open = (yes) => { form.classList.toggle('open', yes); input.setAttribute('aria-expanded', yes ? 'true' : 'false'); };
+  opts.forEach((o, i) => { o.id = o.id || 'combo-opt-' + i; });
+  const filter = () => {
+    const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    opts.forEach((o) => { o.parentElement.hidden = !words.every((w) => o.dataset.text.includes(w)); });
+    if (empty) empty.hidden = visible().length > 0;
+    open(true);
+    highlight(0);
+  };
+  input.addEventListener('input', filter);
+  input.addEventListener('focus', filter);
   input.addEventListener('keydown', (ev) => {
-    if (ev.key === 'Escape') { input.value = ''; apply(); }
-    if (ev.key === 'Enter' && !select.value) ev.preventDefault();
+    if (ev.key === 'ArrowDown') { ev.preventDefault(); open(true); highlight(active + 1); }
+    else if (ev.key === 'ArrowUp') { ev.preventDefault(); highlight(active - 1); }
+    else if (ev.key === 'Escape') { if (input.value) { input.value = ''; filter(); } else open(false); }
+    else if (ev.key === 'Enter') {
+      ev.preventDefault();
+      const o = visible()[active];
+      if (o && form.classList.contains('open')) o.click();
+    }
   });
+  list.addEventListener('mousemove', (ev) => {
+    const o = ev.target.closest('.combo-opt');
+    if (o) highlight(visible().indexOf(o));
+  });
+  list.addEventListener('mousedown', (ev) => ev.preventDefault());   // keep the focus in the input
+  document.addEventListener('click', (ev) => { if (!form.contains(ev.target)) open(false); });
 });
 
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,

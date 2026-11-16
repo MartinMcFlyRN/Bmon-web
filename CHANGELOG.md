@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.31.1 — 2026-11-16
+
+No migrations.
+
+- Agent page → Inventory: one **search-and-add** field instead of search box, list and *Add*: typing shows the matching items under the field; arrows choose, Enter or a click adds, Esc clears or closes
+
 ## 0.31.0 — 2026-11-16
 
 No migrations.

@@ -72,17 +72,19 @@ use Bmon\Web\Monit;
     <?php $assigned = array_column($inventory, 'id');
           $available = array_filter($allItems, static fn ($it) => !in_array($it['id'], $assigned, true)); ?>
     <?php if ($available): ?>
-      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/inventory')) ?>" class="inline-form inv-add">
+      <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/inventory')) ?>" class="combo" data-combo>
         <?= csrf_field() ?>
-        <input type="search" class="inv-search" data-filter-select="inv-select" placeholder="Search items…" aria-label="Search inventory items to add" autocomplete="off">
-        <select name="item_id" id="inv-select" aria-label="Inventory item to add" required>
-          <option value="">Add an item…</option>
+        <input type="search" class="combo-input" placeholder="Search and add an item…" autocomplete="off"
+               role="combobox" aria-expanded="false" aria-controls="inv-options" aria-autocomplete="list" aria-label="Search an inventory item to add">
+        <ul class="combo-list" id="inv-options" role="listbox" aria-label="Inventory items to add">
           <?php foreach ($available as $it): ?>
-            <option value="<?= e($it['id']) ?>"><?= e($it['name']) ?><?= $it['description'] !== '' ? ' — ' . e(mb_strimwidth($it['description'], 0, 60, '…')) : '' ?></option>
+            <li role="presentation"><button type="submit" name="item_id" value="<?= e($it['id']) ?>" class="combo-opt" role="option" tabindex="-1"
+                data-text="<?= e(mb_strtolower($it['name'] . ' ' . $it['description'])) ?>">
+              <span class="strong"><?= e($it['name']) ?></span><?php if ($it['description'] !== ''): ?> <span class="muted small"><?= e(mb_strimwidth(str_replace("\n", ' ', $it['description']), 0, 70, '…')) ?></span><?php endif ?>
+            </button></li>
           <?php endforeach ?>
-        </select>
-        <button type="submit" class="btn">Add</button>
-        <span class="muted small" data-filter-count hidden></span>
+          <li class="combo-empty muted small" hidden>No items match.</li>
+        </ul>
       </form>
     <?php elseif (!$allItems): ?>
       <p class="hint">The inventory is empty: <a href="<?= e(url('/inventory/new')) ?>">create an item</a>.</p>
