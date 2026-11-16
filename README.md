@@ -536,7 +536,7 @@ address), process name and PID, and the usual service of the port
 a scan as requested and sends "start" to the auto-update check; at its next
 request Bmon-web answers with `X-Bmon-Tasks: ports`, the script runs
 `ss -tulpn` (or `netstat -tulpn`) and posts the output to `/agent/v1/ports`,
-signed like the other requests. The list appears a few seconds later, grouped **By port** (protocols, processes and addresses of each port) or **By service** (the ports of each process), or as **All sockets**; if the
+signed like the other requests. The list opens a few seconds later (otherwise it stays closed: **Show results** opens the last scan), grouped **By port** (protocols, processes and addresses of each port) or **By service** (the ports of each process), or as **All sockets**; if the
 agent cannot be reached the scan is done at its next periodic run. The last
 scan is kept with its time; the button needs the auto-update check and a
 deploy with Bmon-web 0.27.0 or later. Monit runs the script as root, so the

@@ -129,12 +129,7 @@ use Bmon\Web\Monit;
       <span class="hint">TCP and UDP sockets with something listening, and the process behind them. Only when you ask: the auto-update
         check of the agent runs <span class="mono">ss -tulpn</span> (or netstat) and sends the list.</span>
     </form>
-    <nav class="segmented ports-views" aria-label="Group the listening ports">
-      <button type="button" class="seg active" data-ports-show="port" aria-pressed="true">By port</button>
-      <button type="button" class="seg" data-ports-show="service" aria-pressed="false">By service</button>
-      <button type="button" class="seg" data-ports-show="socket" aria-pressed="false">All sockets</button>
-    </nav>
-    <div class="ports-box" data-ports-active="port" data-update-status="<?= e(url('/agentconf/' . $host['id'] . '/ports-status')) ?>">
+    <div class="ports-box" data-ports-active="port" data-ports-open="0" data-update-status="<?= e(url('/agentconf/' . $host['id'] . '/ports-status')) ?>">
       <?= \Bmon\Web\View::render('agentconf/_ports', ['ports' => $ports], null) ?>
     </div>
   </div>

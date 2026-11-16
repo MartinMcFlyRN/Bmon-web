@@ -177,6 +177,7 @@ document.querySelectorAll('[data-update-status]').forEach((box) => {
           const pre = box.querySelector('pre');
           const scroll = pre ? pre.scrollTop : 0;
           box.innerHTML = html;
+          box.dispatchEvent(new Event('bmon:refreshed'));
           const pre2 = box.querySelector('pre');
           if (pre2) pre2.scrollTop = scroll;
         }
@@ -189,26 +190,36 @@ document.querySelectorAll('[data-update-status]').forEach((box) => {
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
 });
 
-// Listening ports: By port / By service / All sockets. The choice is an attribute of the box, so it
-// survives the 5 s refresh of its content; it is remembered in this browser when storage works.
-document.querySelectorAll('.ports-views').forEach((nav) => {
-  const box = nav.parentElement.querySelector('.ports-box');
-  if (!box) return;
-  const show = (view) => {
-    box.dataset.portsActive = view;
-    nav.querySelectorAll('[data-ports-show]').forEach((b) => {
-      const on = b.dataset.portsShow === view;
-      b.classList.toggle('active', on);
-      b.setAttribute('aria-pressed', on ? 'true' : 'false');
-    });
+// Listening ports: the result is shown only on request (Show results / Hide results), grouped By port,
+// By service or as All sockets. The state is an attribute of the box, so it survives the 5 s refresh
+// of its content; the grouping is remembered in this browser when storage works. After "Scan
+// listening ports" the page comes back with #ports-open and the result opens by itself.
+document.querySelectorAll('.ports-box').forEach((box) => {
+  const sync = () => {
+    const t = box.querySelector('[data-ports-toggle]');
+    if (t) t.setAttribute('aria-expanded', box.dataset.portsOpen === '1' ? 'true' : 'false');
+    box.querySelectorAll('[data-ports-show]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.portsShow === box.dataset.portsActive ? 'true' : 'false'));
   };
-  try { const saved = localStorage.getItem('bmon.portsView'); if (['port', 'service', 'socket'].includes(saved)) show(saved); } catch (e) { /* no storage */ }
-  nav.addEventListener('click', (ev) => {
-    const b = ev.target.closest('[data-ports-show]');
-    if (!b) return;
-    show(b.dataset.portsShow);
-    try { localStorage.setItem('bmon.portsView', b.dataset.portsShow); } catch (e) { /* no storage */ }
+  try { const saved = localStorage.getItem('bmon.portsView'); if (['port', 'service', 'socket'].includes(saved)) box.dataset.portsActive = saved; } catch (e) { /* no storage */ }
+  if (location.hash === '#ports-open') {
+    box.dataset.portsOpen = '1';
+    history.replaceState(null, '', location.pathname + location.search + '#ports');
+    const panel = box.closest('.panel');
+    if (panel) panel.scrollIntoView();
+  }
+  box.addEventListener('click', (ev) => {
+    if (ev.target.closest('[data-ports-toggle]')) {
+      box.dataset.portsOpen = box.dataset.portsOpen === '1' ? '0' : '1';
+    } else {
+      const b = ev.target.closest('[data-ports-show]');
+      if (!b) return;
+      box.dataset.portsActive = b.dataset.portsShow;
+      try { localStorage.setItem('bmon.portsView', b.dataset.portsShow); } catch (e) { /* no storage */ }
+    }
+    sync();
   });
+  box.addEventListener('bmon:refreshed', sync);
+  sync();
 });
 
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.27.2 — 2026-11-16
+
+No migrations.
+
+- Listening ports: the result of the last scan stays closed on the agent page and opens with **Show results** (and closes with *Hide results*); the line with time and counts stays visible. After *Scan listening ports* the result opens by itself when it arrives
+
 ## 0.27.1 — 2026-11-16
 
 No migrations.

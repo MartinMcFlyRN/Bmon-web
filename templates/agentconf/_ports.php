@@ -29,6 +29,15 @@ $scope = ['all' => ['All interfaces', 'badge-warn'], 'local' => ['This host only
       };
       $protos = static fn (array $p): string => e(strtoupper(implode('+', $p)));
   ?>
+  <button type="button" class="btn ports-toggle" data-ports-toggle aria-expanded="false">
+    <span class="when-closed">Show results</span><span class="when-open">Hide results</span>
+  </button>
+  <div class="ports-results">
+  <nav class="segmented ports-views" aria-label="Group the listening ports">
+    <button type="button" class="seg" data-ports-show="port">By port</button>
+    <button type="button" class="seg" data-ports-show="service">By service</button>
+    <button type="button" class="seg" data-ports-show="socket">All sockets</button>
+  </nav>
   <table class="table table-compact ports-table" data-ports-view="port">
     <thead><tr><th class="num">Port</th><th>Proto</th><th>Usual service</th><th>Process <span class="muted">PID</span></th><th>Addresses</th><th>Reachable from</th></tr></thead>
     <tbody>
@@ -75,5 +84,6 @@ $scope = ['all' => ['All interfaces', 'badge-warn'], 'local' => ['This host only
     <?php endforeach ?>
     </tbody>
   </table>
+  </div>
   <?php endif ?>
 <?php endif ?>

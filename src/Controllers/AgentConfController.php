@@ -451,9 +451,9 @@ class AgentConfController
         }
         Audit::log('agentconf.ports_requested', "{$host['hostname']} (id $id)" . ($sent ? '' : ', at the next run'));
         flash($sent ? 'success' : 'info', $sent
-            ? 'Scan requested: the ports appear below in a few seconds.'
+            ? 'Scan requested: the result opens below in a few seconds.'
             : 'Scan requested, but the agent could not be contacted now: it runs it at its next auto-update run.');
-        redirect("/agentconf/$id#ports");
+        redirect("/agentconf/$id#ports-open");
     }
 
     /** GET /agentconf/{id}/ports-status: the Listening ports panel content (HTML fragment). */
