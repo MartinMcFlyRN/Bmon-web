@@ -470,3 +470,14 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .vars-help summary { cursor: pointer; font-weight: 600; }
 .vars-table { margin-top: 8px; }
 .vars-table td:first-child { width: 1%; }
+
+/* Two-factor authentication */
+.mfa-setup { max-width: 440px; }
+.mfa-steps { padding-left: 20px; margin: 12px 0; }
+.mfa-steps li { margin-bottom: 10px; }
+.mfa-qr { width: 200px; height: 200px; margin: 10px 0; background: #fff; }
+.mfa-qr svg { width: 100%; height: 100%; display: block; }
+.mfa-secret { font-size: 15px; letter-spacing: 1px; word-break: break-all; }
+.mfa-manual summary { cursor: pointer; }
+.mfa-code { font-size: 22px; letter-spacing: 6px; text-align: center; }
+.mfa-cancel { margin-top: 8px; }

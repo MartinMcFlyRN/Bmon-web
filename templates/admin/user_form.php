@@ -61,7 +61,18 @@ $isSelf ??= false;
       <dt>Created</dt><dd><?= e(fmt_dt($target['created_at'])) ?></dd>
       <dt>Updated</dt><dd><?= e(fmt_dt($target['updated_at'])) ?></dd>
       <dt>Last sign-in</dt><dd><?= e(fmt_dt($target['last_login_at'])) ?> <?= $target['last_login_ip'] !== '' ? 'from ' . e($target['last_login_ip']) : '' ?></dd>
+      <dt>Two-factor</dt><dd><?= $target['totp_enabled_at'] !== null
+            ? '<span class="badge badge-ok">Set up</span> ' . e(fmt_dt($target['totp_enabled_at']))
+            : '<span class="badge badge-warn">At the next sign-in</span>' ?></dd>
     </dl>
+    <?php if ($target['totp_enabled_at'] !== null): ?>
+      <form method="post" action="<?= e(url('/admin/users/' . $target['id'] . '/reset-2fa')) ?>"
+            data-confirm="Reset the two-factor authentication of <?= e($target['username']) ?>? <?= $isSelf ? 'You are signed out and' : 'Their sessions end and they' ?> set up an authenticator app again at the next sign-in.">
+        <?= csrf_field() ?>
+        <button type="submit" class="btn">Reset two-factor</button>
+      </form>
+      <p class="hint">E.g. a lost or replaced phone. The password does not change.</p>
+    <?php endif ?>
     <?php if (!$isSelf): ?>
       <form method="post" action="<?= e(url('/admin/users/' . $target['id'] . '/delete')) ?>"
             data-confirm="Delete user <?= e($target['username']) ?>? This cannot be undone.">

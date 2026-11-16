@@ -24,6 +24,8 @@ final class App
 
         $r->get('/login', [AuthController::class, 'showLogin'], 'guest');
         $r->post('/login', [AuthController::class, 'login'], 'guest');
+        $r->get('/login/2fa', [AuthController::class, 'showSecondFactor'], 'guest');
+        $r->post('/login/2fa', [AuthController::class, 'secondFactor'], 'guest');
         $r->post('/logout', [AuthController::class, 'logout'], 'auth');
 
         $r->get('/', [DashboardController::class, 'index']);
@@ -106,6 +108,7 @@ final class App
         $r->get('/admin/users/{id}', [AdminController::class, 'editUser'], 'admin');
         $r->post('/admin/users/{id}', [AdminController::class, 'updateUser'], 'admin');
         $r->post('/admin/users/{id}/delete', [AdminController::class, 'deleteUser'], 'admin');
+        $r->post('/admin/users/{id}/reset-2fa', [AdminController::class, 'resetTwoFactor'], 'admin');
         $r->get('/admin/audit', [AdminController::class, 'audit'], 'admin');
         $r->get('/admin/groups', [AdminController::class, 'groups'], 'admin');
         $r->get('/admin/groups/new', [AdminController::class, 'newGroup'], 'admin');

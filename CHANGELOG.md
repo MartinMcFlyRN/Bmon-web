@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.25.0 — 2026-11-16
+
+**Run `bin/bmon-web migrate` after upgrading** (columns `totp_secret`, `totp_enabled_at`, `totp_last_step` of `users`). Sessions opened before the upgrade end: everybody signs in again and sets up the second factor.
+
+- **Two-factor authentication (TOTP) for every user**: after the password, a 6-digit code of an authenticator app; at the first sign-in the app is set up with a QR code (drawn in the browser with the bundled qrcode-generator, MIT) or by entering the key, confirmed by a first code
+- A code is accepted once, within ±30 s; wrong codes count for the sign-in throttling and 5 of them end the attempt; the step between password and code lasts at most 5 minutes and gives no access
+- Seeds stored encrypted with `monit.credentials_key` (new `Secrets` class, also used by the Installer)
+- Admin → Users: *Two-factor* column and, on the user page, *Reset two-factor* (ends the user's sessions; set up again at the next sign-in); CLI `user:reset-2fa <username>`; `user:list` shows the state
+- Audit log: password accepted, two-factor set up, wrong codes, resets
+
 ## 0.24.0 — 2026-11-16
 
 No migrations.

@@ -31,6 +31,8 @@ function usage(): never
                                            or read from the first line of stdin)
       user:passwd <username>               set a new password (ends the user's sessions)
       user:enable <username>               enable a disabled account
+      user:reset-2fa <username>            reset two-factor authentication (set up again
+                                           at the next sign-in; ends the user's sessions)
       user:list                            list users
       report:slack [--webhook=URL] [--only-if-failing] [--no-offline] [--dry-run]
                                            post the failing services of this moment to Slack
@@ -140,11 +142,19 @@ try {
             echo "Enabled '{$u['username']}'.\n";
             break;
 
+        case 'user:reset-2fa':
+            $username = $pos[0] ?? usage();
+            $u = Users::findByUsername($username) ?? fail("no such user: $username");
+            Users::resetTotp((int) $u['id']);
+            Audit::log('user.2fa_reset', "{$u['username']} (id {$u['id']}) via CLI", $cli);
+            echo "Two-factor authentication reset for '{$u['username']}': set up again at the next sign-in. Existing sessions have been ended.\n";
+            break;
+
         case 'user:list':
-            printf("%-5s %-24s %-6s %-8s %s\n", 'ID', 'USERNAME', 'ROLE', 'ACTIVE', 'LAST LOGIN (UTC)');
+            printf("%-5s %-24s %-6s %-8s %-10s %s\n", 'ID', 'USERNAME', 'ROLE', 'ACTIVE', '2FA', 'LAST LOGIN (UTC)');
             foreach (Users::all() as $u) {
-                printf("%-5d %-24s %-6s %-8s %s\n", $u['id'], $u['username'], $u['role'],
-                    $u['is_active'] ? 'yes' : 'no', $u['last_login_at'] ?? '-');
+                printf("%-5d %-24s %-6s %-8s %-10s %s\n", $u['id'], $u['username'], $u['role'],
+                    $u['is_active'] ? 'yes' : 'no', $u['totp_enabled_at'] !== null ? 'set up' : 'not yet', $u['last_login_at'] ?? '-');
             }
             break;
 

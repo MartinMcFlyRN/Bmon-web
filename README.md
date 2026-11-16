@@ -9,7 +9,12 @@ Composer dependencies: copy the files, configure, run the migrations.
 
 ## What it does
 
-- **Sign-in** with username and password
+- **Sign-in** with username and password, then a **two-factor code** (TOTP)
+  - every user sets up an authenticator app (Google/Microsoft Authenticator, FreeOTP, Aegis, 1Password, Bitwarden…) at the first sign-in, by scanning a QR code (drawn in the browser, no external service) or entering the key; then a 6-digit code is asked at each sign-in
+  - a code is accepted once (±30 s for clock drift); wrong codes count as failed sign-ins for the throttling, and 5 of them end the attempt; the password step alone gives no access (5 minutes to enter the code)
+  - the seeds are stored encrypted with `monit.credentials_key` (when set)
+  - administrators reset the two-factor of a user (Admin → Users → the user → *Reset two-factor*, or `bin/bmon-web user:reset-2fa`): the user's sessions end and they set it up again at the next sign-in
+  - sessions opened before 0.25.0 end at the upgrade: everybody signs in again with the second factor
   - passwords hashed with Argon2id (bcrypt if PHP lacks Argon2), rehashed transparently when the algorithm changes
   - login throttling: per IP (20 failures / 15 min) and per username+IP (5 / 15 min), so an attacker cannot lock a known account out from everywhere
   - same response time for existing and non-existing usernames
@@ -554,6 +559,7 @@ bin/bmon-web migrate                          create or update the tables
 bin/bmon-web user:create <username> [--admin] [--name=NAME] [--email=EMAIL]
 bin/bmon-web user:passwd <username>           new password, ends the user's sessions
 bin/bmon-web user:enable <username>           re-enable a disabled account
+bin/bmon-web user:reset-2fa <username>        reset two-factor (set up again at the next sign-in)
 bin/bmon-web user:list
 bin/bmon-web report:slack [--webhook=URL] [--only-if-failing] [--no-offline] [--dry-run]
 bin/bmon-web version
@@ -562,8 +568,8 @@ bin/bmon-web version
 The password is asked on the terminal (twice, not echoed) or read from the
 first line of stdin, e.g. for provisioning scripts.
 
-If every administrator is locked out: `bin/bmon-web user:passwd admin` and
-`bin/bmon-web user:enable admin`. Throttling clears by itself after
+If every administrator is locked out: `bin/bmon-web user:passwd admin`,
+`bin/bmon-web user:enable admin` and, for a lost phone, `bin/bmon-web user:reset-2fa admin`. Throttling clears by itself after
 `login_window` seconds, or with `DELETE FROM login_attempts`.
 
 ## License
@@ -571,6 +577,9 @@ If every administrator is locked out: `bin/bmon-web user:passwd admin` and
 Bmon-web is free software, released under the **GNU Affero General Public
 License, version 3** (AGPL-3.0). The full text is in [LICENSE](LICENSE), from
 <https://www.gnu.org/licenses/agpl-3.0.txt>.
+
+It includes `public/assets/vendor/qrcode.js` (QR Code Generator for JavaScript,
+© 2009 Kazuhiko Arase, MIT license, see the header of the file).
 
 In short: you may use, study, modify and redistribute it. If you distribute it,
 or let other people use a modified version over a network, you must make the

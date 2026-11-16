@@ -104,44 +104,21 @@ final class AgentPackages
             . (!empty($info['extensions']['subjectAltName']) ? ' · ' . $info['extensions']['subjectAltName'] : '')];
     }
 
-    // --- secrets ----------------------------------------------------------------------
+    // --- secrets (see Secrets) ---------------------------------------------------------
 
-    private static function key(): ?string
-    {
-        $key = base64_decode((string) Config::get('monit.credentials_key', ''), true);
-        return $key !== false && strlen($key) === 32 ? $key : null;
-    }
-
-    /** Encrypted with monit.credentials_key when set ("aes256gcm:…"), else "plain:…". */
     public static function seal(string $plain, string $context): string
     {
-        $key = self::key();
-        if ($key === null) {
-            return 'plain:' . $plain;
-        }
-        $iv = random_bytes(12);
-        $ct = openssl_encrypt($plain, 'aes-256-gcm', $key, OPENSSL_RAW_DATA, $iv, $tag, $context);
-        return 'aes256gcm:' . base64_encode($iv . $ct . $tag);
+        return Secrets::seal($plain, $context);
     }
 
     public static function open(string $stored, string $context): string
     {
-        if (str_starts_with($stored, 'plain:')) {
-            return substr($stored, 6);
-        }
-        $key = self::key() ?? throw new \RuntimeException('The package secrets are encrypted: set monit.credentials_key in the Bmon-web configuration.');
-        $raw = base64_decode(substr($stored, 10), true);
-        $plain = $raw === false ? false : openssl_decrypt(substr($raw, 12, -16), 'aes-256-gcm', $key, OPENSSL_RAW_DATA,
-            substr($raw, 0, 12), substr($raw, -16), $context);
-        if ($plain === false) {
-            throw new \RuntimeException('Cannot decrypt the package secrets: monit.credentials_key changed.');
-        }
-        return $plain;
+        return Secrets::open($stored, $context);
     }
 
     public static function encrypted(): bool
     {
-        return self::key() !== null;
+        return Secrets::available();
     }
 
     // --- the zip ------------------------------------------------------------------------

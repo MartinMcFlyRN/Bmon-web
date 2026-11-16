@@ -10,6 +10,7 @@ use Bmon\Web\HttpException;
 use Bmon\Web\Password;
 use Bmon\Web\ServiceGroups;
 use Bmon\Web\Settings;
+use Bmon\Web\Session;
 use Bmon\Web\Users;
 use Bmon\Web\View;
 
@@ -125,6 +126,21 @@ final class AdminController
         Audit::log('user.delete', "{$target['username']} (id $id)");
         flash('success', "User {$target['username']} deleted.");
         redirect('/admin/users');
+    }
+
+    /** POST /admin/users/{id}/reset-2fa: the user sets up the authenticator app again at the next sign-in. */
+    public function resetTwoFactor(int $id): never
+    {
+        $target = $this->target($id);
+        Users::resetTotp($id);
+        Audit::log('user.2fa_reset', "{$target['username']} (id $id)");
+        if ($id === (int) Auth::user()['id']) {
+            Session::reset();
+            flash('info', 'Your two-factor authentication was reset: sign in and set it up again.');
+            redirect('/login');
+        }
+        flash('success', "Two-factor authentication of {$target['username']} reset: their sessions ended, and they set it up again at the next sign-in.");
+        redirect('/admin/users/' . $id);
     }
 
     public function audit(): string

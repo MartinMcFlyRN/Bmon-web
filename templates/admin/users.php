@@ -9,7 +9,7 @@ use Bmon\Web\Users;
 
 <table class="table">
   <thead>
-    <tr><th>Username</th><th>Full name</th><th>E-mail</th><th>Role</th><th>Status</th><th>Last sign-in</th></tr>
+    <tr><th>Username</th><th>Full name</th><th>E-mail</th><th>Role</th><th>Status</th><th>Two-factor</th><th>Last sign-in</th></tr>
   </thead>
   <tbody>
   <?php foreach ($users as $u): ?>
@@ -22,6 +22,7 @@ use Bmon\Web\Users;
       <td><?= e($u['email']) ?></td>
       <td><span class="badge badge-<?= e($u['role']) ?>"><?= e(Users::ROLES[$u['role']] ?? $u['role']) ?></span></td>
       <td><?= (int) $u['is_active'] ? '<span class="badge badge-ok">Active</span>' : '<span class="badge badge-off">Disabled</span>' ?></td>
+      <td><?= $u['totp_enabled_at'] !== null ? '<span class="badge badge-ok">Set up</span>' : '<span class="badge badge-warn">Not yet</span>' ?></td>
       <td><?= e(fmt_dt($u['last_login_at'])) ?></td>
     </tr>
   <?php endforeach ?>

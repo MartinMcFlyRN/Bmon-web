@@ -10,7 +10,7 @@ final class Users
     public const ROLES = ['admin' => 'Administrator', 'user' => 'User'];
 
     private const COLUMNS = 'id, username, full_name, email, password_hash, role, is_active,
-        session_version, last_login_at, last_login_ip, created_at, updated_at';
+        session_version, last_login_at, last_login_ip, created_at, updated_at, totp_secret, totp_enabled_at, totp_last_step';
 
     public static function find(int $id): ?array
     {
@@ -90,6 +90,32 @@ final class Users
     public static function rehash(int $id, string $password): void
     {
         Db::exec('UPDATE users SET password_hash = ? WHERE id = ?', [Password::hash($password), $id]);
+    }
+
+    /** Two-factor set up: the sealed secret and the step of the code that confirmed it. */
+    public static function setTotp(int $id, string $secret, int $step): void
+    {
+        Db::exec('UPDATE users SET totp_secret = ?, totp_enabled_at = ?, totp_last_step = ?, updated_at = ? WHERE id = ?',
+            [Secrets::seal($secret, "totp-$id"), now_utc(), $step, now_utc(), $id]);
+    }
+
+    /** Records the step of an accepted code (a code is never accepted twice). */
+    public static function setTotpStep(int $id, int $step): void
+    {
+        Db::exec('UPDATE users SET totp_last_step = ? WHERE id = ? AND totp_last_step < ?', [$step, $id, $step]);
+    }
+
+    /** Two-factor reset: set up again at the next sign-in; the user's sessions end. */
+    public static function resetTotp(int $id): void
+    {
+        Db::exec('UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL, totp_last_step = 0,
+                         session_version = session_version + 1, updated_at = ? WHERE id = ?', [now_utc(), $id]);
+    }
+
+    public static function totpSecret(array $user): ?string
+    {
+        return $user['totp_secret'] !== null && $user['totp_enabled_at'] !== null
+            ? Secrets::open((string) $user['totp_secret'], 'totp-' . $user['id']) : null;
     }
 
     public static function recordLogin(int $id, string $ip): void
