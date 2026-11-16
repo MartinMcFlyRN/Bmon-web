@@ -514,3 +514,5 @@ button.seg:last-child { border-right: 0; }
 .bulk-confirm { margin-top: 16px; display: flex; flex-direction: column; align-items: flex-start; gap: 8px; }
 .form-actions { display: flex; gap: 8px; margin-top: 4px; }
 .bulk-confirm input[name="confirm_count"] { width: 8em; }
+.inv-add { flex-wrap: wrap; }
+.inv-add .inv-search { width: 200px; }

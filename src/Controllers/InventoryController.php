@@ -19,10 +19,16 @@ final class InventoryController
 {
     public function index(): string
     {
+        $q = trim(is_string($_GET['q'] ?? null) ? $_GET['q'] : '');
+        $all = Inventory::allWithCounts();
+        $items = $q === '' ? $all : array_values(array_filter($all, static fn (array $i): bool =>
+            mb_stripos($i['name'], $q) !== false || mb_stripos($i['description'], $q) !== false));
         return View::render('inventory/index', [
             'title' => 'Inventory',
             'nav' => 'agentconf',
-            'items' => Inventory::allWithCounts(),
+            'items' => $items,
+            'total' => count($all),
+            'q' => $q,
             'canEdit' => Auth::isAdmin(),
         ]);
     }

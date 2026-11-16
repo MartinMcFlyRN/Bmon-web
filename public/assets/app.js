@@ -249,6 +249,33 @@ document.querySelectorAll('form[data-bulk]').forEach((form) => {
   sync();
 });
 
+// Searchable select: <input data-filter-select="select-id"> keeps in the select only the options whose
+// text contains what is typed (the first, empty option stays) and selects the first match;
+// [data-filter-count] in the same form says how many match. Enter adds the selected item.
+document.querySelectorAll('input[data-filter-select]').forEach((input) => {
+  const select = document.getElementById(input.dataset.filterSelect);
+  if (!select) return;
+  const placeholder = select.options[0] && select.options[0].value === '' ? select.options[0] : null;
+  const all = Array.from(select.options).filter((o) => o !== placeholder);
+  const count = input.form ? input.form.querySelector('[data-filter-count]') : null;
+  const apply = () => {
+    const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    const hits = all.filter((o) => words.every((w) => o.textContent.toLowerCase().includes(w)));
+    select.replaceChildren(...(placeholder ? [placeholder] : []), ...hits);
+    if (placeholder) placeholder.textContent = words.length && !hits.length ? 'No items match' : 'Add an item…';
+    select.value = words.length && hits.length ? hits[0].value : '';
+    if (count) {
+      count.hidden = !words.length;
+      count.textContent = hits.length + ' of ' + all.length;
+    }
+  };
+  input.addEventListener('input', apply);
+  input.addEventListener('keydown', (ev) => {
+    if (ev.key === 'Escape') { input.value = ''; apply(); }
+    if (ev.key === 'Enter' && !select.value) ev.preventDefault();
+  });
+});
+
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,
 // [data-add-row] adds one, [data-remove-row] removes its row.
 document.addEventListener('click', (ev) => {

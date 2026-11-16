@@ -74,13 +74,15 @@ use Bmon\Web\Monit;
     <?php if ($available): ?>
       <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/inventory')) ?>" class="inline-form inv-add">
         <?= csrf_field() ?>
-        <select name="item_id" aria-label="Inventory item to add" required>
+        <input type="search" class="inv-search" data-filter-select="inv-select" placeholder="Search items…" aria-label="Search inventory items to add" autocomplete="off">
+        <select name="item_id" id="inv-select" aria-label="Inventory item to add" required>
           <option value="">Add an item…</option>
           <?php foreach ($available as $it): ?>
             <option value="<?= e($it['id']) ?>"><?= e($it['name']) ?><?= $it['description'] !== '' ? ' — ' . e(mb_strimwidth($it['description'], 0, 60, '…')) : '' ?></option>
           <?php endforeach ?>
         </select>
         <button type="submit" class="btn">Add</button>
+        <span class="muted small" data-filter-count hidden></span>
       </form>
     <?php elseif (!$allItems): ?>
       <p class="hint">The inventory is empty: <a href="<?= e(url('/inventory/new')) ?>">create an item</a>.</p>

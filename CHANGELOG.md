@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.31.0 — 2026-11-16
+
+No migrations.
+
+- Agent page → Inventory: a search box next to the list of items to add; it keeps only the items whose name or description contains the words typed, selects the first one (Enter adds it, Esc clears) and shows how many match
+- Agent → Inventory: search the items by name or description
+
 ## 0.30.0 — 2026-11-16
 
 No migrations.
