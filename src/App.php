@@ -95,6 +95,8 @@ final class App
         $r->post('/agentconf/{id}/link/revoke', [AgentConfController::class, 'revokeLink'], 'admin');
         $r->post('/agentconf/{id}/deploy', [AgentConfController::class, 'deploy'], 'admin');
         $r->get('/agentconf/{id}/update-status', [AgentConfController::class, 'updateStatus'], 'admin');
+        $r->post('/agentconf/{id}/ports', [AgentConfController::class, 'scanPorts'], 'admin');
+        $r->get('/agentconf/{id}/ports-status', [AgentConfController::class, 'portsStatus'], 'admin');
         $r->post('/agentconf/{id}/required', [AgentConfController::class, 'addRequired'], 'admin');
         $r->get('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroupForm'], 'admin');
         $r->post('/agentconf/{id}/add-group', [AgentConfController::class, 'addGroup'], 'admin');
@@ -102,6 +104,7 @@ final class App
         // bmon-update.sh on the agents (signed requests, no session)
         $r->get('/agent/v1/config', [AgentUpdateController::class, 'config'], 'public');
         $r->post('/agent/v1/result', [AgentUpdateController::class, 'result'], 'public');
+        $r->post('/agent/v1/ports', [AgentUpdateController::class, 'ports'], 'public');
 
         $r->get('/admin/users', [AdminController::class, 'users'], 'admin');
         $r->get('/admin/users/new', [AdminController::class, 'newUser'], 'admin');

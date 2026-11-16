@@ -3,7 +3,7 @@
  * @var array $host @var array $checks @var array $managed @var array $reported
  * @var array $syntax @var bool $monitAvailable @var array $missingScripts
  * @var array|null $link @var array|null $newLink @var array $groupsByCheck @var array $update @var array $requiredMissing
- * @var int $enabledCount @var bool $hasGroups @var array $varsMissing
+ * @var int $enabledCount @var bool $hasGroups @var array $varsMissing @var array|null $ports
  */
 use Bmon\Web\AgentChecks;
 use Bmon\Web\AgentTemplates;
@@ -117,6 +117,21 @@ use Bmon\Web\Monit;
       (signed with the httpd password), replaces the whole content of
       <span class="mono"><?= e(AgentChecks::monitDir()) ?></span> and <span class="mono"><?= e(AgentChecks::scriptDir()) ?></span>,
       runs <span class="mono">monit -t</span> (restoring the previous files if it fails) and reloads Monit.</p>
+  </div>
+</section>
+
+<section class="panel" id="ports">
+  <h2>Listening ports <span class="muted small" data-update-age>· refreshed every 5 s</span></h2>
+  <div class="card">
+    <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/ports')) ?>" class="ports-scan">
+      <?= csrf_field() ?>
+      <button type="submit" class="btn"<?= $update['service'] === null ? ' disabled title="Needs the Bmon auto-update check"' : '' ?>>Scan listening ports</button>
+      <span class="hint">TCP and UDP sockets with something listening, and the process behind them. Only when you ask: the auto-update
+        check of the agent runs <span class="mono">ss -tulpn</span> (or netstat) and sends the list.</span>
+    </form>
+    <div data-update-status="<?= e(url('/agentconf/' . $host['id'] . '/ports-status')) ?>">
+      <?= \Bmon\Web\View::render('agentconf/_ports', ['ports' => $ports], null) ?>
+    </div>
   </div>
 </section>
 

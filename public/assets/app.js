@@ -160,12 +160,12 @@ document.addEventListener('keydown', (ev) => {
   });
 });
 
-// AgentConf → agent page: Auto-update status, refreshed every 5 s while the page
-// is visible (<div data-update-status="url">, an HTML fragment of the server).
-(() => {
-  const box = document.querySelector('[data-update-status]');
-  if (!box) return;
-  const age = document.querySelector('[data-update-age]');
+// Agent page: boxes refreshed every 5 s while the page is visible (<div data-update-status="url">, an
+// HTML fragment of the server): Auto-update status, Listening ports. The age label is the
+// [data-update-age] of the same panel.
+document.querySelectorAll('[data-update-status]').forEach((box) => {
+  const panel = box.closest('.panel') || document;
+  const age = panel.querySelector('[data-update-age]');
   let busy = false;
   const refresh = () => {
     if (busy || document.hidden) return;
@@ -187,7 +187,7 @@ document.addEventListener('keydown', (ev) => {
   };
   setInterval(refresh, 5000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh(); });
-})();
+});
 
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,
 // [data-add-row] adds one, [data-remove-row] removes its row.

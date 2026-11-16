@@ -521,6 +521,27 @@ missing; it warns when the set has no auto-update check (the agent would stop
 updating itself) or no httpd password. Every deploy, download, install and
 rollback is in the audit log.
 
+The scripts of **Bmon auto-update** and **OS information** always go in the
+zip in the version bundled with Bmon-web (`resources/agentconf/`), whatever
+the copy stored in the check: upgrading Bmon-web and deploying each agent once
+brings every agent the new scripts.
+
+#### Listening ports (on demand)
+
+The **Listening ports** panel of the agent page lists the TCP and UDP ports
+that have something listening on the server, with address, whether it is
+reachable from outside (*All interfaces*, *This host only*, a specific
+address), process name and PID, and the usual service of the port
+(`/etc/services`). Nothing runs on a schedule: **Scan listening ports** marks
+a scan as requested and sends "start" to the auto-update check; at its next
+request Bmon-web answers with `X-Bmon-Tasks: ports`, the script runs
+`ss -tulpn` (or `netstat -tulpn`) and posts the output to `/agent/v1/ports`,
+signed like the other requests. The table appears a few seconds later; if the
+agent cannot be reached the scan is done at its next periodic run. The last
+scan is kept with its time; the button needs the auto-update check and a
+deploy with Bmon-web 0.27.0 or later. Monit runs the script as root, so the
+process names of every user are visible.
+
 To enable the validation, install Monit on the Bmon-web server without running
 it (`apt install monit && systemctl disable --now monit`); PHP-FPM must allow
 `proc_open` (it is enabled by default). Set `agentconf.monit_binary` if it is

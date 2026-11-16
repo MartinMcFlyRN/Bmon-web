@@ -16,6 +16,9 @@
 # 4. reports the result to Bmon-web and reloads Monit (restarts it when the
 #    "set httpd" settings changed, e.g. a new certificate).
 #
+# Bmon-web can also ask for one-off tasks (header X-Bmon-Tasks): "ports" sends
+# the listening TCP/UDP sockets (ss -tulpn, or netstat -tulpn) to Bmon-web.
+#
 # Needs: sh, curl, unzip, openssl, od. The password never appears on a command
 # line (ps), only in files of a private temporary directory.
 #
@@ -160,6 +163,25 @@ CODE=$($CURL -o "$TMP/zip" -D "$TMP/headers" -w '%{http_code}' \
 header() { tr -d '\r' < "$TMP/headers" | awk -v h="$1" 'BEGIN { h = tolower(h) }
     { i = index($0, ":"); if (i && tolower(substr($0, 1, i - 1)) == h) { v = substr($0, i + 1); sub(/^[ \t]+/, "", v) } }
     END { print v }'; }
+# one-off tasks asked by Bmon-web (done whatever the answer about the configuration)
+TASKS=$(header X-Bmon-Tasks | tr -cd 'a-z,')
+case ",$TASKS," in
+    *,ports,*)
+        if command -v ss >/dev/null 2>&1; then
+            { echo "TOOL ss"; ss -tulpn 2>&1; } > "$TMP/ports"
+        elif command -v netstat >/dev/null 2>&1; then
+            { echo "TOOL netstat"; netstat -tulpn 2>&1; } > "$TMP/ports"
+        else
+            echo "TOOL none" > "$TMP/ports"
+        fi
+        pts=$(date +%s)
+        { printf '%s|ports|%s|%s\n' "$PROTO" "$MONIT_ID" "$pts"; cat "$TMP/ports"; } | hmac > "$TMP/psig"
+        $CURL -o /dev/null --data-urlencode "id=$MONIT_ID" --data-urlencode "user=$HUSER" --data-urlencode "ts=$pts" \
+            --data-urlencode "output@$TMP/ports" --data-urlencode "sig=$(cat "$TMP/psig")" "$URL/agent/v1/ports" 2>/dev/null \
+            || echo "bmon-update: cannot send the listening ports"
+        ;;
+esac
+
 case $CODE in
     204) echo "up to date (version $(echo "$HAVE" | cut -c1-12))"; exit 0 ;;
     200) ;;

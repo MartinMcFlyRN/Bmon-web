@@ -483,3 +483,12 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .mfa-cancel { margin-top: 8px; }
 .mfa-remember { margin: 10px 0 2px; }
 .devices-card { margin-top: 16px; } .devices-card form { display: inline; }
+
+/* Listening ports */
+.ports-scan { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+.ports-scan .hint { margin: 0; flex: 1; min-width: 260px; }
+.ports-table td { vertical-align: middle; }
+.spinner { display: inline-block; width: 12px; height: 12px; border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 50%; vertical-align: -1px; animation: spin .8s linear infinite; margin-right: 4px; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation: none; } }

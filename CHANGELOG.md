@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.27.0 — 2026-11-16
+
+**Run `bin/bmon-web migrate` after upgrading** (table `agent_ports`), then **deploy each agent once** to give it the new auto-update script.
+
+- **Listening ports on demand**: on the agent page, *Scan listening ports* asks the agent (through the auto-update script, started at once via Monit httpd) for the TCP/UDP ports in listening state; the panel shows port, protocol, address, reachability (all interfaces / this host only), process, PID and usual service name. Uses `ss -tulpn`, or `netstat -tulpn` when `ss` is missing. No periodic scan: only when asked; the last result is kept with its time
+- New signed endpoint `POST /agent/v1/ports`; `GET /agent/v1/config` sends `X-Bmon-Tasks` when a scan is pending
+- The zip always carries the **bundled** `bmon-update.sh` and OS information script, not the copy stored in the check: new versions of the scripts reach the agents with the next deploy
+- Audit log: scans requested and received
+
 ## 0.26.0 — 2026-11-16
 
 **Run `bin/bmon-web migrate` after upgrading** (table `trusted_devices`).

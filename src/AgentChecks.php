@@ -477,7 +477,7 @@ final class AgentChecks
             $config = AgentVars::expand($c['config'], self::varsFor((int) $host['id']))[0];
             $out[] = [self::fileName($c['name']), $header . ServiceGroups::apply($config, $groups[(int) $c['id']] ?? []), $time, 0644];
             if ($c['script_name'] !== '' && $c['script'] !== null) {
-                $out[] = [self::SCRIPTS_SUBDIR . '/' . $c['script_name'], $c['script'], $time, 0755];
+                $out[] = [self::SCRIPTS_SUBDIR . '/' . $c['script_name'], self::bundledScript($c) ?? $c['script'], $time, 0755];
                 $scripts[] = $c['script_name'];
             }
         }
@@ -485,6 +485,20 @@ final class AgentChecks
         // exactly these files from the script directory, and nothing else
         $out[] = [self::SCRIPTS_SUBDIR . '/' . self::MANIFEST, implode("\n", $scripts) . ($scripts ? "\n" : ''), null, 0644];
         return $out;
+    }
+
+    /**
+     * Bmon's own scripts (bmon-update.sh, bmon-osinfo.sh of the required templates)
+     * are always installed in the version shipped with Bmon-web, not the copy
+     * saved in the check when it was created.
+     */
+    public static function bundledScript(array $check): ?string
+    {
+        if (!in_array($check['template'], ['bmon-update', 'os-info'], true)) {
+            return null;
+        }
+        $s = AgentTemplates::script(AgentTemplates::get($check['template']) ?? []);
+        return $s !== null && $s['name'] === $check['script_name'] ? self::normalizeScript($s['content']) : null;
     }
 
     /** Fingerprint of what the zip installs (names, modes, contents; not times or README). */

@@ -139,6 +139,7 @@ class AgentConfController
             'update' => $this->updateInfo($host),
             'requiredMissing' => AgentRequired::missing($id),
             'varsMissing' => \Bmon\Web\AgentVars::missingForHost($host),
+            'ports' => \Bmon\Web\AgentPorts::get($id),
         ]);
     }
 
@@ -436,6 +437,31 @@ class AgentConfController
             'update' => $this->updateInfo($host),
             'enabledCount' => count(AgentChecks::enabledSet($id)),
         ], null);
+    }
+
+    /** POST /agentconf/{id}/ports: asks the agent for its listening ports (through the auto-update check). */
+    public function scanPorts(int $id): never
+    {
+        $host = $this->hostRow($id);
+        \Bmon\Web\AgentPorts::request($id, (string) Auth::user()['username']);
+        $service = AgentUpdate::updateService($host);
+        $sent = false;
+        if ($service !== null && $host['offline_since'] === null && MonitClient::available($host)) {
+            $sent = MonitClient::action($host, $service, 'start')['ok'];
+        }
+        Audit::log('agentconf.ports_requested', "{$host['hostname']} (id $id)" . ($sent ? '' : ', at the next run'));
+        flash($sent ? 'success' : 'info', $sent
+            ? 'Scan requested: the ports appear below in a few seconds.'
+            : 'Scan requested, but the agent could not be contacted now: it runs it at its next auto-update run.');
+        redirect("/agentconf/$id#ports");
+    }
+
+    /** GET /agentconf/{id}/ports-status: the Listening ports panel content (HTML fragment). */
+    public function portsStatus(int $id): string
+    {
+        $this->hostRow($id);
+        header('Cache-Control: no-store');
+        return View::render('agentconf/_ports', ['ports' => \Bmon\Web\AgentPorts::get($id)], null);
     }
 
     /**

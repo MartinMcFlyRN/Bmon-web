@@ -27,6 +27,9 @@ final class AgentUpdateController
             $id = (int) $host['id'];
             $have = is_string($in['have'] ?? null) ? $in['have'] : '';
             AgentUpdate::recordPoll($id, $have);
+            if ($tasks = \Bmon\Web\AgentPorts::tasks($id)) {
+                header('X-Bmon-Tasks: ' . implode(',', $tasks));
+            }
 
             $release = AgentUpdate::latest($id);
             if ($release === null) {
@@ -62,6 +65,19 @@ final class AgentUpdateController
             AgentUpdate::recordResult((int) $host['id'], $version, $status, $in['message']);
             Audit::log('agentconf.update_' . $status, "{$host['hostname']} (id {$host['id']}) version " . substr($version, 0, 12)
                 . ($status !== 'installed' ? ': ' . strtok($in['message'], "\n") : ''), ['id' => null, 'username' => 'agent']);
+            echo "ok\n";
+        });
+    }
+
+    /** POST /agent/v1/ports: id, user, ts, output (ss / netstat), sig. */
+    public function ports(): never
+    {
+        $this->plain(function (): void {
+            $in = array_map(static fn ($v) => is_string($v) ? $v : '', $_POST);
+            $data = AgentUpdate::PROTO . '|ports|' . ($in['id'] ?? '') . '|' . ($in['ts'] ?? '') . "\n" . ($in['output'] ?? '');
+            [$host] = AgentUpdate::authenticate($in, $data);
+            \Bmon\Web\AgentPorts::store((int) $host['id'], $in['output'] ?? '');
+            Audit::log('agentconf.ports_scanned', "{$host['hostname']} (id {$host['id']})", ['id' => null, 'username' => 'agent']);
             echo "ok\n";
         });
     }
