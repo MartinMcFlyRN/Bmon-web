@@ -93,6 +93,15 @@ final class Auth
         if (Password::needsRehash($user['password_hash'])) {
             Users::rehash((int) $user['id'], $password);
         }
+        // a computer remembered after a code: the password is enough
+        if (($device = TrustedDevices::current($user)) !== null) {
+            TrustedDevices::touch((int) $device['id']);
+            RateLimiter::record($username, $ip, true);
+            Users::recordLogin((int) $user['id'], $ip);
+            self::login($user);
+            Audit::log('login.success', 'remembered computer (two-factor skipped until ' . substr($device['expires_at'], 0, 10) . ')', $user);
+            return null;
+        }
         // password right: the second factor completes the sign-in
         Session::reset();
         $_SESSION['mfa_uid'] = (int) $user['id'];
@@ -137,7 +146,7 @@ final class Auth
      * the set-up). On success the user is signed in.
      * @return string|null error message, null on success
      */
-    public static function secondFactor(string $code): ?string
+    public static function secondFactor(string $code, bool $remember = false): ?string
     {
         $user = self::pending() ?? throw new \RuntimeException('No sign-in in progress.');
         $ip = client_ip();
@@ -167,7 +176,11 @@ final class Auth
         RateLimiter::record($user['username'], $ip, true);
         Users::recordLogin((int) $user['id'], $ip);
         self::login(Users::find((int) $user['id']));
-        Audit::log('login.success', $setup ? 'two-factor set up' : 'two-factor', self::$user);
+        if ($remember) {
+            TrustedDevices::remember(self::$user);
+        }
+        Audit::log('login.success', ($setup ? 'two-factor set up' : 'two-factor')
+            . ($remember && TrustedDevices::days() > 0 ? ', computer remembered for ' . TrustedDevices::days() . ' days' : ''), self::$user);
         return null;
     }
 

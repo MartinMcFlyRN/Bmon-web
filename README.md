@@ -15,6 +15,7 @@ Composer dependencies: copy the files, configure, run the migrations.
   - the seeds are stored encrypted with `monit.credentials_key` (when set)
   - administrators reset the two-factor of a user (Admin → Users → the user → *Reset two-factor*, or `bin/bmon-web user:reset-2fa`): the user's sessions end and they set it up again at the next sign-in
   - sessions opened before 0.25.0 end at the upgrade: everybody signs in again with the second factor
+  - **Remember this computer**: ticked when entering the code, that browser asks only for the password for 30 days (Admin → Configuration → *Remember a computer after the two-factor code*; 0 turns it off). A random cookie whose hash is in the database; it never signs in without the password. Forgotten on expiry, on a password change, a two-factor reset, a role change or when the account is disabled; listed in My account (*Forget*, *Forget all*), and an administrator can forget them for a user (Admin → Users → the user)
   - passwords hashed with Argon2id (bcrypt if PHP lacks Argon2), rehashed transparently when the algorithm changes
   - login throttling: per IP (20 failures / 15 min) and per username+IP (5 / 15 min), so an attacker cannot lock a known account out from everywhere
   - same response time for existing and non-existing usernames

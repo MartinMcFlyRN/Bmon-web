@@ -47,6 +47,8 @@ final class Settings
             'security.login_window' => $int('security', 'Failed sign-in window', 60, 86400, 'Period over which failed sign-ins are counted.', 'seconds'),
             'security.login_max_per_ip' => $int('security', 'Failed sign-ins per IP', 1, 1000, 'Then that address is blocked for the rest of the window.'),
             'security.login_max_per_user' => $int('security', 'Failed sign-ins per user and IP', 1, 100),
+            'security.remember_device_days' => $int('security', 'Remember a computer after the two-factor code', 0, 365,
+                'For how long a browser where the user ticked "Remember this computer" asks only for the password. 0 = the code is asked at every sign-in.', 'days'),
             'security.trusted_proxies' => ['section' => 'security', 'type' => 'cidrs', 'label' => 'Trusted proxies',
                 'help' => 'One address or network per line (e.g. 10.0.0.0/8): only these may set X-Forwarded-For / X-Real-IP. Leave empty when nginx talks to PHP-FPM directly.'],
 

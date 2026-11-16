@@ -54,6 +54,7 @@ final class App
         $r->get('/profile', [ProfileController::class, 'show']);
         $r->post('/profile', [ProfileController::class, 'update']);
         $r->post('/profile/password', [ProfileController::class, 'changePassword']);
+        $r->post('/profile/devices/{id}/forget', [ProfileController::class, 'forgetDevice']);
 
         $r->get('/agentconf', [AgentConfController::class, 'index'], 'admin');
         // custom templates and group checks (before /agentconf/{id}: the ids are numeric anyway)
@@ -109,6 +110,7 @@ final class App
         $r->post('/admin/users/{id}', [AdminController::class, 'updateUser'], 'admin');
         $r->post('/admin/users/{id}/delete', [AdminController::class, 'deleteUser'], 'admin');
         $r->post('/admin/users/{id}/reset-2fa', [AdminController::class, 'resetTwoFactor'], 'admin');
+        $r->post('/admin/users/{id}/forget-devices', [AdminController::class, 'forgetDevices'], 'admin');
         $r->get('/admin/audit', [AdminController::class, 'audit'], 'admin');
         $r->get('/admin/groups', [AdminController::class, 'groups'], 'admin');
         $r->get('/admin/groups/new', [AdminController::class, 'newGroup'], 'admin');

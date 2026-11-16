@@ -19,6 +19,9 @@ final class ProfileController
         return View::render('profile', [
             'title' => 'My account',
             'nav' => 'profile',
+            'devices' => \Bmon\Web\TrustedDevices::forUser($user),
+            'currentDevice' => \Bmon\Web\TrustedDevices::currentId(),
+            'rememberDays' => \Bmon\Web\TrustedDevices::days(),
             'form' => $form ?? $user,
             'errors' => $errors,
         ]);
@@ -70,6 +73,21 @@ final class ProfileController
         Auth::refresh();
         Audit::log('password.change', 'other sessions ended');
         flash('success', 'Password changed. Your other sessions have been signed out.');
+        redirect('/profile');
+    }
+
+    /** POST /profile/devices/{id}/forget (id 0 = all). */
+    public function forgetDevice(int $id): never
+    {
+        $user = Auth::user();
+        if ($id === 0) {
+            $n = \Bmon\Web\TrustedDevices::revokeAll((int) $user['id']);
+            Audit::log('user.devices_forgotten', "all ($n)");
+            flash('success', 'All your remembered computers are forgotten: they ask for the two-factor code again.');
+        } elseif (\Bmon\Web\TrustedDevices::revoke((int) $user['id'], $id)) {
+            Audit::log('user.devices_forgotten', "device $id");
+            flash('success', 'Computer forgotten: it asks for the two-factor code again.');
+        }
         redirect('/profile');
     }
 }

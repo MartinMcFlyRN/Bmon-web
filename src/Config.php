@@ -81,6 +81,7 @@ final class Config
                 'login_window'        => 900,   // seconds
                 'login_max_per_ip'    => 20,    // failed logins per IP in the window
                 'login_max_per_user'  => 5,     // failed logins per username+IP in the window
+                'remember_device_days' => 30,   // "remember this computer" after a two-factor code (0 = off)
                 // Proxies allowed to set X-Forwarded-For / X-Real-IP (CIDR list).
                 // Empty when nginx talks to PHP-FPM directly.
                 'trusted_proxies'     => [],

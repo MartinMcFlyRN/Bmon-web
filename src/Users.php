@@ -108,6 +108,7 @@ final class Users
     /** Two-factor reset: set up again at the next sign-in; the user's sessions end. */
     public static function resetTotp(int $id): void
     {
+        TrustedDevices::revokeAll($id);
         Db::exec('UPDATE users SET totp_secret = NULL, totp_enabled_at = NULL, totp_last_step = 0,
                          session_version = session_version + 1, updated_at = ? WHERE id = ?', [now_utc(), $id]);
     }

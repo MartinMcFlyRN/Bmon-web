@@ -72,6 +72,13 @@ $isSelf ??= false;
         <button type="submit" class="btn">Reset two-factor</button>
       </form>
       <p class="hint">E.g. a lost or replaced phone. The password does not change.</p>
+      <?php $nDev = count(\Bmon\Web\TrustedDevices::forUser($target)); ?>
+      <?php if ($nDev > 0): ?>
+        <form method="post" action="<?= e(url('/admin/users/' . $target['id'] . '/forget-devices')) ?>"
+              data-confirm="Forget the <?= $nDev ?> remembered computer<?= $nDev === 1 ? '' : 's' ?> of <?= e($target['username']) ?>?">
+          <?= csrf_field() ?><button type="submit" class="btn">Forget remembered computers (<?= $nDev ?>)</button>
+        </form>
+      <?php endif ?>
     <?php endif ?>
     <?php if (!$isSelf): ?>
       <form method="post" action="<?= e(url('/admin/users/' . $target['id'] . '/delete')) ?>"

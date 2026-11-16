@@ -1,5 +1,5 @@
 <?php
-/** @var array $user @var bool $setup @var string|null $error @var string|null $secret @var string|null $uri */
+/** @var array $user @var bool $setup @var string|null $error @var string|null $secret @var string|null $uri @var int $rememberDays */
 ?>
 <form method="post" action="<?= e(url('/login/2fa')) ?>" class="card login-card<?= $setup ? ' mfa-setup' : '' ?>">
   <?= csrf_field() ?>
@@ -32,6 +32,11 @@
   <label for="code"><?= $setup ? 'Code from the app' : 'Code' ?></label>
   <input id="code" name="code" type="text" inputmode="numeric" pattern="[0-9 ]{6,7}" maxlength="7"
          autocomplete="one-time-code" autocapitalize="none" spellcheck="false" required autofocus class="mfa-code">
+  <?php if ($rememberDays > 0): ?>
+    <label class="check mfa-remember"><input type="checkbox" name="remember" value="1"<?= !empty($_POST['remember']) ? ' checked' : '' ?>>
+      Remember this computer for <?= $rememberDays ?> day<?= $rememberDays === 1 ? '' : 's' ?></label>
+    <p class="hint">Then this browser asks only for the password. Not on shared or public computers.</p>
+  <?php endif ?>
   <button type="submit" class="btn btn-primary btn-block"><?= $setup ? 'Confirm and sign in' : 'Sign in' ?></button>
   <button type="submit" name="cancel" value="1" class="btn btn-block mfa-cancel" formnovalidate>Back to sign in</button>
   <?php if (!$setup): ?>

@@ -26,6 +26,10 @@ final class AuthController
 
         $next = $_SESSION['after_login'] ?? '/';
         $error = Auth::attempt($username, $password);
+        if ($error === null && Auth::user() !== null) {
+            // remembered computer: signed in with the password
+            redirect(is_string($next) && preg_match('#^/(?!/)[^\s\\\\]*$#', $next) ? $next : '/');
+        }
         if ($error === null) {
             $_SESSION['after_login'] = $next;   // the session was reset: keep where to go
             redirect('/login/2fa');
@@ -47,7 +51,7 @@ final class AuthController
         $secret = $setup ? Auth::pendingSecret() : null;
         return View::render('auth/second_factor', [
             'title' => $setup ? 'Set up two-factor authentication' : 'Two-factor authentication',
-            'user' => $user, 'setup' => $setup, 'error' => $error,
+            'user' => $user, 'setup' => $setup, 'error' => $error, 'rememberDays' => \Bmon\Web\TrustedDevices::days(),
             'secret' => $secret,
             'uri' => $secret !== null ? Totp::uri($secret, $user['username'] . '@' . self::site(), 'Bmon') : null,
         ], 'layout_guest');
@@ -65,7 +69,7 @@ final class AuthController
             flash('info', 'The sign-in took too long: sign in again.');
             redirect('/login');
         }
-        $error = Auth::secondFactor(is_string($_POST['code'] ?? null) ? $_POST['code'] : '');
+        $error = Auth::secondFactor(is_string($_POST['code'] ?? null) ? $_POST['code'] : '', ($_POST['remember'] ?? '') === '1');
         if ($error === null) {
             $next = $_SESSION['after_login'] ?? '/';
             unset($_SESSION['after_login']);

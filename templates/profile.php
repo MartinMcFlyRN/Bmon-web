@@ -40,4 +40,34 @@ $err = static fn (string $f): string => !empty($errors[$f]) ? ' aria-invalid="tr
     <p class="hint">Changing the password signs out all your other sessions.</p>
     <button type="submit" class="btn btn-primary">Change password</button>
   </form>
+
+  <section class="card devices-card">
+    <h2>Remembered computers</h2>
+    <?php if ($rememberDays === 0): ?>
+      <p class="muted">Remembering computers is turned off: the two-factor code is asked at every sign-in.</p>
+    <?php elseif (!$devices): ?>
+      <p class="muted">None. Tick “Remember this computer” when you enter the two-factor code, and that browser asks only for
+        the password for <?= $rememberDays ?> days.</p>
+    <?php else: ?>
+      <table class="table table-compact">
+        <thead><tr><th>Browser</th><th>Remembered</th><th>Last used</th><th>Until</th><th></th></tr></thead>
+        <tbody>
+        <?php foreach ($devices as $d): ?>
+          <tr>
+            <td><?= e(\Bmon\Web\TrustedDevices::label($d['user_agent'])) ?><?= (int) $d['id'] === $currentDevice ? ' <span class="badge badge-ok">This one</span>' : '' ?></td>
+            <td class="nowrap"><?= e(fmt_dt($d['created_at'])) ?> <span class="muted small">from <?= e($d['ip']) ?></span></td>
+            <td class="nowrap"><?= $d['last_used_at'] ? e(fmt_dt($d['last_used_at'])) . ' <span class="muted small">from ' . e($d['last_ip']) . '</span>' : '<span class="muted">—</span>' ?></td>
+            <td class="nowrap"><?= e(fmt_dt($d['expires_at'], 'Y-m-d')) ?></td>
+            <td><form method="post" action="<?= e(url('/profile/devices/' . $d['id'] . '/forget')) ?>">
+              <?= csrf_field() ?><button type="submit" class="btn btn-sm">Forget</button></form></td>
+          </tr>
+        <?php endforeach ?>
+        </tbody>
+      </table>
+      <form method="post" action="<?= e(url('/profile/devices/0/forget')) ?>" data-confirm="Forget all your remembered computers? They ask for the two-factor code again.">
+        <?= csrf_field() ?><button type="submit" class="btn btn-sm">Forget all</button>
+      </form>
+      <p class="hint">Changing the password, or a reset of the two-factor by an administrator, forgets them all.</p>
+    <?php endif ?>
+  </section>
 </div>

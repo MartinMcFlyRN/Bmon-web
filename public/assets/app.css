@@ -481,3 +481,5 @@ dialog.dialog h3 { font-size: 14px; margin: 20px 0 4px; }
 .mfa-manual summary { cursor: pointer; }
 .mfa-code { font-size: 22px; letter-spacing: 6px; text-align: center; }
 .mfa-cancel { margin-top: 8px; }
+.mfa-remember { margin: 10px 0 2px; }
+.devices-card { margin-top: 16px; } .devices-card form { display: inline; }

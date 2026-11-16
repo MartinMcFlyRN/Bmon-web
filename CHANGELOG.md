@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.26.0 — 2026-11-16
+
+**Run `bin/bmon-web migrate` after upgrading** (table `trusted_devices`).
+
+- **Remember this computer** after the two-factor code: that browser then asks only for the password for 30 days (Admin → Configuration → *Remember a computer after the two-factor code*, 0 = off). A random HttpOnly cookie, stored as SHA-256; never enough without the password
+- Remembered computers are forgotten on expiry, password change, two-factor reset, role change or disabled account; *My account* lists them (browser, when and from where remembered and last used, expiry) with *Forget* / *Forget all*; Admin → Users → the user: *Forget remembered computers*
+- Audit log: sign-ins with a remembered computer, computers remembered and forgotten
+
 ## 0.25.0 — 2026-11-16
 
 **Run `bin/bmon-web migrate` after upgrading** (columns `totp_secret`, `totp_enabled_at`, `totp_last_step` of `users`). Sessions opened before the upgrade end: everybody signs in again and sets up the second factor.

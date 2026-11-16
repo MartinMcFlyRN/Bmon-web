@@ -128,6 +128,16 @@ final class AdminController
         redirect('/admin/users');
     }
 
+    /** POST /admin/users/{id}/forget-devices: the user's remembered computers ask for the code again. */
+    public function forgetDevices(int $id): never
+    {
+        $target = $this->target($id);
+        $n = \Bmon\Web\TrustedDevices::revokeAll($id);
+        Audit::log('user.devices_forgotten', "{$target['username']} (id $id): $n");
+        flash('success', "Remembered computers of {$target['username']} forgotten ($n): they ask for the two-factor code again.");
+        redirect('/admin/users/' . $id);
+    }
+
     /** POST /admin/users/{id}/reset-2fa: the user sets up the authenticator app again at the next sign-in. */
     public function resetTwoFactor(int $id): never
     {
