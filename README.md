@@ -383,7 +383,8 @@ the agents, to install on each node with all its checks ready.
   produces the configuration. The check is a **copy**: from then on it is plain
   text, edited freely for that service only — templates are never linked to the
   checks made from them, so no change elsewhere ever alters an existing check.
-  Checks can be renamed, disabled or deleted.
+  Checks can be renamed, disabled or deleted, also several at once: select them
+  in the list of the agent (or of a Group Check) and press *Delete selected checks*.
 - **OS information**: Monit reports only the kernel ("Linux 6.12…"). The
   "OS information" template (System category) adds a `check program` with an
   attached script, `bmon-osinfo.sh`, that reads `/etc/os-release` (parsed, never

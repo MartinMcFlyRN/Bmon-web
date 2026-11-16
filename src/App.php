@@ -84,6 +84,7 @@ final class App
         $r->get('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'edit'], 'admin');
         $r->post('/agentconf/groups/{id}/checks/{checkId}', [GroupChecksController::class, 'update'], 'admin');
         $r->post('/agentconf/groups/{id}/checks/{checkId}/delete', [GroupChecksController::class, 'delete'], 'admin');
+        $r->post('/agentconf/groups/{id}/checks/delete', [GroupChecksController::class, 'deleteChecks'], 'admin');
         $r->get('/agentconf/delete', [AgentConfController::class, 'deleteConfirm'], 'admin');
         $r->post('/agentconf/delete', [AgentConfController::class, 'deleteMany'], 'admin');
         $r->get('/agentconf/{id}', [AgentConfController::class, 'host'], 'admin');
@@ -92,6 +93,7 @@ final class App
         $r->get('/agentconf/{id}/checks/{checkId}', [AgentConfController::class, 'edit'], 'admin');
         $r->post('/agentconf/{id}/checks/{checkId}', [AgentConfController::class, 'update'], 'admin');
         $r->post('/agentconf/{id}/checks/{checkId}/delete', [AgentConfController::class, 'delete'], 'admin');
+        $r->post('/agentconf/{id}/checks/delete', [AgentConfController::class, 'deleteChecks'], 'admin');
         $r->get('/agentconf/{id}/download', [AgentConfController::class, 'download'], 'admin');
         $r->post('/agentconf/{id}/link', [AgentConfController::class, 'createLink'], 'admin');
         $r->post('/agentconf/{id}/link/revoke', [AgentConfController::class, 'revokeLink'], 'admin');

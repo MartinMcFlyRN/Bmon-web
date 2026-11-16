@@ -368,6 +368,34 @@ class AgentConfController
         redirect($sc['base']);
     }
 
+    /** POST /agentconf/{id}/checks/delete (and groups/{id}/checks/delete): the selected checks (ids[]). */
+    public function deleteChecks(int $id): never
+    {
+        $sc = $this->scope($id);
+        $names = [];
+        foreach (self::selectedIds($_POST) as $checkId) {
+            $check = AgentChecks::find($sc['sid'], $checkId);
+            if ($check === null) {
+                continue;   // not of this agent/group, or already gone
+            }
+            AgentChecks::delete($checkId);
+            $names[] = $check['name'];
+        }
+        if (!$names) {
+            flash('error', 'Select the checks to delete first.');
+            redirect($sc['base']);
+        }
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+        Audit::log('agentconf.delete', $this->auditWho($sc) . ': ' . count($names) . ' checks: ' . implode(', ', $names));
+        $msg = count($names) . ' check' . (count($names) === 1 ? '' : 's') . ' deleted: ' . implode(', ', $names) . '. '
+            . ($sc['kind'] === 'host' ? 'They go away from the host with the next zip or deploy.' : 'Agents that already received a copy keep it.');
+        if ($sc['kind'] === 'host' && ($missing = AgentRequired::missing($id))) {
+            $msg .= ' Required checks are now missing (' . AgentRequired::labels($missing) . '): download and deploy are blocked until they are added again.';
+        }
+        flash('success', $msg);
+        redirect($sc['base']);
+    }
+
     public function download(int $id): never
     {
         $host = $this->hostRow($id);

@@ -26,11 +26,17 @@ $base = $scope['base'];
       <div class="syntax syntax-fail"><span class="dot dot-fail"></span> monit -t: the enabled checks of the group are <strong>not valid</strong>:
         <pre><?= e($syntax['output']) ?></pre></div>
     <?php endif ?>
+    <form method="post" action="<?= e(url($base . '/checks/delete')) ?>" id="bulk-checks" class="bulk-bar" data-bulk
+          data-confirm-template="Delete {n} check(s) of this group? Agents that already received a copy keep it.">
+      <?= csrf_field() ?>
+      <button type="submit" class="btn btn-danger" data-bulk-submit disabled>Delete selected checks <span data-bulk-count>(0)</span></button>
+    </form>
     <table class="table">
-      <thead><tr><th>File</th><th>Defines</th><th>Service groups</th><th>Script</th><th>Created from</th><th>Status</th><th>Updated</th></tr></thead>
+      <thead><tr><th class="col-check"><input type="checkbox" data-bulk-all form="bulk-checks" aria-label="Select all checks" title="Select all checks"></th><th>File</th><th>Defines</th><th>Service groups</th><th>Script</th><th>Created from</th><th>Status</th><th>Updated</th></tr></thead>
       <tbody>
       <?php foreach ($checks as $c): $tpl = AgentTemplates::get($c['template']); ?>
         <tr class="<?= (int) $c['enabled'] ? '' : 'row-off' ?>">
+          <td class="col-check"><input type="checkbox" name="ids[]" value="<?= e($c['id']) ?>" form="bulk-checks" data-bulk-item aria-label="Select <?= e(AgentChecks::fileName($c['name'])) ?>"></td>
           <td class="nowrap"><a class="strong mono" href="<?= e(url($base . '/checks/' . $c['id'])) ?>"><?= e(AgentChecks::fileName($c['name'])) ?></a></td>
           <td><?php foreach ($c['services'] as $s): ?><span class="chip"><?= e($s) ?></span> <?php endforeach ?>
             <?php if (!$c['services']): ?><span class="muted small">Monit settings</span><?php endif ?></td>

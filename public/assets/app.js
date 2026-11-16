@@ -224,6 +224,7 @@ document.querySelectorAll('.ports-box').forEach((box) => {
 
 // Bulk selection in a list: <form data-bulk> with a [data-bulk-submit] button and a [data-bulk-count];
 // checkboxes [data-bulk-item] (and a [data-bulk-all] that selects them all) belong to it via form="…".
+// data-confirm-template="… {n} …" asks for confirmation with the number selected.
 document.querySelectorAll('form[data-bulk]').forEach((form) => {
   const items = () => Array.from(document.querySelectorAll('[data-bulk-item][form="' + form.id + '"]'));
   const all = document.querySelector('[data-bulk-all][form="' + form.id + '"]');
@@ -234,6 +235,7 @@ document.querySelectorAll('form[data-bulk]').forEach((form) => {
     const n = list.filter((c) => c.checked).length;
     if (submit) submit.disabled = n === 0;
     if (count) count.textContent = '(' + n + ')';
+    if (form.dataset.confirmTemplate) form.dataset.confirm = form.dataset.confirmTemplate.replace('{n}', String(n));
     if (all) {
       all.disabled = list.length === 0;
       all.checked = list.length > 0 && n === list.length;

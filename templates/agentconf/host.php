@@ -72,12 +72,18 @@ use Bmon\Web\Monit;
     <div class="card muted">No checks yet. <a href="<?= e(url('/agentconf/' . $host['id'] . '/new')) ?>">Add the first one from a template</a>,
       or create one from a service Monit already reports, below.</div>
   <?php else: ?>
+  <form method="post" action="<?= e(url('/agentconf/' . $host['id'] . '/checks/delete')) ?>" id="bulk-checks" class="bulk-bar" data-bulk
+        data-confirm-template="Delete {n} check(s) of this agent? They go away from the host with the next deploy.">
+    <?= csrf_field() ?>
+    <button type="submit" class="btn btn-danger" data-bulk-submit disabled>Delete selected checks <span data-bulk-count>(0)</span></button>
+  </form>
   <table class="table">
-    <thead><tr><th>File</th><th>Defines</th><th>Groups</th><th>Script</th><th>Created from</th><th>Status</th><th>Updated</th></tr></thead>
+    <thead><tr><th class="col-check"><input type="checkbox" data-bulk-all form="bulk-checks" aria-label="Select all checks" title="Select all checks"></th><th>File</th><th>Defines</th><th>Groups</th><th>Script</th><th>Created from</th><th>Status</th><th>Updated</th></tr></thead>
     <tbody>
     <?php foreach ($checks as $c):
         $tpl = AgentTemplates::get($c['template']); ?>
       <tr class="<?= (int) $c['enabled'] ? '' : 'row-off' ?>">
+        <td class="col-check"><input type="checkbox" name="ids[]" value="<?= e($c['id']) ?>" form="bulk-checks" data-bulk-item aria-label="Select <?= e(AgentChecks::fileName($c['name'])) ?>"></td>
         <td class="nowrap"><a class="strong mono" href="<?= e(url('/agentconf/' . $host['id'] . '/checks/' . $c['id'])) ?>"><?= e(AgentChecks::fileName($c['name'])) ?></a></td>
         <td><?php foreach ($c['services'] as $s): ?><span class="chip"><?= e($s) ?></span> <?php endforeach ?>
           <?php if (!$c['services']): ?><span class="muted small">Monit settings</span><?php endif ?></td>

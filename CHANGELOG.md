@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.0 — 2026-11-16
+
+No migrations.
+
+- **Delete checks in bulk**: on the page of an agent (and of a Group Check) a checkbox on each check, one in the header to select them all, and *Delete selected checks (N)*, confirmed in a dialog with the number. On an agent the checks go away from the host with the next deploy; if a required check was among them, the message says that download and deploy are blocked until it is added again. One audit entry with the names
+
 ## 0.28.0 — 2026-11-16
 
 No migrations.
