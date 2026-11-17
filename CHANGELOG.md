@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.32.0 — 2026-11-17
+
+No migrations.
+
+- Agent list: **Advanced search** flag next to the search box; it shows fields for **OS**, **Kernel**, **Inventory**, **Check** and **Monit version**. Each matches part of the text, and every filled field must match (together with the simple search):
+  - OS: name, id, version or codename from the OS information check, or Monit's platform name
+  - Kernel: the kernel release reported by Monit
+  - Inventory: the name of an item of the host
+  - Check: the name of a check prepared in Bmon or of a service reported by Monit
+- Agent list: under the name, the distribution from the OS information check (when present) and the kernel
+
 ## 0.31.1 — 2026-11-16
 
 No migrations.

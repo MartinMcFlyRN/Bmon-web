@@ -525,3 +525,15 @@ button.seg:last-child { border-right: 0; }
   padding: 6px 12px; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .combo-opt.active { background: #eef7f1; box-shadow: inset 3px 0 0 var(--accent); }
 .combo-empty { padding: 6px 12px; }
+
+/* Agent list: advanced search */
+.search-adv { flex-direction: column; align-items: stretch; gap: 10px; }
+.search-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.check-inline { display: inline-flex; align-items: center; gap: 6px; margin-left: 8px; font-size: 14px; cursor: pointer; white-space: nowrap; }
+.adv-fields { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px 12px; margin: 0; padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 4px; background: var(--surface); max-width: 1000px; }
+.adv-fields[hidden] { display: none; }
+.adv-fields label { display: flex; flex-direction: column; gap: 3px; font-size: 13px; font-weight: 600; }
+.adv-fields input[type=search] { width: 100%; padding: 6px 9px; font: inherit; font-weight: 400; border: 1px solid var(--border); border-radius: 4px; }
+.adv-fields .hint { grid-column: 1 / -1; margin: 0; }
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

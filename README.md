@@ -274,7 +274,13 @@ The **AgentConf** menu (administrators only) prepares Monit configurations for
 the agents, to install on each node with all its checks ready.
 
 - **Menu**: **Agent** is a dropdown with **Manage** (the agents and their
-  checks), **Group Checks**, **Custom Templates** and **Installer**.
+  checks), **Inventory**, **Group Checks**, **Custom Templates** and **Installer**.
+- **Searching agents**: the box of the Manage list searches name, address, OS
+  and Monit version; the **Advanced search** flag adds fields for **OS**
+  (distribution name, version or codename from the OS information check),
+  **Kernel**, **Inventory** (item name), **Check** (a check prepared in Bmon or
+  a service reported by Monit) and **Monit version**. Each field matches part
+  of the text, and every filled field must match.
 - **Installer**: packages to set up Monit on a new server. *Add package* asks
   for a name, the install directory (default `/usr/local/monit`), the **Monit
   binary** and the **monit.pem** (private key + certificate for HTTPS), the

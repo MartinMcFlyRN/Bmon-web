@@ -298,6 +298,21 @@ document.querySelectorAll('form[data-combo]').forEach((form) => {
   document.addEventListener('click', (ev) => { if (!form.contains(ev.target)) open(false); });
 });
 
+// Advanced search flag (Agent list): shows the extra fields; when it is off they are disabled, so they
+// are not sent and do not filter.
+document.querySelectorAll('form[data-adv-search]').forEach((form) => {
+  const flag = form.querySelector('[data-adv-toggle]');
+  const box = form.querySelector('.adv-fields');
+  if (!flag || !box) return;
+  // empty fields stay out of the address
+  form.addEventListener('submit', () => form.querySelectorAll('input[type=search]').forEach((i) => { if (i.value.trim() === '') i.disabled = true; }));
+  flag.addEventListener('change', () => {
+    box.hidden = !flag.checked;
+    box.querySelectorAll('input').forEach((i) => { i.disabled = !flag.checked; });
+    if (flag.checked) { const first = box.querySelector('input'); if (first) first.focus(); }
+  });
+});
+
 // Editable rows (custom template fields): <tbody data-rows>, <template data-row-template>,
 // [data-add-row] adds one, [data-remove-row] removes its row.
 document.addEventListener('click', (ev) => {

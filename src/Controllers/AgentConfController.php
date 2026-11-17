@@ -15,6 +15,7 @@ use Bmon\Web\Auth;
 use Bmon\Web\Db;
 use Bmon\Web\DownloadLinks;
 use Bmon\Web\HostDelete;
+use Bmon\Web\OsInfo;
 use Bmon\Web\HttpException;
 use Bmon\Web\Monit;
 use Bmon\Web\MonitClient;
@@ -43,6 +44,15 @@ class AgentConfController
         };
     }
 
+    /** Fields of the advanced search of the agent list: name => label, placeholder. */
+    public const ADVANCED = [
+        'os' => ['OS', 'e.g. debian 12, ubuntu'],
+        'kernel' => ['Kernel', 'e.g. 6.12, deb13'],
+        'inventory' => ['Inventory', 'item name'],
+        'check' => ['Check', 'check or service name'],
+        'monit' => ['Monit version', 'e.g. 5.33'],
+    ];
+
     public function index(): string
     {
         // offline agents are listed too (their zip can be installed by hand); ?active=1 hides them
@@ -53,18 +63,63 @@ class AgentConfController
         if (!$all) {
             $where[] = 'h.offline_since IS NULL';
         }
+        $like = static fn (string $v): string => '%' . addcslashes($v, '%_\\') . '%';
+        $osInfo = OsInfo::sql('h');
         if ($q !== '') {
-            $like = '%' . addcslashes($q, '%_\\') . '%';
             $where[] = '(h.hostname LIKE ? OR hm.display_name LIKE ? OR h.remote_addr LIKE ? OR h.os_name LIKE ? OR h.monit_version LIKE ?)';
-            array_push($params, $like, $like, $like, $like, $like);
+            array_push($params, $like($q), $like($q), $like($q), $like($q), $like($q));
+        }
+        // Advanced search (shown by the "Advanced search" flag): every filled field must match, partially.
+        $adv = ($_GET['adv'] ?? '') === '1';
+        $advFields = [];
+        foreach (array_keys(self::ADVANCED) as $f) {
+            $advFields[$f] = trim(is_string($_GET[$f] ?? null) ? mb_substr($_GET[$f], 0, 100) : '');
+        }
+        if ($adv) {
+            foreach ($advFields as $f => $v) {
+                if ($v === '') {
+                    continue;
+                }
+                $l = $like($v);
+                switch ($f) {
+                    case 'os':          // filtered below: Monit platform name or the OS information check
+                        break;
+                    case 'kernel':      // Monit platform release (uname -r)
+                        $where[] = 'h.os_release LIKE ?';
+                        $params[] = $l;
+                        break;
+                    case 'inventory':
+                        $where[] = 'EXISTS (SELECT 1 FROM host_inventory hi JOIN inventory i ON i.id = hi.item_id
+                                              WHERE hi.host_id = h.id AND i.name LIKE ?)';
+                        $params[] = $l;
+                        break;
+                    case 'check':       // checks prepared in Bmon or services reported by Monit
+                        $where[] = '(EXISTS (SELECT 1 FROM agent_checks ac WHERE ac.host_id = h.id AND ac.name LIKE ?)
+                                     OR EXISTS (SELECT 1 FROM ' . Db::collector('services') . ' sv WHERE sv.host_id = h.id AND sv.name LIKE ?))';
+                        array_push($params, $l, $l);
+                        break;
+                    case 'monit':
+                        $where[] = 'h.monit_version LIKE ?';
+                        $params[] = $l;
+                        break;
+                }
+            }
         }
         $agents = Db::all(
             'SELECT h.id, ' . Db::hostName() . ' AS hostname, h.remote_addr, h.monit_version, h.os_name, h.os_release,
-                    h.services_total, h.last_seen, h.offline_since
+                    h.services_total, h.last_seen, h.offline_since, ' . $osInfo . ' AS os_info
                FROM ' . Db::collector('hosts') . ' h ' . Db::hostMetaJoin()
             . ($where ? ' WHERE ' . implode(' AND ', $where) : '') . ' ORDER BY hostname',
             $params
         );
+        if ($adv && $advFields['os'] !== '') {
+            // name, id, version and codename of the OS information check (not kernel or addresses), or Monit's platform name
+            $agents = array_values(array_filter($agents, static function (array $a) use ($advFields): bool {
+                $os = OsInfo::parse($a['os_info']);
+                $text = $a['os_name'] . ' ' . ($os ? "{$os['pretty']} {$os['id']} {$os['version']} {$os['codename']}" : '');
+                return mb_stripos($text, $advFields['os']) !== false;
+            }));
+        }
         $counts = AgentChecks::counts();
         $updates = AgentUpdate::overview();
 
@@ -89,7 +144,7 @@ class AgentConfController
         return View::render('agentconf/index', [
             'title' => 'Agent', 'nav' => 'agentconf',
             'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
-            'q' => $q, 'sort' => $sort, 'dir' => $dir,
+            'q' => $q, 'sort' => $sort, 'dir' => $dir, 'adv' => $adv, 'advFields' => $advFields,
         ]);
     }
 
