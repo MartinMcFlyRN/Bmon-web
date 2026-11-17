@@ -76,7 +76,7 @@ class AgentConfController
         $csv = stream_get_contents($out);
         Audit::log('agentconf.export', count($l['agents']) . ' agents exported as CSV');
         header('Content-Type: text/csv; charset=utf-8');
-        header('Content-Disposition: attachment; filename="bmon-agents-' . date('Ymd-Hi') . '.csv"');
+        header('Content-Disposition: attachment; filename="bmon-agents-' . fmt_dt(gmdate('Y-m-d H:i:s'), 'Ymd-Hi') . '.csv"');
         header('Cache-Control: no-store');
         echo $csv;
         exit;
