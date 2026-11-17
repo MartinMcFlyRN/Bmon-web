@@ -79,5 +79,9 @@ $th = static fn (string $key, string $label, string $class = ''): string
   <?php endforeach ?>
   </tbody>
 </table>
-<p class="muted small"><?= count($agents) ?> agent<?= count($agents) === 1 ? '' : 's' ?>.</p>
+<div class="list-foot">
+  <p class="muted small"><?= count($agents) ?> agent<?= count($agents) === 1 ? '' : 's' ?>.</p>
+  <a class="btn" href="<?= e(url('/agentconf/export') . query_with([])) ?>" download
+     title="Agent name, kernel and public IP of the <?= count($agents) ?> agents listed (same search and order)">Export CSV</a>
+</div>
 <?php endif ?>

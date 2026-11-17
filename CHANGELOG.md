@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.33.0 — 2026-11-17
+
+No migrations.
+
+- Agent list: **Export CSV** under the list downloads the agents listed (same search, advanced search, offline filter and order) with **Agent** name, **Kernel** and **Public IP**: the public IPv4 and then IPv6 addresses from the OS information check, or the report address when that is public; several are separated by spaces. UTF-8 with BOM, comma separated; one audit entry per export
+
 ## 0.32.0 — 2026-11-17
 
 No migrations.

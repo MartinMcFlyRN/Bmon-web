@@ -14,6 +14,7 @@ use Bmon\Web\Audit;
 use Bmon\Web\Auth;
 use Bmon\Web\Db;
 use Bmon\Web\DownloadLinks;
+use Bmon\Web\AgentVars;
 use Bmon\Web\HostDelete;
 use Bmon\Web\OsInfo;
 use Bmon\Web\HttpException;
@@ -54,6 +55,41 @@ class AgentConfController
     ];
 
     public function index(): string
+    {
+        $l = $this->agentList();
+        $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
+        return View::render('agentconf/index', ['title' => 'Agent', 'nav' => 'agentconf', 'offlineCount' => $offline] + $l);
+    }
+
+    /** GET /agentconf/export: the agents of the list (same search, filters and order) as CSV. */
+    public function export(): never
+    {
+        $l = $this->agentList();
+        $out = fopen('php://temp', 'w+');
+        fwrite($out, "\xEF\xBB\xBF");   // BOM: spreadsheets open the file as UTF-8
+        fputcsv($out, ['Agent', 'Kernel', 'Public IP'], ',', '"', '');
+        foreach ($l['agents'] as $a) {
+            $ips = AgentVars::publicIps(OsInfo::parse($a['os_info']), (string) $a['remote_addr']);
+            fputcsv($out, array_map([self::class, 'csvCell'], [(string) $a['hostname'], (string) $a['os_release'], implode(' ', $ips)]), ',', '"', '');
+        }
+        rewind($out);
+        $csv = stream_get_contents($out);
+        Audit::log('agentconf.export', count($l['agents']) . ' agents exported as CSV');
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="bmon-agents-' . date('Ymd-Hi') . '.csv"');
+        header('Cache-Control: no-store');
+        echo $csv;
+        exit;
+    }
+
+    /** A cell that a spreadsheet would read as a formula gets a leading apostrophe. */
+    private static function csvCell(string $v): string
+    {
+        return preg_match('/^[=+\-@\t\r]/', $v) ? "'" . $v : $v;
+    }
+
+    /** The agents of the list page, from the query string (search, advanced search, offline, sort). */
+    private function agentList(): array
     {
         // offline agents are listed too (their zip can be installed by hand); ?active=1 hides them
         $all = ($_GET['active'] ?? '') !== '1';
@@ -140,12 +176,10 @@ class AgentConfController
             return $c ?: strnatcasecmp((string) $a['hostname'], (string) $b['hostname']);
         });
 
-        $offline = (int) Db::value('SELECT COUNT(*) FROM ' . Db::collector('hosts') . ' WHERE offline_since IS NOT NULL');
-        return View::render('agentconf/index', [
-            'title' => 'Agent', 'nav' => 'agentconf',
-            'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all, 'offlineCount' => $offline,
+        return [
+            'agents' => $agents, 'counts' => $counts, 'updates' => $updates, 'all' => $all,
             'q' => $q, 'sort' => $sort, 'dir' => $dir, 'adv' => $adv, 'advFields' => $advFields,
-        ]);
+        ];
     }
 
     public function host(int $id, ?array $newLink = null): string

@@ -67,6 +67,22 @@ final class AgentVars
         return array_filter($v, static fn ($x) => $x !== '') + self::bmon();
     }
 
+    /**
+     * Public addresses of an agent: the public IPv4 and then IPv6 addresses reported by the OS information
+     * check; when it reports no public IPv4, the report address if that is public.
+     *
+     * @param array|null $os from OsInfo::parse()
+     * @return list<string>
+     */
+    public static function publicIps(?array $os, string $reportAddr): array
+    {
+        [$pub4, $pub6] = self::classify(array_filter(explode(',', $os['ips'] ?? '')));
+        if ($pub4 === [] && self::isPublic4($reportAddr)) {
+            $pub4 = [$reportAddr];
+        }
+        return array_merge($pub4, $pub6);
+    }
+
     /** Example values, to validate checks of Group Checks and Custom Templates. */
     public static function sample(): array
     {

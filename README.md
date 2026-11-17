@@ -281,6 +281,10 @@ the agents, to install on each node with all its checks ready.
   **Kernel**, **Inventory** (item name), **Check** (a check prepared in Bmon or
   a service reported by Monit) and **Monit version**. Each field matches part
   of the text, and every filled field must match.
+- **Export CSV** (under the Manage list): the agents listed, with the same
+  search and order, as a CSV with agent name, kernel and public IP (public
+  IPv4 then IPv6 addresses from the OS information check, or the report
+  address when that is public; separated by spaces).
 - **Installer**: packages to set up Monit on a new server. *Add package* asks
   for a name, the install directory (default `/usr/local/monit`), the **Monit
   binary** and the **monit.pem** (private key + certificate for HTTPS), the
